@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node --watch -r ts-node/register src/main.ts",
+    "dev": "node --env-file-if-exists=../../.env --watch -r ts-node/register src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/pricing/pricing.test.ts"
+    "test": "tsx --test src/pricing/pricing.test.ts && node --require ts-node/register --test src/admin/admin.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -16,10 +16,16 @@
     "@nestjs/swagger": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.2.8",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1",
+    "pg-mem": "^3.0.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.0"
   }

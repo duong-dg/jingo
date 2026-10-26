@@ -27,6 +27,9 @@ services:
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-jingo}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jingo}
       REDIS_URL: redis://redis:6379
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3100}
     mem_limit: 512m
     healthcheck:
       test: [CMD, node, -e, "fetch('http://localhost:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

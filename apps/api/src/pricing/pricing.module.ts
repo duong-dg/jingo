@@ -1,7 +1,8 @@
 import { BadRequestException, Body, Controller, Module, NotFoundException, Post } from '@nestjs/common';
 import { IsInt, IsObject, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { products } from '../catalog/catalog.data';
+import { CatalogModule } from '../catalog/catalog.module';
+import { CatalogService } from '../catalog/catalog.service';
 import { calculateQuote } from './pricing';
 
 class QuantitiesDto {
@@ -17,12 +18,12 @@ class QuoteDto {
 }
 @Controller('quotes')
 class PricingController {
-  @Post() quote(@Body() body: QuoteDto) {
-    const product = products.find((item) => item.id === body.productId);
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm.');
-    try { return calculateQuote(product, body.variantId, body.date, body.quantities); }
+  constructor(private readonly catalog: CatalogService) {}
+  @Post() async quote(@Body() body: QuoteDto) {
+    const product = await this.catalog.find(body.productId);
+    try { return calculateQuote(product, body.variantId, body.date, body.quantities, product.rules, product.closures); }
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'Không thể báo giá.'); }
   }
 }
-@Module({ controllers: [PricingController] })
+@Module({ imports: [CatalogModule], controllers: [PricingController] })
 export class PricingModule {}

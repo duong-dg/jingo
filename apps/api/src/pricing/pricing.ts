@@ -52,5 +52,5 @@ export function calculateQuote(
   }).filter((line) => line !== null);
   const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
   if (!Number.isSafeInteger(total)) throw new Error('Tổng tiền vượt giới hạn.');
-  return { productId: product.id, variantId, date, currency: 'VND', lines, total, demo: true as const };
+  return { productId: product.id, variantId, date, currency: 'VND', lines, total, demo: product.demo ?? true };
 }

@@ -4,13 +4,15 @@
 
 Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một repository với ba ứng dụng web/api/worker. PostgreSQL là nguồn dữ liệu chính; Redis cho queue/cache; file vé riêng tư dùng object storage khi triển khai nghiệp vụ. App di động sau này dùng cùng API. Chưa triển khai khách sạn hoặc API nhà cung cấp.
 
-## Trạng thái hiện tại
+## Trạng thái hiện tại (0.2)
 
-- Web tiếng Việt responsive: trang chủ, danh mục mẫu, trang chi tiết với chọn ngày/gói/nhóm khách, trang chờ cẩm nang.
-- API phiên bản v1: health, danh mục mẫu, tính giá minh họa. Chưa ghi database hoặc giữ chỗ.
-- Hàm pricing có kiểm tra lịch, ưu tiên giá, khóa bán, nhóm khách hợp lệ và giá 0đ. Các quy tắc hiện là đầu vào nội bộ của hàm; chưa có API quản trị để nhập lịch giá.
+- Web tiếng Việt responsive: danh mục database, chi tiết và popup chọn vé, ngày nhanh, hạng/gói, stepper nhóm khách và tổng tiền từ API. Chưa có tạo đơn/giỏ hàng/thanh toán.
+- Admin /admin: login/logout cookie HttpOnly, phiên hash PostgreSQL hết hạn 8 giờ, giới hạn đăng nhập sai, kiểm tra nguồn mutation và header chống CSRF. Chủ tài khoản tạo qua env, mật khẩu scrypt; chưa có quản lý nhiều vai trò.
+- PostgreSQL: product config JSONB, slug unique, version optimistic locking, audit cùng transaction, bảng admin/session và migration marker. Giá/lịch/khóa lưu trong product document để cập nhật nguyên tử; booking, inventory và ledger sau này cần bảng quan hệ riêng.
+- Admin tạo/sửa/nháp/xuất bản sản phẩm, gói và nhóm giá, điều kiện khách, SEO, lịch giá, ngày khóa và nháp tiếng Anh. Ngày khóa chặn cả endpoint rates lẫn quotes.
+- Public chỉ đọc sản phẩm xuất bản, không trả bản dịch nháp/lịch nội bộ. Seed ba sản phẩm mẫu một lần, không ghi đè khi restart.
 - Worker chỉ xử lý job diagnostic. Chưa có thông báo, xuất PDF hoặc job nghiệp vụ.
-- Compose chuẩn bị PostgreSQL/Redis nhưng API chưa sử dụng chúng. Chưa có migration, xác thực, thanh toán hoặc dữ liệu thật.
+- Compose truyền DATABASE_URL và bootstrap admin. API yêu cầu PostgreSQL. Máy phát triển chưa có Docker/PostgreSQL thật; kiểm thử tích hợp chạy pg-mem, cần smoke test và backup/restore trên Ubuntu.
 - Mọi trang đang noindex để tránh lập chỉ mục dữ liệu mẫu. Chỉ mở index sau khi nội dung thật, canonical, sitemap và robots được kiểm tra.
 
 ## Các module nghiệp vụ sẽ triển khai
@@ -53,7 +55,7 @@ Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một reposi
 
 ## Đa ngôn ngữ kiểu WPML (yêu cầu đã chốt)
 
-Tiếng Việt mặc định, tiếng Anh là ngôn ngữ bổ sung đầu tiên. Đây là thiết kế cho giai đoạn CMS, chưa có giao diện admin dịch hoặc trang tiếng Anh trong scaffold hiện tại.
+Tiếng Việt mặc định, tiếng Anh là ngôn ngữ bổ sung đầu tiên. Admin đã có tab nhập bản dịch tiếng Anh dạng nháp liên kết cùng sản phẩm. Chưa có route tiếng Anh, dịch tự động hoặc workflow WPML đầy đủ; các mục sau là thiết kế đích.
 
 - Tách bản dịch nội dung khỏi thực thể thương mại. Product/variant giữ ID cố định; bảng product_translation và variant_translation có khóa (entity_id, locale). Giá, tồn, mã đối tác và vé không nhân bản theo ngôn ngữ.
 - Post, destination, category, menu, trang chính sách và trường SEO có bản dịch liên kết với thực thể gốc. Slug unique theo loại nội dung + locale. Lưu lịch sử slug để chuyển hướng 301.
@@ -66,4 +68,4 @@ Tiếng Việt mặc định, tiếng Anh là ngôn ngữ bổ sung đầu tiên
 - Email, voucher JinGo và thông báo theo locale lưu trên booking; mã/QR vé gốc đối tác giữ nguyên. Không chỉnh nội dung vé gốc theo cách làm mất hiệu lực.
 - Có thể thêm gợi ý dịch máy sau này qua một adapter, luôn lưu nháp để con người duyệt; chưa tích hợp dịch vụ hoặc phát sinh chi phí dịch tự động.
 
-Các mục 1–5 thuộc phạm vi đã thống nhất, không phải tính năng hiện đã hoàn thành.
+Các mục 1–5 thuộc phạm vi đã thống nhất; phần sản phẩm/giá/admin chủ đã triển khai như trên, các nghiệp vụ đặt hàng/tài chính chưa hoàn thành.

@@ -1,0 +1,37 @@
+import { Global, Inject, Injectable, Module, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Pool } from 'pg';
+import { products } from '../catalog/catalog.data';
+
+@Injectable()
+export class DatabaseService implements OnModuleInit, OnModuleDestroy {
+  constructor(@Inject('DB_POOL') public readonly pool: Pool) {}
+  async onModuleInit() {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS jingo_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_products (id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1, updated_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_admins (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_sessions (token_hash text PRIMARY KEY, admin_id text NOT NULL REFERENCES jingo_admins(id), expires_at timestamptz NOT NULL);
+      CREATE INDEX IF NOT EXISTS jingo_sessions_expiry ON jingo_sessions(expires_at);
+      CREATE TABLE IF NOT EXISTS jingo_audit (id text PRIMARY KEY, admin_id text NOT NULL, action text NOT NULL, entity_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+    `);
+    // One-time sample import. Existing edits and drafts are never overwritten on restart.
+    const seeded = await this.pool.query("SELECT id FROM jingo_migrations WHERE id = '001_catalog_seed'");
+    if (!seeded.rowCount) {
+      const client = await this.pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const product of products) await client.query('INSERT INTO jingo_products(id, slug, data) VALUES ($1,$2,$3) ON CONFLICT (id) DO NOTHING',
+          [product.id, product.slug, JSON.stringify({ ...product, status: 'PUBLISHED', demo: true, rules: [], closures: [], seoTitle: '', seoDescription: '' })]);
+        await client.query("INSERT INTO jingo_migrations(id) VALUES ('001_catalog_seed') ON CONFLICT (id) DO NOTHING");
+        await client.query('COMMIT');
+      } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
+    }
+  }
+  async onModuleDestroy() { await this.pool.end(); }
+}
+@Global()
+@Module({ providers: [{ provide: 'DB_POOL', useFactory: () => {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Configure PostgreSQL before starting the API.');
+  return new Pool({ connectionString: process.env.DATABASE_URL, max: 10, connectionTimeoutMillis: 5000 });
+} }, DatabaseService], exports: [DatabaseService] })
+export class DatabaseModule {}

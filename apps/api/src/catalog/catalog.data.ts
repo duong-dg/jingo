@@ -11,6 +11,7 @@ export interface Product {
   destination: string;
   type: 'TICKET' | 'TOUR';
   description: string;
+  demo?: boolean;
   variants: Variant[];
 }
 

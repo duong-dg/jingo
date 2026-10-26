@@ -9,8 +9,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   const document = SwaggerModule.createDocument(app, new DocumentBuilder()
-    .setTitle('JinGo API').setDescription('Development foundation — sample catalog and pricing only.')
-    .setVersion('0.1.0').build());
+    .setTitle('JinGo API').setDescription('Catalog, calendar pricing and authenticated product administration. Ordering and payments are not enabled.')
+    .setVersion('0.2.0').build());
   if (process.env.NODE_ENV !== 'production') SwaggerModule.setup('api/docs', app, document);
   await app.listen(Number(process.env.PORT || 4000), '0.0.0.0');
 }

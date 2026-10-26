@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <nav aria-label="Điều hướng chính"><Link href="/#experiences">Vé & trải nghiệm</Link><Link href="/#local">Tour địa phương</Link><Link href="/cam-nang">Cẩm nang</Link></nav>
       <span className="header-note">Đi gần hơn. Trải nghiệm nhiều hơn.</span>
     </header>
-    <div className="demo-banner">Bản phát triển · Sản phẩm và giá minh họa · Chưa nhận đặt vé hoặc thanh toán</div>
+    <div className="demo-banner">Bản phát triển · Chưa nhận đặt vé hoặc thanh toán</div>
     {children}
     <footer><Link className="logo" href="/">jin<span>go</span>↗</Link><p>Những hành trình đáng nhớ, bắt đầu từ đây.</p><small>JinGo · Nền tảng đang phát triển</small></footer>
   </body></html>;
