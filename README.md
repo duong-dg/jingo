@@ -1,6 +1,22 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Đã có đăng nhập admin, dữ liệu PostgreSQL, gói vé, giá theo nhóm khách/lịch, khóa ngày và popup chọn vé. Đơn hàng, thanh toán, kho/giao vé, POS, công nợ và CMS blog vẫn đang phát triển; chưa nhận giao dịch thật.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.3 có yêu cầu đặt vé, tra cứu riêng, admin xác nhận nguồn vé, ghi nhận chuyển khoản thủ công và giao mã vé/voucher. Chưa có cổng thanh toán, công nợ, POS, kho file vé, hoàn tiền hoặc CMS blog.
+
+## Luồng đặt vé và xử lý đơn (0.3)
+
+1. Admin cấu hình sản phẩm thật, giá và điều kiện; bỏ chọn “Sản phẩm minh họa” khi sẵn sàng nhận yêu cầu. Vé mẫu không nhận đơn kể cả gọi API trực tiếp.
+2. Khách chọn ngày/gói/nhóm khách, điền liên hệ và gửi yêu cầu. Server tính lại giá, kiểm tra ngày khóa, ngày đã qua và sản phẩm xuất bản. Đây là yêu cầu chờ kiểm tra, không giữ tồn/chỗ tự động.
+3. Khách nhận mã đơn và link tra cứu có khóa riêng. Khóa nằm trong fragment URL, không gửi trong query string/log request; API chỉ lưu hash. Khách cần lưu link, chưa có gửi email/SMS tự động hoặc khôi phục khóa bằng OTP.
+4. Vào `/admin/don-hang`, mở đơn, xác nhận sau khi có nguồn vé/chỗ. Nhập hướng dẫn công khai cho khách gồm quyền lợi, chính sách áp dụng và thông tin chuyển khoản thực tế; ghi chú nội bộ được lưu riêng.
+5. Đối chiếu ngân hàng, nhập đúng tổng tiền và mã giao dịch để xác nhận thu đủ tiền. Đây là ghi sổ thủ công, không phải API ngân hàng. Chưa hỗ trợ thiếu/thừa tiền hoặc nhiều lần thanh toán. Mã giao dịch không được dùng lại cho đơn khác.
+6. Giao từng mã nhà cung cấp hoặc voucher tour, nhập số khách mã đó áp dụng và hướng dẫn. Có thể giao từng phần; tổng số khách đã giao không vượt đơn. Mã vé đã giao không được cấp trùng. Khách bấm cập nhật trên trang tra cứu để nhận mã.
+7. Chỉ hủy trực tiếp yêu cầu chưa thu tiền. Đơn đã thu tiền cần quy trình hoàn tiền riêng, hiện thao tác hủy bị chặn để không làm mất dấu khoản thu.
+
+Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau không thay đổi đơn cũ. Phiên bản đơn chống ghi đè, request ID chống tạo đơn/ghi thu/giao vé trùng khi retry; sổ thu, thao tác và audit cập nhật trong transaction. Trình duyệt lưu khóa idempotency và hash payload trong sessionStorage để retry sau lỗi mạng, không lưu thông tin liên hệ trong cache này.
+
+Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có file PDF/ảnh, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
+
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.3.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
@@ -28,7 +44,7 @@ docker compose logs --tail=80 api
 
 Mở `https://your-domain.example/admin`, đăng nhập bằng tài khoản đã thiết lập. API tự tạo bảng và nhập ba sản phẩm mẫu một lần; khởi động lại không ghi đè dữ liệu đã sửa. Có thể chuyển sản phẩm mẫu sang nháp và tạo sản phẩm thật. Nếu gặp lỗi nguồn yêu cầu, kiểm tra PUBLIC_BASE_URL và recreate API bằng `docker compose up -d`.
 
-Admin hiện hỗ trợ: tạo/sửa/ẩn sản phẩm, hạng vé và giá từng nhóm, điều kiện tuổi/chiều cao, lịch giá và ngày khóa, xem giá đã lưu cho sản phẩm xuất bản, SEO cơ bản, lưu nháp bản dịch tiếng Anh. Chưa có upload ảnh, blog, đơn hàng hoặc quản lý nhiều nhân viên.
+Admin hỗ trợ sản phẩm/giá/lịch khóa/SEO/bản dịch nháp và quản lý đơn tại `/admin/don-hang`. Chưa có upload ảnh, blog, POS hoặc quản lý nhiều nhân viên.
 
 Sau triển khai, kiểm tra đăng nhập, lưu giá, tải lại trang, chặn ngày khóa và restart API để xác minh dữ liệu còn nguyên.
 
@@ -80,7 +96,7 @@ npm run build
 
 Compose mặc định chỉ publish web ở loopback 3100, không chiếm 80/443 của JinHunt, không public database/Redis. API chỉ bắt đầu phục vụ sau khi khởi tạo database thành công; `/health` phản ánh tiến trình sống, chưa theo dõi DB mất kết nối sau khởi động. Các giới hạn RAM là mức khởi đầu, cần đo khi chạy cùng JinHunt.
 
-Image nền hiện chứa cả ba workspace và công cụ build để đơn giản giai đoạn đầu. Trước production thật sẽ tách image gọn, build trên CI và deploy theo tag cố định. Không mở nhận thanh toán trước khi hoàn thành booking, payment, kho vé, backup và kiểm tra bảo mật.
+Image nền hiện chứa cả ba workspace và công cụ build để đơn giản giai đoạn đầu. Trước vận hành rộng sẽ tách image gọn, build trên CI và deploy theo tag cố định. Luồng hiện tại cần người vận hành kiểm tra nguồn vé, ngân hàng và mã đã giao; chuẩn bị backup, kiểm tra bảo mật và chạy thử PostgreSQL thật trước khi dùng dữ liệu kinh doanh.
 
 ## Sao lưu
 

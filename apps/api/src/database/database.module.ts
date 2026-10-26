@@ -13,6 +13,25 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS jingo_sessions (token_hash text PRIMARY KEY, admin_id text NOT NULL REFERENCES jingo_admins(id), expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_sessions_expiry ON jingo_sessions(expires_at);
       CREATE TABLE IF NOT EXISTS jingo_audit (id text PRIMARY KEY, admin_id text NOT NULL, action text NOT NULL, entity_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_orders (
+        id text PRIMARY KEY, code text NOT NULL UNIQUE, request_id text NOT NULL UNIQUE, request_hash text NOT NULL,
+        access_hash text NOT NULL, snapshot jsonb NOT NULL, contact jsonb NOT NULL,
+        booking_status text NOT NULL DEFAULT 'REQUESTED', payment_status text NOT NULL DEFAULT 'UNPAID', instructions text NOT NULL DEFAULT '',
+        version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS jingo_orders_created ON jingo_orders(created_at);
+      CREATE TABLE IF NOT EXISTS jingo_order_payments (
+        id text PRIMARY KEY, order_id text NOT NULL UNIQUE REFERENCES jingo_orders(id), amount bigint NOT NULL,
+        reference text NOT NULL UNIQUE, admin_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS jingo_order_tickets (
+        id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), code text NOT NULL, code_hash text NOT NULL UNIQUE,
+        kind text NOT NULL, covers integer NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS jingo_order_actions (
+        id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), request_hash text NOT NULL,
+        admin_id text NOT NULL, action text NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+      );
     `);
     // One-time sample import. Existing edits and drafts are never overwritten on restart.
     const seeded = await this.pool.query("SELECT id FROM jingo_migrations WHERE id = '001_catalog_seed'");

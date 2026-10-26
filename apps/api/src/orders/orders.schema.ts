@@ -1,0 +1,20 @@
+import { z } from 'zod';
+const quantity = z.number().int().min(0).max(50);
+export const orderInput = z.object({
+  requestId: z.uuid(), accessKey: z.string().regex(/^[a-f0-9]{64}$/),
+  productId: z.string().min(1).max(80), variantId: z.string().min(1).max(80), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  quantities: z.object({ ADULT: quantity.optional(), CHILD: quantity.optional(), SENIOR: quantity.optional() }).strict(),
+  expectedTotal: z.number().int().min(0).max(15_000_000_000),
+  contact: z.object({ name: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9 ()-]{8,25}$/).refine(value=>{const length=value.replace(/\D/g,'').length;return length>=8&&length<=15;},'Số điện thoại cần 8–15 chữ số'), email: z.email().max(200).optional(), note: z.string().trim().max(1000).default('') }).strict(),
+  accepted: z.literal(true)
+}).strict();
+export const lookupInput = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
+const base = { requestId: z.uuid(), version: z.number().int().min(1), note: z.string().trim().min(1).max(1000) };
+export const actionInput = z.discriminatedUnion('action', [
+  z.object({ ...base, action: z.literal('CONFIRM'), instructions: z.string().trim().min(10).max(4000) }).strict(),
+  z.object({ ...base, action: z.literal('CANCEL') }).strict(),
+  z.object({ ...base, action: z.literal('PAY'), amount: z.number().int().min(0).max(15_000_000_000), reference: z.string().trim().min(1).max(200) }).strict(),
+  z.object({ ...base, action: z.literal('DELIVER'), tickets: z.array(z.object({ code: z.string().trim().min(1).max(2000), kind: z.enum(['SUPPLIER_CODE','TOUR_VOUCHER']), covers: z.number().int().min(1).max(150), note: z.string().trim().max(1000).default('') }).strict()).min(1).max(150) }).strict()
+]);
+export type OrderInput = z.infer<typeof orderInput>;
+export type ActionInput = z.infer<typeof actionInput>;

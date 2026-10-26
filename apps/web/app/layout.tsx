@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SkipLink } from './skip-link';
 import './styles.css';
 
 export const metadata: Metadata = {
@@ -10,13 +11,13 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="vi"><body>
-    <a className="skip-link" href="#main">Đến nội dung</a>
+    <SkipLink/>
     <header className="header"><Link className="logo" href="/">jin<span>go</span><i>↗</i></Link>
       <nav aria-label="Điều hướng chính"><Link href="/#experiences">Vé & trải nghiệm</Link><Link href="/#local">Tour địa phương</Link><Link href="/cam-nang">Cẩm nang</Link></nav>
       <span className="header-note">Đi gần hơn. Trải nghiệm nhiều hơn.</span>
     </header>
-    <div className="demo-banner">Bản phát triển · Chưa nhận đặt vé hoặc thanh toán</div>
+    <div className="demo-banner">Đặt theo yêu cầu · JinGo xác nhận nguồn vé trước khi hướng dẫn thanh toán</div>
     {children}
-    <footer><Link className="logo" href="/">jin<span>go</span>↗</Link><p>Những hành trình đáng nhớ, bắt đầu từ đây.</p><small>JinGo · Nền tảng đang phát triển</small></footer>
+    <footer><Link className="logo" href="/">jin<span>go</span>↗</Link><p>Những hành trình đáng nhớ, bắt đầu từ đây.</p><Link href="/tra-cuu">Tra cứu đơn hàng ↗</Link><small>JinGo · Nền tảng đang phát triển</small></footer>
   </body></html>;
 }

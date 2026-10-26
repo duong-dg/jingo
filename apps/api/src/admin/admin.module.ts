@@ -23,5 +23,5 @@ class AdminController {
     return { data: await this.catalog.save(body, admin.id) };
   }
 }
-@Module({ imports: [CatalogModule], providers: [AuthService], controllers: [AdminController] })
+@Module({ imports: [CatalogModule], providers: [AuthService], controllers: [AdminController], exports: [AuthService] })
 export class AdminModule {}
