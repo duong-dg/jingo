@@ -1,3 +1,4 @@
+import{checkSchedule}from'./schedule';
 import { CustomerType, Product } from '../catalog/catalog.data';
 
 export interface PriceRule {
@@ -26,11 +27,11 @@ export function validateDate(value: string): void {
 export function calculateQuote(
   product: Product, variantId: string, date: string,
   quantities: Partial<Record<CustomerType, number>>,
-  rules: PriceRule[] = [], closures: Closure[] = []
+  rules: PriceRule[] = [], closures: Closure[] = [],slotId?:string,now=Date.now()
 ) {
   validateDate(date);
   const variant = product.variants.find((item) => item.id === variantId);
-  if (!variant) throw new Error('Gói vé không tồn tại.');
+  if (!variant) throw new Error('Gói vé không tồn tại.');const timeSlot=checkSchedule(variant,date,slotId,now);
   if (closures.some((item) => item.productId === product.id && (!item.variantId || item.variantId === variantId)
     && item.startDate <= date && date <= item.endDate)) throw new Error('Ngày này đã khóa bán.');
   const weekday = new Date(`${date}T00:00:00Z`).getUTCDay() || 7;
@@ -52,5 +53,5 @@ export function calculateQuote(
   }).filter((line) => line !== null);
   const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
   if (!Number.isSafeInteger(total)) throw new Error('Tổng tiền vượt giới hạn.');
-  return { productId: product.id, productName:product.name, variantId, variantName:variant.name, date, currency: 'VND', lines, total, demo: product.demo ?? true };
+  return { productId: product.id, productName:product.name, variantId, variantName:variant.name, date,...(timeSlot?{timeSlot}:{}), currency: 'VND', lines, total, demo: product.demo ?? true };
 }

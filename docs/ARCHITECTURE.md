@@ -6,7 +6,7 @@ Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một reposi
 
 ## Trạng thái hiện tại (0.4)
 
-- Web tiếng Việt responsive: danh mục, popup chọn vé, checkout yêu cầu đặt và tra cứu bằng mã + khóa riêng. Chưa có giỏ hàng hoặc cổng thanh toán.
+- Web tiếng Việt responsive: danh mục, chọn vé trực tiếp trên trang, checkout yêu cầu đặt và tra cứu bằng mã + khóa riêng. Chưa có giỏ hàng hoặc cổng thanh toán.
 - Admin /admin: login/logout cookie HttpOnly, phiên hash PostgreSQL hết hạn 8 giờ, giới hạn đăng nhập sai, kiểm tra nguồn mutation và header chống CSRF. Chủ tài khoản tạo qua env, mật khẩu scrypt; chưa có quản lý nhiều vai trò.
 - PostgreSQL: product config JSONB, slug unique, version optimistic locking, audit cùng transaction, bảng admin/session và migration marker. Giá/lịch/khóa lưu trong product document để cập nhật nguyên tử; booking, inventory và ledger sau này cần bảng quan hệ riêng.
 - Admin tạo/sửa/nháp/xuất bản sản phẩm, gói và nhóm giá, điều kiện khách, SEO, lịch giá, ngày khóa và nháp tiếng Anh. Ngày khóa chặn cả endpoint rates lẫn quotes.
@@ -71,4 +71,10 @@ Phiên bản 0.6 triển khai tiếng Việt ở URL cũ, tiếng Anh ở /en. N
 - Checkout/lookup có giao diện English; đơn lưu locale và snapshot tên/điều kiện/chính sách. Mã vé và hướng dẫn thủ công không tự dịch. CTV/admin vẫn Việt.
 - Chưa có dịch máy, slug riêng mỗi locale, thêm ngôn ngữ qua admin, bản dịch voucher/email hoặc dịch các trang chính sách tùy chỉnh. Có thể bổ sung sau; chưa có phí API dịch.
 
-Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, POS, cổng thanh toán và thông báo tự động; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.
+Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, POS, cổng thanh toán và thông báo SMS/push; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.
+
+## Cập nhật 0.7
+
+Gói vé có timeSlots tùy chọn, dùng ngày đặt + giờ bắt đầu GMT+7 để kiểm tra cutoff tại cùng hàm báo giá cho khách/CTV và lúc tạo đơn. Snapshot giữ suất giờ độc lập với thay đổi lịch sau này. Email mới bắt buộc; đơn cũ không bị cập nhật ngược.
+
+SMTP trong admin, bí mật AES-256-GCM với khóa file ẩn trong volume media. Outbox PostgreSQL cùng transaction đơn, API polling mỗi 10 giây, claim FOR UPDATE SKIP LOCKED và lease 2 phút; retry tối đa 5 lần rồi admin có thể đưa lại vào hàng đợi. Gửi theo at-least-once, có thể trùng email nếu SMTP nhận rồi tiến trình chết trước khi ghi SENT. Không dùng thông báo email làm căn cứ thu tiền/giữ chỗ. Sao lưu cả DB và volume gồm .smtp-key.

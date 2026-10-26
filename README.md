@@ -1,7 +1,20 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.6 thêm website Việt–Anh và trung tâm bản dịch; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.7 thêm chọn vé trực tiếp, suất giờ, email khách bắt buộc và cấu hình SMTP; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
 
+
+## Chọn vé, suất giờ và email (0.7)
+
+- Trang vé hiện sẵn ngày, gói, giá người lớn/trẻ em/người cao tuổi và số lượng; không cần mở popup. Menu website sticky, giảm hiệu ứng rê chuột. Admin dùng menu trái trên desktop, menu thu gọn trên điện thoại; không còn hàng tab phân hệ phía trên.
+- Admin > Sản phẩm > Gói & giá: thêm tối đa 30 suất giờ cho mỗi gói, có giờ bắt đầu và kết thúc tùy chọn. Để trống là dùng cả ngày. Suất lặp theo ngày sử dụng; ngày khóa/lịch giá vẫn áp dụng như cũ. Chưa cấu hình suất riêng từng thứ hoặc chuyến qua đêm.
+- Tới đúng giờ bắt đầu (Asia/Ho_Chi_Minh, GMT+7), server chặn báo giá/tạo đơn mới cho suất đó, cả khách lẻ và CTV. Client kiểm tra lại mỗi 15 giây; kiểm tra server lúc tạo đơn là quyết định cuối. Ngày/gói/giờ được lưu cùng snapshot đơn, sửa lịch không đổi đơn cũ.
+- Email khách bắt buộc ở form và API đặt vé; CTV dùng email tài khoản của họ. Đơn cũ không có email vẫn xem/xử lý được. Tab English cũ trong sản phẩm/bài viết có trình dịch trực tiếp, đồng bộ cùng trung tâm /admin/ban-dich; lưu nguồn trước khi dịch.
+- /admin/smtp: điền máy chủ, cổng, TLS/STARTTLS, tài khoản, mật khẩu ứng dụng, tên và email gửi. Lưu rồi gửi thử đến địa chỉ của bạn; chỉ bật tự động khi đã kiểm tra. Không có thông tin SMTP hoặc dịch vụ email mặc định.
+- Email bán lẻ được đưa vào outbox trong cùng transaction với tạo đơn/xác nhận/ghi thu/giao vé/hủy, chứa link tra cứu riêng để khách xem tình trạng và vé mới nhất. Gửi ở API qua bộ xử lý định kỳ 10 giây, không phụ thuộc worker Redis. Lỗi SMTP không làm mất đơn. Đơn CTV không tự gửi giá nhập ra email khách; CTV tiếp tục chia sẻ link nhận vé riêng.
+- Outbox tự thử lại với khoảng chờ tăng dần, tối đa 5 lần; admin xem trạng thái và bấm gửi lại nếu thất bại. SENT nghĩa SMTP đã chấp nhận, không đảm bảo vào hộp thư đến. Nếu tiến trình chết sau khi SMTP nhận trước khi đánh dấu SENT, có thể nhận thư trùng; mã đơn/Message-ID giữ nguyên, không phát sinh thu tiền hoặc vé trùng.
+- Mật khẩu SMTP và khóa tra cứu cần dùng cho email được mã hóa AES-256-GCM trong DB. Khóa mã hóa nằm ở file ẩn MEDIA_DIR/.smtp-key trong volume ảnh. Sao lưu cả database và toàn bộ volume, gồm file ẩn này; mất khóa thì không giải mã được SMTP/link cũ. Không đưa file này vào Git hoặc thư viện ảnh công khai. Đơn có trước bản 0.7 chưa lưu khóa email sẽ không được tự gửi link qua email.
+
+Bộ test SMTP dùng transport giả, không gửi mail tới người thật. Cần kiểm tra SMTP thật, DNS SPF/DKIM và kết nối cổng gửi trên Ubuntu sau triển khai. Chưa kiểm tra tranh chấp hàng đợi trên PostgreSQL thật tại máy phát triển; bộ test dùng pg-mem với khóa mô phỏng.
 
 ## Việt–Anh và trung tâm bản dịch (0.6)
 
@@ -29,7 +42,7 @@ Tài khoản tạm dừng vẫn xem đơn/nợ nhưng không đặt mới hoặc
 
 Khóa dòng tài khoản và transaction bảo vệ hạn mức; request ID chống ghi nợ/trả nợ lặp. Bản cập nhật tự bổ sung bảng và nhập mã giao dịch cũ vào danh mục chống trùng, không đặt lại sản phẩm/đơn/ảnh. Tổng thu ở màn hình đơn chỉ tính đơn thanh toán trực tiếp trong danh sách, chưa phải báo cáo hợp nhất cả tiền trả nợ.
 
-Kiểm thử local gồm 12 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
+Kiểm thử local gồm 14 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
 
 ```bash
 JINGO_TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/jingo_credit_test npm run test:credit-postgres -w @jingo/api
@@ -53,13 +66,13 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.6.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.7.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
 1. Admin cấu hình sản phẩm thật, giá và điều kiện; bỏ chọn “Sản phẩm minh họa” khi sẵn sàng nhận yêu cầu. Vé mẫu không nhận đơn kể cả gọi API trực tiếp.
 2. Khách chọn ngày/gói/nhóm khách, điền liên hệ và gửi yêu cầu. Server tính lại giá, kiểm tra ngày khóa, ngày đã qua và sản phẩm xuất bản. Đây là yêu cầu chờ kiểm tra, không giữ tồn/chỗ tự động.
-3. Khách nhận mã đơn và link tra cứu có khóa riêng. Khóa nằm trong fragment URL, không gửi trong query string/log request; API chỉ lưu hash. Khách cần lưu link, chưa có gửi email/SMS tự động hoặc khôi phục khóa bằng OTP.
+3. Khách nhận mã đơn và link tra cứu có khóa riêng. Khóa nằm trong fragment URL, không gửi trong query string/log request; API kiểm tra bằng hash; từ bản 0.7 có thêm bản sao khóa đã mã hóa để gửi email giao dịch khi bật SMTP. Khách cần lưu link; chưa có SMS hoặc khôi phục khóa bằng OTP.
 4. Vào `/admin/don-hang`, mở đơn, xác nhận sau khi có nguồn vé/chỗ. Nhập hướng dẫn công khai cho khách gồm quyền lợi, chính sách áp dụng và thông tin chuyển khoản thực tế; ghi chú nội bộ được lưu riêng.
 5. Đối chiếu ngân hàng, nhập đúng tổng tiền và mã giao dịch để xác nhận thu đủ tiền. Đây là ghi sổ thủ công, không phải API ngân hàng. Chưa hỗ trợ thiếu/thừa tiền hoặc nhiều lần thanh toán. Mã giao dịch không được dùng lại cho đơn khác.
 6. Giao từng mã nhà cung cấp hoặc voucher tour, nhập số khách mã đó áp dụng và hướng dẫn. Có thể giao từng phần; tổng số khách đã giao không vượt đơn. Mã vé đã giao không được cấp trùng. Khách bấm cập nhật trên trang tra cứu để nhận mã.
@@ -67,9 +80,9 @@ Sau cập nhật, health phải hiện `0.6.0`. Không có dữ liệu mẫu m�
 
 Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau không thay đổi đơn cũ. Phiên bản đơn chống ghi đè, request ID chống tạo đơn/ghi thu/giao vé trùng khi retry; sổ thu, thao tác và audit cập nhật trong transaction. Trình duyệt lưu khóa idempotency và hash payload trong sessionStorage để retry sau lỗi mạng, không lưu thông tin liên hệ trong cache này.
 
-Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
+Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.6.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.7.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 

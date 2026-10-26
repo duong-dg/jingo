@@ -9,5 +9,5 @@ export function applyNetPricing(retail:ReturnType<typeof calculateQuote>,group:P
     const unitPrice=rules[0]?.amount??(group.discountType==='AMOUNT'?Math.max(0,line.unitPrice-group.discountValue):Math.floor(line.unitPrice*(10000-group.discountValue)/10000));
     return{customerType:line.customerType,quantity:line.quantity,unitPrice,subtotal:unitPrice*line.quantity};
   });
-  return{productId:retail.productId,productName:retail.productName,variantId:retail.variantId,variantName:retail.variantName,date:retail.date,currency:retail.currency,demo:retail.demo,lines,total:lines.reduce((sum,line)=>sum+line.subtotal,0)};
+  return{...(retail.timeSlot?{timeSlot:retail.timeSlot}:{}),productId:retail.productId,productName:retail.productName,variantId:retail.variantId,variantName:retail.variantName,date:retail.date,currency:retail.currency,demo:retail.demo,lines,total:lines.reduce((sum,line)=>sum+line.subtotal,0)};
 }

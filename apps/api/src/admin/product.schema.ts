@@ -1,3 +1,4 @@
+import{slotSchema}from'../pricing/schedule';
 import {translationState} from '../content/translations';
 import { z } from 'zod';
 import { validateDate } from '../pricing/pricing';
@@ -16,7 +17,7 @@ export const productSchema = z.object({
   name: text.min(1).max(200), destination: text.min(1).max(150), type: id, description: text,
   cover:imageRef.nullable().default(null),gallery:z.array(imageRef).max(20).default([]),detailHtml:z.string().max(200000).default(''),
   status: z.enum(['DRAFT', 'PUBLISHED']), demo: z.boolean().default(false), version: z.number().int().min(0),
-  variants: z.array(z.object({ id, name: text.min(1).max(100), prices,
+  variants: z.array(z.object({ id, name: text.min(1).max(100), prices,timeSlots:z.array(slotSchema).max(30).default([]),
     conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional() }).strict().optional()
   }).strict()).min(1).max(30),
   rules: z.array(rule).max(1000).default([]), closures: z.array(closure).max(500).default([]),
@@ -26,6 +27,7 @@ export const productSchema = z.object({
   const fail = (message: string) => ctx.addIssue({ code: 'custom', message });
   if (new Set(product.variants.map(v => v.id)).size !== product.variants.length) fail('Mã gói vé bị trùng.');
   if (new Set(product.rules.map(r => r.id)).size !== product.rules.length) fail('Mã lịch giá bị trùng.');
+  for(const variant of product.variants){if(new Set(variant.timeSlots.map(s=>s.id)).size!==variant.timeSlots.length||new Set(variant.timeSlots.map(s=>s.start)).size!==variant.timeSlots.length)fail('Khung giờ bị trùng mã hoặc giờ bắt đầu.');}
   for (const variant of product.variants) if (!Object.values(variant.prices).some(p => p !== undefined)) fail(`Gói ${variant.name} cần ít nhất một giá.`);
   for (const item of [...product.rules, ...product.closures]) {
     if (item.productId !== product.id) fail('Lịch phải thuộc sản phẩm đang sửa.');

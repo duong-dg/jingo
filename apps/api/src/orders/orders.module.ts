@@ -1,3 +1,4 @@
+import{MailModule}from'../mail/mail.module';
 import { BadRequestException, Body, Controller, Get, Module, Param, Post, Req, Res, HttpException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
@@ -26,5 +27,5 @@ class AdminOrdersController {
   @Get(':id') async get(@Param('id') id: string, @Req() req: Request, @Res({ passthrough:true }) res: Response) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.orders.get(id); }
   @Post(':id/actions') async action(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req); return this.orders.act(id,parse(actionInput,body),admin.id); }
 }
-@Module({ imports:[AdminModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService],exports:[OrdersService] })
+@Module({ imports:[AdminModule,MailModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService],exports:[OrdersService] })
 export class OrdersModule {}

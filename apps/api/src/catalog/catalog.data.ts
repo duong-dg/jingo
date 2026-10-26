@@ -1,5 +1,5 @@
 export type CustomerType = 'ADULT' | 'CHILD' | 'SENIOR';
-export interface Variant {
+export interface Variant {timeSlots?:{id:string;start:string;end?:string}[];
   id: string;
   name: string;
   prices: Partial<Record<CustomerType, number>>;

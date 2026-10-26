@@ -1,3 +1,4 @@
+import{MailService}from'../mail/mail.module';
 import{translated,localizeProduct}from'../content/translations';
 import { BadRequestException, ConflictException, Injectable, NotFoundException,ForbiddenException } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
@@ -11,11 +12,11 @@ import{applyNetPricing}from'../partners/net-pricing';
 import{ledgerRows,creditSummary,checkCredit}from'../partners/credit';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-export interface OrderSnapshot { locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
+export interface OrderSnapshot {timeSlot?:{id:string;start:string;end?:string}; locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(private readonly db: DatabaseService,private readonly mail:MailService) {}
   async create(input: OrderInput,partnerId?:string) {
     const requestHash = hash(JSON.stringify(partnerId?{partnerId,input}:input));
     const client = await this.db.pool.connect();
@@ -35,19 +36,19 @@ export class OrdersService {
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year:'numeric',month:'2-digit',day:'2-digit' }).format(new Date());
       if (input.date < today) throw new BadRequestException('Ngày sử dụng đã qua.');
       let quote;
-      try { quote = calculateQuote(product, input.variantId, input.date, input.quantities, product.rules, product.closures); }
+      try { quote = calculateQuote(product, input.variantId, input.date, input.quantities, product.rules, product.closures,input.slotId); }
       catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
       if(group)quote=applyNetPricing(quote,group);
       if (quote.total !== input.expectedTotal) throw new ConflictException('Giá vừa thay đổi. Vui lòng kiểm tra giá mới trước khi gửi.');
       if(input.locale==='en'&&!translated('PRODUCT',product))throw new ConflictException('English content has changed. Please refresh before booking.');const view=input.locale==='en'?localizeProduct(product):product;const variant = view.variants.find((v:{id:string}) => v.id === input.variantId)!;
-      const snapshot: OrderSnapshot = { productId: product.id, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
+      const snapshot: OrderSnapshot = {...(quote.timeSlot?{timeSlot:quote.timeSlot}:{}), productId: product.id, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
         total: quote.total, lines: quote.lines, demo: false, conditions: variant.conditions || {},
         policy: input.locale==='en'?'Booking requests require JinGo to confirm supplier availability. No reservation or ticket is guaranteed yet. Only pay after JinGo confirms and provides instructions and the applicable cancellation terms.':'Yêu cầu đặt cần JinGo xác nhận nguồn vé/chỗ. Chưa giữ chỗ hoặc bảo đảm có vé. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp hướng dẫn. Chính sách đổi/hủy do JinGo xác nhận với nhà cung cấp trước khi bạn thanh toán.' };
       const code = 'JG' + randomBytes(5).toString('hex').toUpperCase();
       const id=randomUUID();
       await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact) VALUES ($1,$2,$3,$4,$5,$6,$7)',
         [id, code, input.requestId, requestHash, hash(input.accessKey), JSON.stringify(snapshot),JSON.stringify(input.contact)]);
-      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);
+      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,input.accessKey);await this.mail.enqueue(client,id,'CREATED',1);}
       await client.query('COMMIT'); return { code, accessKey: input.accessKey };
     } catch (e) {
       await client.query('ROLLBACK');
@@ -137,7 +138,7 @@ export class OrdersService {
       await client.query('UPDATE jingo_orders SET version=version+1 WHERE id=$1', [id]);
       await client.query('INSERT INTO jingo_order_actions(id,order_id,request_hash,admin_id,action,note) VALUES ($1,$2,$3,$4,$5,$6)', [action.requestId,id,requestHash,adminId,action.action,action.note]);
       await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id) VALUES ($1,$2,$3,$4)', [randomUUID(),adminId,`order.${action.action.toLowerCase()}`,id]);
-      await client.query('COMMIT');
+      await this.mail.enqueue(client,id,action.action,row.version+1);await client.query('COMMIT');
     } catch(e) { await client.query('ROLLBACK'); if ((e as { code?: string }).code === '23505') throw new ConflictException('Mã vé, mã giao dịch hoặc mã thao tác đã được dùng.'); throw e; }
     finally { client.release(); }
     return this.get(id);
@@ -145,5 +146,5 @@ export class OrdersService {
   async partnerList(partnerId:string){return(await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.created_at,o.version FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE p.partner_id=$1 ORDER BY o.created_at DESC LIMIT 200',[partnerId])).rows;}
   async partnerGet(id:string,partnerId:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE o.id=$1 AND p.partner_id=$2',[id,partnerId]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy đơn.');return{...await this.detail(result.rows[0],false),contact:result.rows[0].contact};}
   async createShare(id:string,partnerId:string,requestId:string,accessKey:string){const order=await this.partnerGet(id,partnerId);const previous=await this.db.pool.query('SELECT order_id,access_hash FROM jingo_partner_shares WHERE id=$1',[requestId]);if(previous.rowCount){if(previous.rows[0].order_id!==id||previous.rows[0].access_hash!==hash(accessKey))throw new ConflictException('Mã yêu cầu đã dùng.');return{code:order.code,accessKey};}try{await this.db.pool.query('INSERT INTO jingo_partner_shares(id,order_id,access_hash)VALUES($1,$2,$3)',[requestId,id,hash(accessKey)]);}catch(e){if((e as{code?:string}).code==='23505')throw new ConflictException('Mã chia sẻ đã dùng.');throw e;}return{code:order.code,accessKey};}
-  async deliveryLookup(code:string,key:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_shares s ON s.order_id=o.id WHERE o.code=$1 AND s.access_hash=$2',[code,hash(key)]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy vé.');const row=result.rows[0]as OrderRow;const detail=await this.detail(row,false);return{code:row.code,productName:row.snapshot.productName,variantName:row.snapshot.variantName,date:row.snapshot.date,bookingStatus:row.booking_status,totalGuests:detail.totalGuests,deliveredGuests:detail.deliveredGuests,tickets:detail.tickets};}
+  async deliveryLookup(code:string,key:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_shares s ON s.order_id=o.id WHERE o.code=$1 AND s.access_hash=$2',[code,hash(key)]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy vé.');const row=result.rows[0]as OrderRow;const detail=await this.detail(row,false);return{code:row.code,productName:row.snapshot.productName,variantName:row.snapshot.variantName,date:row.snapshot.date,...(row.snapshot.timeSlot?{timeSlot:row.snapshot.timeSlot}:{}),bookingStatus:row.booking_status,totalGuests:detail.totalGuests,deliveredGuests:detail.deliveredGuests,tickets:detail.tickets};}
 }

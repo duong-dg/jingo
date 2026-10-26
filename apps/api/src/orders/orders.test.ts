@@ -16,7 +16,7 @@ test('request → confirm → collect → partial/full delivery; access control 
   try{
     let res=await call('/admin/login',{email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD});assert.equal(res.status,201);cookie=res.headers.get('set-cookie')!.split(';')[0];
     const product=(await(await call('/admin/products',undefined,true)).json()).data[0];
-    const input={requestId:randomUUID(),accessKey:randomBytes(32).toString('hex'),productId:product.id,variantId:product.variants[0].id,date:'2099-06-01',quantities:{ADULT:2},expectedTotal:product.variants[0].prices.ADULT*2,contact:{name:'Test Guest',phone:'0901234567',note:''},accepted:true};
+    const input={requestId:randomUUID(),accessKey:randomBytes(32).toString('hex'),productId:product.id,variantId:product.variants[0].id,date:'2099-06-01',quantities:{ADULT:2},expectedTotal:product.variants[0].prices.ADULT*2,contact:{name:'Test Guest',phone:'0901234567',email:'guest@example.test',note:''},accepted:true};
     assert.equal((await call('/orders',input)).status,400,'demo products must not take orders');
     product.demo=false;await call('/admin/products',product,true);
     assert.equal((await call('/orders',{...input,expectedTotal:1})).status,409,'client cannot alter price');

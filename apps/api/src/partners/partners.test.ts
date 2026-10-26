@@ -18,7 +18,7 @@ test('CTV isolation, credit, repayments, global transfer references and price-fr
     assert.equal((await call('/admin/partners',undefined,aCookie)).status,401);assert.equal((await call('/admin/price-groups',undefined,aCookie)).status,401);
     const catalog=(await(await call('/partner/products',undefined,aCookie)).json()).data;const p=catalog.find((p:{id:string})=>p.id===product.id);assert.equal(p.variants[0].prices,undefined);assert.equal(p.rules,undefined);
     const selection={productId:product.id,variantId:product.variants[0].id,date:'2099-06-01',quantities:{ADULT:1}};res=await call('/partner/quotes',selection,aCookie);assert.equal(res.status,201);const quoted=await res.json();assert.equal(quoted.total,90000);assert.equal(quoted.unitPrices.ADULT,90000);for(const customer of p.variants[0].customerTypes)assert.equal(typeof quoted.unitPrices[customer],'number');
-    const input={...selection,requestId:randomUUID(),accessKey:secret(),expectedTotal:90000,contact:{name:'CTV Contact',phone:'0901234567',note:''},accepted:true};
+    const input={...selection,requestId:randomUUID(),accessKey:secret(),expectedTotal:90000,contact:{name:'CTV Contact',phone:'0901234567',email:'guest@example.test',note:''},accepted:true};
     assert.equal((await call('/orders',{...input,requestId:randomUUID()})).status,409,'public customers cannot use CTV prices');
     assert.equal((await call('/partner/orders',{...input,groupId:group.id},aCookie)).status,400);
     res=await call('/partner/orders',input,aCookie);assert.equal(res.status,201);const created=await res.json();assert.equal((await(await call('/partner/orders',input,aCookie)).json()).code,created.code);

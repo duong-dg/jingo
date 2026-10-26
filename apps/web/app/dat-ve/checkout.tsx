@@ -3,13 +3,13 @@ import { useLocale } from '../components/locale-context';
 import { translator, localizedPath, dateLocale, errorText } from '../../lib/i18n';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-type Selection = {
+type Selection = {slotId?:string;
     productId: string;
     variantId: string;
     date: string;
     quantities: Record<string, number>;
 };
-type Quote = {
+type Quote = {timeSlot?:{start:string;end?:string};
     productName: string;
     variantName: string;
     total: number;
@@ -54,7 +54,7 @@ export function Checkout({ selection }: {
             setError('');
             const email = String(form.get('email') || '').trim();
             try {
-                const payload = { ...selection, ...(locale === 'en' ? { locale } : {}), expectedTotal: quote.total, contact: { name: String(form.get('name')).trim(), phone: String(form.get('phone')).trim(), ...(email ? { email } : {}), note: String(form.get('note')).trim() }, accepted: true };
+                const payload = { ...selection, ...(locale === 'en' ? { locale } : {}), expectedTotal: quote.total, contact: { name: String(form.get('name')).trim(), phone: String(form.get('phone')).trim(), email, note: String(form.get('note')).trim() }, accepted: true };
                 const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(payload)));
                 const fingerprint = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
                 const storageKey = 'jingo-pending:' + selection.productId + ':' + selection.variantId + ':' + selection.date;
@@ -80,5 +80,5 @@ export function Checkout({ selection }: {
                 setError(errorText((err as Error).message, locale));
                 setBusy(false);
             }
-        }}><fieldset disabled={busy || !quote || quote.demo}><label>{t("Họ và tên")}<input name="name" autoComplete="name" required minLength={2} maxLength={100}/></label><label>{t("Số điện thoại")}<input name="phone" type="tel" autoComplete="tel" required pattern="\+?[0-9 \(\)\-]{8,25}" maxLength={25}/></label><label>{t("Email (không bắt buộc)")}<input name="email" type="email" autoComplete="email" maxLength={200}/></label><label>{t("Ghi chú")}<textarea name="note" rows={3} maxLength={1000} placeholder={t("Điểm đón hoặc yêu cầu cần trao đổi…")}/></label><label className="order-consent"><input type="checkbox" required/>{t("Tôi hiểu đây là yêu cầu chờ xác nhận, chưa giữ chỗ. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp chính sách áp dụng.")}</label><button className="button" disabled={!identity || busy}>{busy ? t("Đang gửi yêu cầu…") : t("Gửi yêu cầu đặt vé ↗")}</button></fieldset></form>{error && <div className="order-error" role="alert">{error}<br /><button type="button" className="text-link" onClick={() => window.location.reload()}>{t("Tải lại giá")}</button></div>}</section><aside className="order-card order-summary"><p className="eyebrow">{t("LỰA CHỌN CỦA BẠN")}</p><h2>{quote?.productName || t("Chi tiết giá")}</h2><p>{quote?.variantName}</p><p>{t("Ngày sử dụng:")} <strong>{selection.date}</strong></p>{quote ? <>{quote.lines.map(line => <div className="order-price-row" key={line.customerType}><span>{line.quantity} × {t(labels[line.customerType])}<small>{money(line.unitPrice)}{t(" / khách")}</small></span><strong>{money(line.subtotal)}</strong></div>)}<div className="order-grand-total"><span>{t("Tổng tiền")}</span><strong>{money(quote.total)}</strong></div>{quote.demo && <p className="order-error">{t("Sản phẩm minh họa chưa nhận đơn. Quản trị cần thiết lập sản phẩm thật trước khi mở bán.")}</p>}</> : <p>{t("Đang kiểm tra giá…")}</p>}<div className="order-info">{t("Chưa thu tiền tại bước này. JinGo kiểm tra lại với đối tác trước khi xác nhận yêu cầu của bạn.")}</div></aside></div></main>;
+        }}><fieldset disabled={busy || !quote || quote.demo}><label>{t("Họ và tên")}<input name="name" autoComplete="name" required minLength={2} maxLength={100}/></label><label>{t("Số điện thoại")}<input name="phone" type="tel" autoComplete="tel" required pattern="\+?[0-9 \(\)\-]{8,25}" maxLength={25}/></label><label>{(locale==='en'?'Email (required)':'Email (bắt buộc)')}<input name="email" required type="email" autoComplete="email" maxLength={200}/></label><label>{t("Ghi chú")}<textarea name="note" rows={3} maxLength={1000} placeholder={t("Điểm đón hoặc yêu cầu cần trao đổi…")}/></label><label className="order-consent"><input type="checkbox" required/>{t("Tôi hiểu đây là yêu cầu chờ xác nhận, chưa giữ chỗ. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp chính sách áp dụng.")}</label><button className="button" disabled={!identity || busy}>{busy ? t("Đang gửi yêu cầu…") : t("Gửi yêu cầu đặt vé ↗")}</button></fieldset></form>{error && <div className="order-error" role="alert">{error}<br /><button type="button" className="text-link" onClick={() => window.location.reload()}>{t("Tải lại giá")}</button></div>}</section><aside className="order-card order-summary"><p className="eyebrow">{t("LỰA CHỌN CỦA BẠN")}</p><h2>{quote?.productName || t("Chi tiết giá")}</h2><p>{quote?.variantName}</p>{quote?.timeSlot&&<p>{locale==='en'?'Visit time':'Giờ sử dụng'}: {quote.timeSlot.start}{quote.timeSlot.end?' – '+quote.timeSlot.end:''} (GMT+7)</p>}<p>{t("Ngày sử dụng:")} <strong>{selection.date}</strong></p>{quote ? <>{quote.lines.map(line => <div className="order-price-row" key={line.customerType}><span>{line.quantity} × {t(labels[line.customerType])}<small>{money(line.unitPrice)}{t(" / khách")}</small></span><strong>{money(line.subtotal)}</strong></div>)}<div className="order-grand-total"><span>{t("Tổng tiền")}</span><strong>{money(quote.total)}</strong></div>{quote.demo && <p className="order-error">{t("Sản phẩm minh họa chưa nhận đơn. Quản trị cần thiết lập sản phẩm thật trước khi mở bán.")}</p>}</> : <p>{t("Đang kiểm tra giá…")}</p>}<div className="order-info">{t("Chưa thu tiền tại bước này. JinGo kiểm tra lại với đối tác trước khi xác nhận yêu cầu của bạn.")}</div></aside></div></main>;
 }

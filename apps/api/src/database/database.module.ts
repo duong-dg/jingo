@@ -7,6 +7,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject('DB_POOL') public readonly pool: Pool) {}
   async onModuleInit() {
     await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS jingo_settings(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_products (id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1, updated_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_admins (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL);
@@ -55,6 +56,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         kind text NOT NULL, amount bigint NOT NULL, reference text NOT NULL, note text NOT NULL, actor_id text NOT NULL,
         request_hash text NOT NULL, due_at timestamptz, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_order_mail_keys(order_id text PRIMARY KEY REFERENCES jingo_orders(id),secret text NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_mail_outbox(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),event text NOT NULL,status text NOT NULL DEFAULT 'PENDING',attempts integer NOT NULL DEFAULT 0,next_at timestamptz NOT NULL DEFAULT now(),last_error text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),sent_at timestamptz);
       CREATE INDEX IF NOT EXISTS jingo_partner_ledger_owner ON jingo_partner_ledger(partner_id);
     `);
     const registered=await this.pool.query("SELECT id FROM jingo_migrations WHERE id='005_payment_references'");
