@@ -26,5 +26,5 @@ class AdminOrdersController {
   @Get(':id') async get(@Param('id') id: string, @Req() req: Request, @Res({ passthrough:true }) res: Response) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.orders.get(id); }
   @Post(':id/actions') async action(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req); return this.orders.act(id,parse(actionInput,body),admin.id); }
 }
-@Module({ imports:[AdminModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService] })
+@Module({ imports:[AdminModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService],exports:[OrdersService] })
 export class OrdersModule {}

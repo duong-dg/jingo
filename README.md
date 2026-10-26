@@ -1,6 +1,28 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.4 thêm ảnh sản phẩm, thư viện ảnh, loại sản phẩm tùy chỉnh và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, công nợ, POS, kho file vé riêng tư hoặc hoàn tiền.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.5 thêm cổng cộng tác viên, nhóm giá và sổ công nợ; giữ các chức năng ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
+
+
+## Cộng tác viên và công nợ (0.5)
+
+1. Tạo nhóm giá tại /admin/nhom-gia: giảm theo phần trăm hoặc số tiền trên giá thực tế của ngày đặt. Có thể đặt giá cấp riêng theo sản phẩm, gói, người lớn/trẻ em/người cao tuổi và khoảng ngày; quy tắc ưu tiên cao nhất thay thế mức giảm mặc định, không cộng dồn.
+2. Tạo tài khoản tại /admin/ctv, gán nhóm giá và mật khẩu ban đầu ít nhất 12 ký tự. Công nợ mặc định tắt; quản trị viên tự cấp hạn mức và kỳ hạn. Không có đăng ký CTV công khai.
+3. CTV đăng nhập /ctv, chỉ thấy giá JinGo cấp, đặt yêu cầu và theo dõi đơn của mình. CTV tự quyết định giá bán lại theo thỏa thuận, hệ thống không thu hoặc lưu giá bán lại.
+4. Admin xác nhận nguồn vé. CTV có thể xác nhận dùng hạn mức; hoặc admin đối chiếu chuyển khoản rồi ghi thu đủ tiền như trước. Ghi nợ không phải khoản tiền mặt đã thu.
+5. Admin giao mã vé. CTV tạo link /nhan-ve có khóa riêng để gửi khách: chỉ có thông tin trải nghiệm và mã vé, không hiện giá cấp CTV, liên hệ hay ghi chú nội bộ. Người giữ link xem được mã vé; không đăng công khai.
+6. Admin ghi trả nợ tại sổ công nợ sau khi đối chiếu ngân hàng. Giao dịch trả nợ phân bổ khoản cũ trước, không cho trả vượt dư nợ và không tạo ví. Mã giao dịch dùng chung toàn hệ thống, không dùng lại giữa thu đơn và trả nợ.
+
+Tài khoản tạm dừng vẫn xem đơn/nợ nhưng không đặt mới hoặc ghi nợ mới; khóa tài khoản chặn đăng nhập. Đổi mật khẩu/khóa thu hồi phiên. Giảm hạn mức hoặc tắt công nợ không xóa nợ cũ. Quá hạn chặn ghi nợ mới; thời điểm đến hạn bằng thời điểm ghi nợ cộng số ngày kỳ hạn, giao diện hiển thị giờ Việt Nam. Đơn đã ghi nợ không được hủy trực tiếp; hoàn tiền/điều chỉnh nợ cần quy trình riêng chưa có trong bản này.
+
+Khóa dòng tài khoản và transaction bảo vệ hạn mức; request ID chống ghi nợ/trả nợ lặp. Bản cập nhật tự bổ sung bảng và nhập mã giao dịch cũ vào danh mục chống trùng, không đặt lại sản phẩm/đơn/ảnh. Tổng thu ở màn hình đơn chỉ tính đơn thanh toán trực tiếp trong danh sách, chưa phải báo cáo hợp nhất cả tiền trả nợ.
+
+Kiểm thử local gồm 11 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
+
+```bash
+JINGO_TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/jingo_credit_test npm run test:credit-postgres -w @jingo/api
+```
+
+Không có biến trên thì test báo SKIP. Chạy kiểm tra này và luồng đơn thử trước khi cấp công nợ thật. Chưa tích hợp POS, API kho đối tác hay cổng thanh toán tự động.
 
 ## Ảnh, loại sản phẩm và blog (0.4)
 
@@ -18,7 +40,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.4.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.5.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -34,7 +56,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.4.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.5.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 

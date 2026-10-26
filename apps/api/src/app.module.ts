@@ -5,11 +5,12 @@ import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './admin/admin.module';
 import { OrdersModule } from './orders/orders.module';
 import{PostsModule}from'./content/posts.module';
+import{PartnersModule}from'./partners/partners.module';
 
 @Controller('health')
 class HealthController {
-  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.4.0' }; }
+  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.5.0' }; }
 }
 
-@Module({ imports: [DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule], controllers: [HealthController] })
+@Module({ imports: [DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule], controllers: [HealthController] })
 export class AppModule {}

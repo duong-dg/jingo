@@ -44,7 +44,21 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE TABLE IF NOT EXISTS jingo_slug_aliases (kind text NOT NULL, slug text NOT NULL, entity_id text NOT NULL, PRIMARY KEY(kind,slug));
+      CREATE TABLE IF NOT EXISTS jingo_price_groups (id text PRIMARY KEY, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS jingo_partners (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS jingo_partner_sessions (token_hash text PRIMARY KEY, partner_id text NOT NULL REFERENCES jingo_partners(id), expires_at timestamptz NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_partner_orders (order_id text PRIMARY KEY REFERENCES jingo_orders(id), partner_id text NOT NULL REFERENCES jingo_partners(id));
+      CREATE TABLE IF NOT EXISTS jingo_partner_shares (id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),access_hash text NOT NULL UNIQUE,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_payment_references (reference text PRIMARY KEY, kind text NOT NULL, entity_id text NOT NULL, amount bigint NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_partner_ledger (
+        id text PRIMARY KEY, partner_id text NOT NULL REFERENCES jingo_partners(id), order_id text REFERENCES jingo_orders(id),
+        kind text NOT NULL, amount bigint NOT NULL, reference text NOT NULL, note text NOT NULL, actor_id text NOT NULL,
+        request_hash text NOT NULL, due_at timestamptz, created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS jingo_partner_ledger_owner ON jingo_partner_ledger(partner_id);
     `);
+    const registered=await this.pool.query("SELECT id FROM jingo_migrations WHERE id='005_payment_references'");
+    if(!registered.rowCount){const client=await this.pool.connect();try{await client.query('BEGIN');const payments=await client.query('SELECT reference,order_id,amount FROM jingo_order_payments');for(const payment of payments.rows)await client.query('INSERT INTO jingo_payment_references(reference,kind,entity_id,amount)VALUES($1,$2,$3,$4) ON CONFLICT(reference) DO NOTHING',[payment.reference,'ORDER_PAYMENT',payment.order_id,payment.amount]);await client.query("INSERT INTO jingo_migrations(id)VALUES('005_payment_references') ON CONFLICT(id) DO NOTHING");await client.query('COMMIT');}catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}}
     for (const type of [
       {id:'TICKET',name:'Vé tham quan / show',slug:'ve-tham-quan',bookingKind:'TICKET',status:'ACTIVE'},
       {id:'TOUR',name:'Tour địa phương',slug:'tour-dia-phuong',bookingKind:'TOUR',status:'ACTIVE'}

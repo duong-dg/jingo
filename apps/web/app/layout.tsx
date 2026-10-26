@@ -19,6 +19,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </header>
     <div className="demo-banner">Đặt theo yêu cầu · JinGo xác nhận nguồn vé trước khi hướng dẫn thanh toán</div>
     {children}
-    <footer><Link className="logo" href="/">jin<span>go</span>↗</Link><p>Những hành trình đáng nhớ, bắt đầu từ đây.</p><Link href="/tra-cuu">Tra cứu đơn hàng ↗</Link><small>JinGo · Nền tảng đang phát triển</small></footer>
+    <footer><Link className="logo" href="/">jin<span>go</span>↗</Link><p>Những hành trình đáng nhớ, bắt đầu từ đây.</p><Link href="/tra-cuu">Tra cứu đơn hàng ↗</Link><Link href="/ctv">Cổng CTV ↗</Link><small>JinGo · Nền tảng đang phát triển</small></footer>
   </body></html>;
 }
