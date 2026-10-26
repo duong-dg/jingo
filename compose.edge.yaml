@@ -1,0 +1,19 @@
+# Optional: only use when ports 80/443 are not already occupied by JinHunt.
+services:
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+    ports: ['80:80', '443:443', '443:443/udp']
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web]
+    mem_limit: 128m
+    logging:
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,8 @@
+{
+  "name": "@jingo/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "dev": "tsx watch src/main.ts", "build": "tsc -p tsconfig.json", "start": "node dist/main.js", "typecheck": "tsc --noEmit" },
+  "dependencies": { "bullmq": "^5.0.0" },
+  "devDependencies": { "tsx": "^4.20.0" }
+}
