@@ -4,7 +4,15 @@ COPY package*.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/worker/package.json apps/worker/package.json
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    for attempt in 1 2 3; do \
+      npm ci --prefer-offline --no-audit --no-fund \
+        --fetch-retries=3 --fetch-retry-mintimeout=10000 \
+        --fetch-retry-maxtimeout=30000 --fetch-timeout=120000 && exit 0; \
+      if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+      echo "Dependency download failed; retrying npm ci ($attempt/3)..."; \
+      sleep 10; \
+    done
 COPY . .
 ARG INTERNAL_API_URL=http://api:4000
 ENV INTERNAL_API_URL=$INTERNAL_API_URL NEXT_TELEMETRY_DISABLED=1
