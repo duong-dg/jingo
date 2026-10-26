@@ -1,6 +1,24 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.3 có yêu cầu đặt vé, tra cứu riêng, admin xác nhận nguồn vé, ghi nhận chuyển khoản thủ công và giao mã vé/voucher. Chưa có cổng thanh toán, công nợ, POS, kho file vé, hoàn tiền hoặc CMS blog.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.4 thêm ảnh sản phẩm, thư viện ảnh, loại sản phẩm tùy chỉnh và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, công nợ, POS, kho file vé riêng tư hoặc hoàn tiền.
+
+## Ảnh, loại sản phẩm và blog (0.4)
+
+- `/admin`: tab Hình ảnh cho ảnh đại diện và tối đa 20 ảnh thông tin, sắp xếp thứ tự và mô tả alt. Tab Nội dung soạn quyền lợi/lịch trình/thông tin bằng trình định dạng có chèn ảnh. Trang chi tiết có gallery phóng lớn; danh sách hiển thị ảnh đại diện.
+- `/admin/loai-san-pham`: tạo/sửa loại như vé cáp treo, show diễn, tour đảo. Loại có tên/URL riêng, nhưng cách xử lý đặt vẫn chọn TICKET hoặc TOUR. Loại đang có sản phẩm không được lưu trữ để tránh đứt liên kết.
+- `/admin/bai-viet`: soạn thảo định dạng, ảnh bìa/ảnh trong bài, chuyên mục, tác giả, giới thiệu, sản phẩm liên quan, SEO, nháp và hẹn giờ theo giờ Việt Nam. Có ô nhập bản dịch tiếng Anh dạng nháp; chưa có route tiếng Anh/auto dịch hoặc workflow WPML hoàn chỉnh.
+- `/cam-nang` và `/cam-nang/[slug]`: danh sách, chuyên mục, bài viết, mục lục từ H2/H3, thời gian đọc, khối vé liên quan lấy tên/giá hiện tại. Bài nháp và bài chưa đến giờ không xuất hiện ở API/trang công khai hoặc sitemap.
+- `/loai/[slug]`: trang nhóm sản phẩm; trang chủ có các nút nhóm. Đổi URL sản phẩm, bài viết hoặc loại sẽ lưu alias theo ID, trang web chuyển hướng 308 tới URL hiện tại; không tạo chuỗi chuyển hướng.
+
+Ảnh upload chỉ nhận JPG, PNG, WebP thật, tối đa 5 MB và 25 triệu điểm ảnh. Server kiểm tra chữ ký file, giải mã, bỏ metadata, resize tối đa 1920px và chuyển WebP. Thư viện dùng cho ảnh giới thiệu **công khai**, không dùng chứa mã vé riêng của khách. Nội dung HTML được lọc phía server; ảnh trong nội dung chỉ lấy từ thư viện này.
+
+File nằm trong Docker volume `jingo_media_data` gắn tại `/app/data/media` của API, metadata nằm ở PostgreSQL. Rebuild/recreate container giữ nguyên ảnh. Phải sao lưu cả volume ảnh lẫn database; chỉ sao lưu database không đủ phục hồi ảnh. Không chạy `docker compose down -v` để cập nhật. Local dev ghi vào `apps/api/data/media` (đã gitignore), hoặc đặt MEDIA_DIR trong `.env`.
+
+Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình `client_max_body_size 8m;` cho riêng domain JinGo trong reverse proxy, rồi kiểm tra/reload proxy. API vẫn giữ giới hạn file 5 MB. Không thay cấu hình proxy của JinHunt.
+
+SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
+
+Sau cập nhật, health phải hiện `0.4.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -14,9 +32,9 @@ Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.3 có yêu c
 
 Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau không thay đổi đơn cũ. Phiên bản đơn chống ghi đè, request ID chống tạo đơn/ghi thu/giao vé trùng khi retry; sổ thu, thao tác và audit cập nhật trong transaction. Trình duyệt lưu khóa idempotency và hash payload trong sessionStorage để retry sau lỗi mạng, không lưu thông tin liên hệ trong cache này.
 
-Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có file PDF/ảnh, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
+Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.3.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.4.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
@@ -44,7 +62,7 @@ docker compose logs --tail=80 api
 
 Mở `https://your-domain.example/admin`, đăng nhập bằng tài khoản đã thiết lập. API tự tạo bảng và nhập ba sản phẩm mẫu một lần; khởi động lại không ghi đè dữ liệu đã sửa. Có thể chuyển sản phẩm mẫu sang nháp và tạo sản phẩm thật. Nếu gặp lỗi nguồn yêu cầu, kiểm tra PUBLIC_BASE_URL và recreate API bằng `docker compose up -d`.
 
-Admin hỗ trợ sản phẩm/giá/lịch khóa/SEO/bản dịch nháp và quản lý đơn tại `/admin/don-hang`. Chưa có upload ảnh, blog, POS hoặc quản lý nhiều nhân viên.
+Admin hỗ trợ sản phẩm/ảnh/nội dung/giá/lịch khóa, loại sản phẩm, blog, SEO, bản dịch nháp và đơn tại `/admin/don-hang`. Chưa có POS hoặc quản lý nhiều nhân viên.
 
 Sau triển khai, kiểm tra đăng nhập, lưu giá, tải lại trang, chặn ngày khóa và restart API để xác minh dữ liệu còn nguyên.
 

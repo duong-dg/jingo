@@ -32,7 +32,23 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), request_hash text NOT NULL,
         admin_id text NOT NULL, action text NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_media (
+        id text PRIMARY KEY, filename text NOT NULL, alt text NOT NULL, width integer NOT NULL, height integer NOT NULL,
+        bytes integer NOT NULL, created_by text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS jingo_product_types (
+        id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1
+      );
+      CREATE TABLE IF NOT EXISTS jingo_posts (
+        id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1,
+        created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS jingo_slug_aliases (kind text NOT NULL, slug text NOT NULL, entity_id text NOT NULL, PRIMARY KEY(kind,slug));
     `);
+    for (const type of [
+      {id:'TICKET',name:'Vé tham quan / show',slug:'ve-tham-quan',bookingKind:'TICKET',status:'ACTIVE'},
+      {id:'TOUR',name:'Tour địa phương',slug:'tour-dia-phuong',bookingKind:'TOUR',status:'ACTIVE'}
+    ]) await this.pool.query('INSERT INTO jingo_product_types(id,slug,data) VALUES ($1,$2,$3) ON CONFLICT (id) DO NOTHING',[type.id,type.slug,JSON.stringify(type)]);
     // One-time sample import. Existing edits and drafts are never overwritten on restart.
     const seeded = await this.pool.query("SELECT id FROM jingo_migrations WHERE id = '001_catalog_seed'");
     if (!seeded.rowCount) {

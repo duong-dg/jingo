@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { validateDate } from '../pricing/pricing';
+import {imageRef} from '../content/content.schema';
 
 const date = z.string().refine((value) => { try { validateDate(value); return true; } catch { return false; } }, 'Ngày không hợp lệ');
 const money = z.number().int().min(0).max(100_000_000);
@@ -11,7 +12,8 @@ const rule = z.object({ id, productId: id, variantId: id, customerType: z.enum([
 const closure = z.object({ productId: id, variantId: id.optional(), startDate: date, endDate: date, reason: text.max(200).optional() }).strict();
 export const productSchema = z.object({
   id, slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160),
-  name: text.min(1).max(200), destination: text.min(1).max(150), type: z.enum(['TICKET', 'TOUR']), description: text,
+  name: text.min(1).max(200), destination: text.min(1).max(150), type: id, description: text,
+  cover:imageRef.nullable().default(null),gallery:z.array(imageRef).max(20).default([]),detailHtml:z.string().max(200000).default(''),
   status: z.enum(['DRAFT', 'PUBLISHED']), demo: z.boolean().default(false), version: z.number().int().min(0),
   variants: z.array(z.object({ id, name: text.min(1).max(100), prices,
     conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional() }).strict().optional()

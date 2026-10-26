@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { CatalogModule } from '../catalog/catalog.module';
 import { CatalogService } from '../catalog/catalog.service';
 import { AuthService } from './auth.service';
+import { AuthModule } from './auth.module';
 
 @Controller('admin')
 class AdminController {
@@ -23,5 +24,5 @@ class AdminController {
     return { data: await this.catalog.save(body, admin.id) };
   }
 }
-@Module({ imports: [CatalogModule], providers: [AuthService], controllers: [AdminController], exports: [AuthService] })
+@Module({ imports: [CatalogModule,AuthModule], controllers: [AdminController], exports: [AuthModule] })
 export class AdminModule {}

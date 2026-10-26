@@ -1,0 +1,16 @@
+'use client';
+import{useEffect,useState}from'react';
+import{EditorContent,useEditor,useEditorState}from'@tiptap/react';
+import StarterKit from'@tiptap/starter-kit';
+import Image from'@tiptap/extension-image';
+import Link from'@tiptap/extension-link';
+import{MediaChooser,imageUrl}from'./media-picker';
+export function RichEditor({value,onChange,label='Nội dung',disabled=false}:{value:string;onChange:(html:string)=>void;label?:string;disabled?:boolean}){
+  const[imageOpen,setImageOpen]=useState(false);
+  const editor=useEditor({extensions:[StarterKit.configure({link:false}),Link.configure({openOnClick:false,protocols:['http','https','mailto','tel']}),Image.configure({allowBase64:false})],content:value,immediatelyRender:false,editorProps:{attributes:{class:'jingo-prose-editor','aria-label':label,role:'textbox','aria-multiline':'true'}},onUpdate:({editor})=>onChange(editor.getHTML())});
+  const active=useEditorState({editor,selector:({editor})=>({bold:editor?.isActive('bold'),italic:editor?.isActive('italic'),h2:editor?.isActive('heading',{level:2}),h3:editor?.isActive('heading',{level:3}),bullet:editor?.isActive('bulletList'),ordered:editor?.isActive('orderedList')})});
+  useEffect(()=>{if(editor&&editor.getHTML()!==value)editor.commands.setContent(value,{emitUpdate:false});},[value,editor]);
+  useEffect(()=>{editor?.setEditable(!disabled,false);},[disabled,editor]);
+  if(!editor)return <p className="admin-hint">Đang mở trình soạn thảo…</p>;
+  return <div className="rich-editor"><div className="rich-editor-toolbar" role="toolbar" aria-label="Định dạng nội dung"><button type="button" aria-pressed={active?.bold} onClick={()=>editor.chain().focus().toggleBold().run()}><b>B</b></button><button type="button" aria-pressed={active?.italic} onClick={()=>editor.chain().focus().toggleItalic().run()}><i>I</i></button><button type="button" aria-pressed={active?.h2} onClick={()=>editor.chain().focus().toggleHeading({level:2}).run()}>H2</button><button type="button" aria-pressed={active?.h3} onClick={()=>editor.chain().focus().toggleHeading({level:3}).run()}>H3</button><button type="button" aria-pressed={active?.bullet} onClick={()=>editor.chain().focus().toggleBulletList().run()}>• Danh sách</button><button type="button" aria-pressed={active?.ordered} onClick={()=>editor.chain().focus().toggleOrderedList().run()}>1. Danh sách</button><button type="button" onClick={()=>{const href=window.prompt('Đường dẫn (để trống để bỏ liên kết)',editor.getAttributes('link').href||'');if(href===null)return;if(!href)editor.chain().focus().extendMarkRange('link').unsetLink().run();else if(/^(https?:\/\/|mailto:|tel:|\/)/i.test(href))editor.chain().focus().extendMarkRange('link').setLink({href}).run();}}>Liên kết</button><button type="button" onClick={()=>setImageOpen(true)}>＋ Ảnh</button><button type="button" aria-label="Hoàn tác" onClick={()=>editor.chain().focus().undo().run()}>↶</button><button type="button" aria-label="Làm lại" onClick={()=>editor.chain().focus().redo().run()}>↷</button></div><EditorContent editor={editor}/>{imageOpen&&<MediaChooser onChoose={image=>{editor.chain().focus().setImage({src:imageUrl(image),alt:image.alt}).run();setImageOpen(false);}} onClose={()=>setImageOpen(false)}/>}</div>;
+}

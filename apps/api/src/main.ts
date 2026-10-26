@@ -3,14 +3,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import type{NestExpressApplication}from'@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useBodyParser('json',{limit:'1mb'});
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   const document = SwaggerModule.createDocument(app, new DocumentBuilder()
-    .setTitle('JinGo API').setDescription('Catalog, pricing, booking requests, manual collection and code delivery. Supplier APIs and payment gateways are not connected.')
-    .setVersion('0.3.0').build());
+    .setTitle('JinGo API').setDescription('Catalog, media library, custom product types, CMS and booking operations. Supplier APIs and payment gateways are not connected.')
+    .setVersion('0.4.0').build());
   if (process.env.NODE_ENV !== 'production') SwaggerModule.setup('api/docs', app, document);
   await app.listen(Number(process.env.PORT || 4000), '0.0.0.0');
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SkipLink } from './skip-link';
 import './styles.css';
+import './content.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.PUBLIC_BASE_URL || 'http://localhost:3000'),

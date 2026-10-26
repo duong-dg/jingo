@@ -1,0 +1,40 @@
+import'reflect-metadata';
+import{test}from'node:test';import assert from'node:assert/strict';import{randomUUID}from'node:crypto';import{mkdtemp,rm}from'node:fs/promises';import{tmpdir}from'node:os';import{join,resolve,dirname,basename}from'node:path';
+import{Test}from'@nestjs/testing';import{newDb}from'pg-mem';import{ValidationPipe}from'@nestjs/common';import sharp from'sharp';import{AppModule}from'../app.module';
+test('media validation, custom product types, blog scheduling and HTML isolation',async()=>{
+  process.env.ADMIN_EMAIL='content@example.test';process.env.ADMIN_PASSWORD='content-integration-test-123';process.env.PUBLIC_BASE_URL='http://localhost:3000';const directory=await mkdtemp(join(tmpdir(),'jingo-media-test-'));process.env.MEDIA_DIR=directory;
+  const adapter=newDb({noAstCoverageCheck:true}).adapters.createPg();const pool=new adapter.Pool();const module=await Test.createTestingModule({imports:[AppModule]}).overrideProvider('DB_POOL').useValue(pool).compile();const app=module.createNestApplication();app.setGlobalPrefix('api/v1');app.useGlobalPipes(new ValidationPipe({whitelist:true,forbidNonWhitelisted:true,transform:true}));await app.listen(0,'127.0.0.1');const base=await app.getUrl()+'/api/v1';let cookie='';
+  const call=(path:string,body?:unknown,admin=false)=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-Jingo-Admin':'1',Origin:'http://localhost:3000',...(admin?{Cookie:cookie}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
+  const upload=(buffer:Uint8Array,admin=true,name='test.png',type='image/png')=>{const form=new FormData();form.set('file',new Blob([new Uint8Array(buffer)],{type}),name);form.set('alt','Ảnh thử nghiệm');return fetch(base+'/admin/media',{method:'POST',headers:{'X-Jingo-Admin':'1',Origin:'http://localhost:3000',...(admin?{Cookie:cookie}:{})},body:form});};
+  try{
+    let res=await call('/admin/login',{email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD});cookie=res.headers.get('set-cookie')!.split(';')[0];
+    assert.equal((await call('/admin/media')).status,401);assert.equal((await call('/admin/posts')).status,401);assert.equal((await call('/admin/product-types')).status,401);
+    const png=await sharp({create:{width:40,height:30,channels:3,background:'#72925a'}}).png().toBuffer();assert.equal((await upload(png,false)).status,401);
+    assert.equal((await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),true,'bad.png')).status,400);
+    res=await upload(png);assert.equal(res.status,201);const image=(await res.json()).data;assert.equal(image.width,40);assert.equal(image.alt,'Ảnh thử nghiệm');
+    res=await call('/media/'+image.id);assert.equal(res.status,200);assert.match(res.headers.get('content-type')!,/image\/webp/);assert.equal(Buffer.from(await res.arrayBuffer()).subarray(0,4).toString(),'RIFF');assert.equal((await call('/media/..')).status,404);
+    const type={id:randomUUID(),slug:'show-dien',name:'Show diễn',description:'Biểu diễn nghệ thuật',bookingKind:'TICKET',status:'ACTIVE',version:0};res=await call('/admin/product-types',type,true);assert.equal(res.status,201);const savedType=(await res.json()).data;
+    assert.equal((await call('/admin/product-types',type,true)).status,409);
+    const product=(await(await call('/admin/products',undefined,true)).json()).data[0];product.type=type.id;product.cover={id:image.id,alt:'Ảnh đại diện'};product.gallery=[{id:image.id,alt:'Ảnh thông tin'}];product.detailHtml='<h2>Quyền lợi</h2><script>alert(1)</script><p onclick="bad()">Nội dung rõ ràng</p>';
+    res=await call('/admin/products',product,true);assert.equal(res.status,201);const savedProduct=(await res.json()).data;assert.doesNotMatch(savedProduct.detailHtml,/script|onclick/);
+    const publicProduct=(await(await call('/products/'+product.slug)).json()).data;assert.equal(publicProduct.typeName,'Show diễn');assert.equal(publicProduct.bookingKind,'TICKET');assert.equal(publicProduct.cover.id,image.id);
+    assert.equal((await call('/admin/product-types',{...savedType,status:'ARCHIVED'},true)).status,409);
+    const post={id:randomUUID(),slug:'bai-thu-nghiem',title:'Bài thử nghiệm',excerpt:'Cẩm nang hữu ích',contentHtml:`<h2>Chuẩn bị</h2><p>Thông tin cần biết trước chuyến đi.</p><script>alert(1)</script><a href="javascript:alert(1)">Xấu</a><img src="/api/v1/media/${image.id}" onerror="bad()"><img src="https://external.example/track.png">`,cover:{id:image.id,alt:'Bìa bài viết'},category:'Kinh nghiệm',author:'JinGo',status:'DRAFT',publishedAt:null,seoTitle:'Tiêu đề SEO',seoDescription:'Mô tả SEO',relatedProductIds:[product.id],version:0,english:{title:'Private draft',excerpt:'',contentHtml:'<script>bad()</script><p>English draft</p>',seoTitle:'',seoDescription:''}};
+    res=await call('/admin/posts',post,true);assert.equal(res.status,201);const draft=(await res.json()).data;assert.doesNotMatch(draft.contentHtml,/script|onerror|javascript:|external\.example/);assert.match(draft.contentHtml,/api\/v1\/media/);
+    assert.equal((await call('/posts/'+post.slug)).status,404);assert.equal((await(await call('/posts')).json()).data.length,0);
+    const{updatedAt,...scheduled}=draft;scheduled.status='PUBLISHED';scheduled.publishedAt='2099-01-01T00:00:00.000Z';res=await call('/admin/posts',scheduled,true);assert.equal(res.status,201);const future=(await res.json()).data;assert.equal((await call('/posts/'+post.slug)).status,404);
+    const{updatedAt:futureUpdated,...published}=future;published.publishedAt='2020-01-01T00:00:00.000Z';res=await call('/admin/posts',published,true);assert.equal(res.status,201);
+    const visible=(await(await call('/posts/'+post.slug)).json()).data;assert.equal(visible.english,undefined);assert.equal(visible.version,undefined);assert.equal(visible.seoTitle,'Tiêu đề SEO');assert.equal((await(await call('/posts')).json()).data[0].contentHtml,undefined);
+    assert.equal((await call('/admin/posts',published,true)).status,409);
+    const broken={...post,id:randomUUID(),slug:'anh-khong-ton-tai',cover:{id:randomUUID(),alt:'missing'}};assert.equal((await call('/admin/posts',broken,true)).status,400);
+    const badType={...savedProduct,type:'does-not-exist'};assert.equal((await call('/admin/products',badType,true)).status,400);
+    const latest=(await(await call('/admin/posts',undefined,true)).json()).data.find((p:{id:string})=>p.id===post.id);const{updatedAt:ignored,...rename}=latest;
+    rename.slug='duong-dan-moi';res=await call('/admin/posts',rename,true);assert.equal(res.status,201);
+    assert.equal((await(await call('/posts/'+post.slug)).json()).data.slug,'duong-dan-moi');
+    assert.equal((await call('/admin/posts',{...post,id:randomUUID()},true)).status,409,'old slugs cannot be assigned to another article');
+    res=await call('/admin/products',{...savedProduct,slug:'san-pham-moi'},true);assert.equal(res.status,201);
+    assert.equal((await(await call('/products/'+product.slug)).json()).data.slug,'san-pham-moi');
+    res=await call('/admin/product-types',{...savedType,slug:'show-nghe-thuat'},true);assert.equal(res.status,201);
+    assert.equal((await(await call('/product-types/show-dien')).json()).data.slug,'show-nghe-thuat');
+  }finally{await app.close();const target=resolve(directory);assert.equal(dirname(target),resolve(tmpdir()));assert.ok(basename(target).startsWith('jingo-media-test-'));await rm(target,{recursive:true,force:true});}
+});

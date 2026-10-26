@@ -9,7 +9,7 @@ export interface Product {
   slug: string;
   name: string;
   destination: string;
-  type: 'TICKET' | 'TOUR';
+  type: string;
   description: string;
   demo?: boolean;
   variants: Variant[];

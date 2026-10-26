@@ -1,0 +1,4 @@
+import type{MetadataRoute}from'next';
+import{contentApi,Product,Post,ProductType,siteBase,indexing}from'../lib/content-api';
+export const dynamic='force-dynamic';
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{if(!indexing())return[];const[products,posts,types]=await Promise.all([contentApi<Product[]>('products'),contentApi<Post[]>('posts'),contentApi<ProductType[]>('product-types')]);const url=(path:string)=>new URL(path,siteBase()).toString();return[{url:url('/')},{url:url('/cam-nang')},...products.filter(product=>!product.demo).map(product=>({url:url(`/ve/${product.slug}`)})),...posts.map(post=>({url:url(`/cam-nang/${post.slug}`),lastModified:new Date(post.updatedAt)})),...types.filter(type=>products.some(product=>!product.demo&&product.type===type.id)).map(type=>({url:url(`/loai/${type.slug}`)}))];}

@@ -4,13 +4,17 @@
 
 Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một repository với ba ứng dụng web/api/worker. PostgreSQL là nguồn dữ liệu chính; Redis cho queue/cache; file vé riêng tư dùng object storage khi triển khai nghiệp vụ. App di động sau này dùng cùng API. Chưa triển khai khách sạn hoặc API nhà cung cấp.
 
-## Trạng thái hiện tại (0.3)
+## Trạng thái hiện tại (0.4)
 
 - Web tiếng Việt responsive: danh mục, popup chọn vé, checkout yêu cầu đặt và tra cứu bằng mã + khóa riêng. Chưa có giỏ hàng hoặc cổng thanh toán.
 - Admin /admin: login/logout cookie HttpOnly, phiên hash PostgreSQL hết hạn 8 giờ, giới hạn đăng nhập sai, kiểm tra nguồn mutation và header chống CSRF. Chủ tài khoản tạo qua env, mật khẩu scrypt; chưa có quản lý nhiều vai trò.
 - PostgreSQL: product config JSONB, slug unique, version optimistic locking, audit cùng transaction, bảng admin/session và migration marker. Giá/lịch/khóa lưu trong product document để cập nhật nguyên tử; booking, inventory và ledger sau này cần bảng quan hệ riêng.
 - Admin tạo/sửa/nháp/xuất bản sản phẩm, gói và nhóm giá, điều kiện khách, SEO, lịch giá, ngày khóa và nháp tiếng Anh. Ngày khóa chặn cả endpoint rates lẫn quotes.
 - Public chỉ đọc sản phẩm xuất bản, không trả bản dịch nháp/lịch nội bộ. Seed ba sản phẩm mẫu một lần, không ghi đè khi restart.
+- Media module: admin guard trước multipart parsing, giới hạn file 5 MB, kiểm tra chữ ký và decode bằng Sharp, bỏ metadata và chuyển WebP. Một job tối ưu ảnh tại một thời điểm để giới hạn RAM. Volume ảnh marketing công khai tách khỏi vé riêng tư sẽ triển khai sau.
+- CMS: trình soạn Tiptap, sanitizer HTML phía server, bài/SEO/chuyên mục/ảnh/sản phẩm liên quan, nháp và hẹn giờ. Không cần worker cho lịch đăng: public read lọc thời gian hiện tại. Có bản tiếng Anh nháp, chưa có frontend đa ngôn ngữ.
+- Product types là taxonomy do admin tạo, khác bookingKind TICKET/TOUR. Kiểm tra tham chiếu khi lưu và chặn lưu trữ loại đang dùng. Alias URL theo ID và giao dịch cùng thay đổi nội dung, web redirect 308.
+- Public blog SSR, mục lục, BlogPosting, canonical/OpenGraph; sitemap/robots đọc env runtime. Indexing opt-in, mặc định không lập chỉ mục. Admin/checkout/tra cứu luôn noindex.
 - Bảng quan hệ orders/payments/tickets/actions: snapshot bất biến, request idempotency, version optimistic locking và khóa hàng khi xử lý. Xác nhận nguồn cung thủ công, ghi nhận thu đủ chuyển khoản một lần, giao mã từng phần/đủ và hủy đơn chưa thu. Chưa giữ tồn hoặc gọi ngân hàng.
 - Public không trả thông tin liên hệ, lịch sử nội bộ hoặc khoản thu. Khóa tra cứu 256-bit chỉ lưu hash; URL dùng fragment, no-referrer/no-store. Chưa có email/OTP để gửi hoặc khôi phục khóa. Public API giới hạn 100 yêu cầu/phút/remote address; sau reverse proxy có thể dùng chung hạn mức, cần thiết kế rate limit phân tán khi mở rộng.
 - Worker chỉ xử lý job diagnostic. Chưa có thông báo, xuất PDF hoặc job nghiệp vụ.
@@ -70,4 +74,4 @@ Tiếng Việt mặc định, tiếng Anh là ngôn ngữ bổ sung đầu tiên
 - Email, voucher JinGo và thông báo theo locale lưu trên booking; mã/QR vé gốc đối tác giữ nguyên. Không chỉnh nội dung vé gốc theo cách làm mất hiệu lực.
 - Có thể thêm gợi ý dịch máy sau này qua một adapter, luôn lưu nháp để con người duyệt; chưa tích hợp dịch vụ hoặc phát sinh chi phí dịch tự động.
 
-Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé, refund, ledger công nợ, POS, CMS, cổng thanh toán và thông báo tự động.
+Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, ledger công nợ, POS, cổng thanh toán và thông báo tự động; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.

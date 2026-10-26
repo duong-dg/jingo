@@ -1,0 +1,8 @@
+import type{Metadata}from'next';
+import Link from'next/link';
+import{notFound,permanentRedirect}from'next/navigation';
+import{contentApi,Product,ProductType,siteBase,indexing}from'../../../lib/content-api';
+import{ProductCard}from'../../components/product-card';
+async function getType(slug:string){try{return await contentApi<ProductType>('product-types/'+encodeURIComponent(slug));}catch(e){if((e as{status?:number}).status===404)return null;throw e;}}
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{const{slug}=await params;const type=await getType(slug);return{title:type?.name||'Không tìm thấy loại sản phẩm',description:type?.description,alternates:{canonical:new URL(`/loai/${slug}`,siteBase()).toString()},robots:{index:!!type&&indexing(),follow:true}};}
+export default async function TypePage({params}:{params:Promise<{slug:string}>}){const requested=(await params).slug;const type=await getType(requested);if(!type)notFound();if(type.slug!==requested)permanentRedirect(`/loai/${type.slug}`);const products=await contentApi<Product[]>(`products?type=${encodeURIComponent(type.id)}`);return <main id="main" className="section"><Link className="text-link" href="/">← Tất cả trải nghiệm</Link><p className="eyebrow">KHÁM PHÁ THEO CÁCH CỦA BẠN</p><h1>{type.name}</h1>{type.description&&<p className="lead">{type.description}</p>}{!products.length&&<p className="notice">Các trải nghiệm thuộc nhóm này đang được cập nhật.</p>}<div className="cards">{products.map((product,index)=><ProductCard key={product.id} product={product} index={index}/>)}</div></main>;}
