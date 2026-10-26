@@ -2,7 +2,7 @@
 import{useEffect,useState}from'react';
 import Link from'next/link';
 import{adminApi}from'./admin-api';
-export function AdminNav({active}:{active:string}){return <nav className="admin-section-nav" aria-label="Phân hệ quản trị">{[['products','/admin','Sản phẩm & giá'],['orders','/admin/don-hang','Đơn hàng'],['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV'],['types','/admin/loai-san-pham','Loại sản phẩm'],['posts','/admin/bai-viet','Bài viết']].map(([key,url,label])=><Link key={key} href={url} aria-current={active===key?'page':undefined}>{label}</Link>)}</nav>;}
+export function AdminNav({active}:{active:string}){return <nav className="admin-section-nav" aria-label="Phân hệ quản trị">{[['products','/admin','Sản phẩm & giá'],['orders','/admin/don-hang','Đơn hàng'],['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV'],['types','/admin/loai-san-pham','Loại sản phẩm'],['posts','/admin/bai-viet','Bài viết'],['translations','/admin/ban-dich','Ngôn ngữ & bản dịch']].map(([key,url,label])=><Link key={key} href={url} aria-current={active===key?'page':undefined}>{label}</Link>)}</nav>;}
 export function useUnsavedChanges(dirty:boolean){useEffect(()=>{const handler=(event:BeforeUnloadEvent)=>{if(dirty)event.preventDefault();};window.addEventListener('beforeunload',handler);return()=>window.removeEventListener('beforeunload',handler);},[dirty]);}
 export function AdminFrame({title,active,children}:{title:string;active:string;children:React.ReactNode}){
   const[user,setUser]=useState('');const[error,setError]=useState('');

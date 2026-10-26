@@ -1,4 +1,5 @@
-import{BadRequestException,Body,ConflictException,Controller,Get,Injectable,Module,NotFoundException,Param,Post as HttpPost,Req,Res,UseGuards}from'@nestjs/common';
+import{markTranslation,translated}from'./translations';
+import{BadRequestException,Body,ConflictException,Controller,Get,Injectable,Module,NotFoundException,Param,Query,Post as HttpPost,Req,Res,UseGuards}from'@nestjs/common';
 import type{Request,Response}from'express';
 import{randomUUID}from'node:crypto';
 import{DatabaseService}from'../database/database.module';
@@ -16,7 +17,7 @@ export class PostsService{
   async save(body:unknown,adminId:string){
     const parsed=postSchema.safeParse(body);if(!parsed.success)throw new BadRequestException(parsed.error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('\n'));
     const post=parsed.data;post.contentHtml=cleanContent(post.contentHtml);
-    if(post.english)post.english.contentHtml=cleanContent(post.english.contentHtml);
+    if(post.english)post.english.contentHtml=cleanContent(post.english.contentHtml);markTranslation('POST',post);
     if(post.status==='PUBLISHED'&&!post.contentHtml.replace(/<[^>]*>/g,'').trim())throw new BadRequestException('Bài xuất bản cần nội dung chữ.');
     if(post.status==='PUBLISHED'&&!post.publishedAt)post.publishedAt=new Date().toISOString();
     await this.media.validateIds([...(post.cover?[post.cover.id]:[]),...contentImageIds(post.contentHtml),...contentImageIds(post.english?.contentHtml||'')]);
@@ -31,15 +32,15 @@ export class PostsService{
     return this.find(post.slug,true);
   }
 }
-function publicPost(post:Post&{updatedAt:string}){const{english,version,...published}=post;return published;}
+function publicPost(post:Post&{updatedAt:string},lang?:string){const{english,version,...published}=post;const languages=translated('POST',post)?['vi','en']:['vi'];return{...published,...(lang==='en'?{title:english!.title,excerpt:english!.excerpt,contentHtml:english!.contentHtml,category:english!.category,seoTitle:english!.seoTitle,seoDescription:english!.seoDescription,cover:post.cover?{...post.cover,alt:english!.title}:null}:{}),languages};}
 @Controller('posts')class PublicPostsController{
   constructor(private readonly posts:PostsService){}
-  @Get()async list(){return{data:(await this.posts.list()).map(post=>{const{contentHtml,...summary}=publicPost(post);return summary;})};}
-  @Get(':slug')async detail(@Param('slug')slug:string){return{data:publicPost(await this.posts.find(slug))};}
+  @Get()async list(@Query('lang')lang?:string){return{data:(await this.posts.list()).filter(post=>lang!=='en'||translated('POST',post)).map(post=>{const{contentHtml,...summary}=publicPost(post,lang);return summary;})};}
+  @Get(':slug')async detail(@Param('slug')slug:string,@Query('lang')lang?:string){const post=await this.posts.find(slug);if(lang==='en'&&!translated('POST',post))throw new NotFoundException('Translation unavailable.');return{data:publicPost(post,lang)};}
 }
 @Controller('admin/posts')@UseGuards(AdminGuard)class AdminPostsController{
   constructor(private readonly posts:PostsService){}
   @Get()async list(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return{data:await this.posts.list(true)};}
   @HttpPost()async save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.save(body,req.admin.id)};}
 }
-@Module({imports:[AuthModule,MediaModule],providers:[PostsService],controllers:[PublicPostsController,AdminPostsController]})export class PostsModule{}
+@Module({imports:[AuthModule,MediaModule],providers:[PostsService],exports:[PostsService],controllers:[PublicPostsController,AdminPostsController]})export class PostsModule{}

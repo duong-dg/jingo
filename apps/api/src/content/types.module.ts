@@ -1,4 +1,5 @@
-import {BadRequestException,Body,ConflictException,Controller,Get,Injectable,Module,Post,Req,Res,UseGuards,Param,NotFoundException} from '@nestjs/common';
+import{markTranslation,translated}from'./translations';
+import {BadRequestException,Body,ConflictException,Controller,Get,Injectable,Module,Post,Req,Res,UseGuards,Param,Query,NotFoundException} from '@nestjs/common';
 import type{Request,Response}from'express';
 import{randomUUID}from'node:crypto';
 import{DatabaseService}from'../database/database.module';
@@ -11,7 +12,7 @@ export class TypesService{
   async list(admin=false):Promise<ProductType[]>{const rows=await this.db.pool.query('SELECT data,version FROM jingo_product_types ORDER BY slug');return rows.rows.map(row=>({...row.data,version:row.version} as ProductType)).filter(type=>admin||type.status==='ACTIVE');}
   async find(slug:string){let result=await this.db.pool.query('SELECT data,version FROM jingo_product_types WHERE slug=$1',[slug]);if(!result.rowCount)result=await this.db.pool.query('SELECT t.data,t.version FROM jingo_slug_aliases a JOIN jingo_product_types t ON t.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['TYPE',slug]);const type=result.rows[0]?.data as ProductType|undefined;if(!type||type.status!=='ACTIVE')throw new NotFoundException();return{...type,version:result.rows[0].version};}
   async save(body:unknown,adminId:string){
-    const parsed=typeSchema.safeParse(body);if(!parsed.success)throw new BadRequestException(parsed.error.issues.map(i=>i.message).join('\n'));const type=parsed.data;
+    const parsed=typeSchema.safeParse(body);if(!parsed.success)throw new BadRequestException(parsed.error.issues.map(i=>i.message).join('\n'));const type=parsed.data;markTranslation('TYPE',type);
     const client=await this.db.pool.connect();try{await client.query('BEGIN');
       if(type.version===0){await reserveSlug(client,'TYPE',type.id,type.slug);await client.query('INSERT INTO jingo_product_types(id,slug,data)VALUES($1,$2,$3)',[type.id,type.slug,JSON.stringify(type)]);}
       else{
@@ -29,7 +30,8 @@ export class TypesService{
     return(await this.list(true)).find(t=>t.id===type.id);
   }
 }
-@Controller('product-types')class PublicTypesController{constructor(private readonly types:TypesService){}@Get()async list(){return{data:await this.types.list()};}@Get(':slug')async find(@Param('slug')slug:string){return{data:await this.types.find(slug)};}}
+function publicType(type:ProductType,lang?:string){const{english,version,...published}=type;return{...published,...(lang==='en'?{name:english!.name,description:english!.description}:{}),languages:translated('TYPE',type)?['vi','en']:['vi']};}
+@Controller('product-types')class PublicTypesController{constructor(private readonly types:TypesService){}@Get()async list(@Query('lang')lang?:string){return{data:(await this.types.list()).filter(type=>lang!=='en'||translated('TYPE',type)).map(type=>publicType(type,lang))};}@Get(':slug')async find(@Param('slug')slug:string,@Query('lang')lang?:string){const type=await this.types.find(slug);if(lang==='en'&&!translated('TYPE',type))throw new NotFoundException();return{data:publicType(type,lang)};}}
 @Controller('admin/product-types')@UseGuards(AdminGuard)class AdminTypesController{
   constructor(private readonly types:TypesService){}
   @Get()async list(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return{data:await this.types.list(true)};}

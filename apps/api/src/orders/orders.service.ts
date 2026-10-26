@@ -1,3 +1,4 @@
+import{translated,localizeProduct}from'../content/translations';
 import { BadRequestException, ConflictException, Injectable, NotFoundException,ForbiddenException } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { PoolClient } from 'pg';
@@ -10,7 +11,7 @@ import{applyNetPricing}from'../partners/net-pricing';
 import{ledgerRows,creditSummary,checkCredit}from'../partners/credit';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-export interface OrderSnapshot { productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
+export interface OrderSnapshot { locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
@@ -38,10 +39,10 @@ export class OrdersService {
       catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
       if(group)quote=applyNetPricing(quote,group);
       if (quote.total !== input.expectedTotal) throw new ConflictException('Giá vừa thay đổi. Vui lòng kiểm tra giá mới trước khi gửi.');
-      const variant = product.variants.find(v => v.id === input.variantId)!;
-      const snapshot: OrderSnapshot = { productId: product.id, productName: product.name, variantName: variant.name, date: input.date,
+      if(input.locale==='en'&&!translated('PRODUCT',product))throw new ConflictException('English content has changed. Please refresh before booking.');const view=input.locale==='en'?localizeProduct(product):product;const variant = view.variants.find((v:{id:string}) => v.id === input.variantId)!;
+      const snapshot: OrderSnapshot = { productId: product.id, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
         total: quote.total, lines: quote.lines, demo: false, conditions: variant.conditions || {},
-        policy: 'Yêu cầu đặt cần JinGo xác nhận nguồn vé/chỗ. Chưa giữ chỗ hoặc bảo đảm có vé. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp hướng dẫn. Chính sách đổi/hủy do JinGo xác nhận với nhà cung cấp trước khi bạn thanh toán.' };
+        policy: input.locale==='en'?'Booking requests require JinGo to confirm supplier availability. No reservation or ticket is guaranteed yet. Only pay after JinGo confirms and provides instructions and the applicable cancellation terms.':'Yêu cầu đặt cần JinGo xác nhận nguồn vé/chỗ. Chưa giữ chỗ hoặc bảo đảm có vé. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp hướng dẫn. Chính sách đổi/hủy do JinGo xác nhận với nhà cung cấp trước khi bạn thanh toán.' };
       const code = 'JG' + randomBytes(5).toString('hex').toUpperCase();
       const id=randomUUID();
       await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact) VALUES ($1,$2,$3,$4,$5,$6,$7)',

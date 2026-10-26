@@ -1,15 +1,16 @@
+import{translationState}from'./translations';
 import {z} from 'zod';
 import sanitizeHtml from 'sanitize-html';
 export const imageRef=z.object({id:z.uuid(),alt:z.string().trim().max(300)}).strict();
 export const slugSchema=z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160);
-export const typeSchema=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),slug:slugSchema,name:z.string().trim().min(1).max(100),description:z.string().trim().max(1000).default(''),bookingKind:z.enum(['TICKET','TOUR']),status:z.enum(['ACTIVE','ARCHIVED']),version:z.number().int().min(0)}).strict();
+export const typeSchema=z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),slug:slugSchema,name:z.string().trim().min(1).max(100),description:z.string().trim().max(1000).default(''),bookingKind:z.enum(['TICKET','TOUR']),status:z.enum(['ACTIVE','ARCHIVED']),version:z.number().int().min(0),english:z.object({name:z.string().trim().max(100),description:z.string().trim().max(1000),...translationState}).strict().optional()}).strict();
 export const postSchema=z.object({
   id:z.uuid(),slug:slugSchema,title:z.string().trim().min(1).max(200),excerpt:z.string().trim().max(1000),
   contentHtml:z.string().max(200000),cover:imageRef.nullable().default(null),category:z.string().trim().max(100).default('Cẩm nang'),
   author:z.string().trim().min(1).max(100),status:z.enum(['DRAFT','PUBLISHED']),publishedAt:z.iso.datetime({offset:true}).nullable().default(null),
   seoTitle:z.string().trim().max(200).default(''),seoDescription:z.string().trim().max(500).default(''),
   relatedProductIds:z.array(z.string().max(80)).max(12).default([]),version:z.number().int().min(0),
-  english:z.object({title:z.string().max(200),excerpt:z.string().max(1000),contentHtml:z.string().max(200000),seoTitle:z.string().max(200),seoDescription:z.string().max(500)}).strict().optional()
+  english:z.object({title:z.string().max(200),excerpt:z.string().max(1000),contentHtml:z.string().max(200000),seoTitle:z.string().max(200),seoDescription:z.string().max(500),category:z.string().trim().max(100).default(''),...translationState}).strict().optional()
 }).strict();
 export type Post=z.infer<typeof postSchema>;
 export type ProductType=z.infer<typeof typeSchema>;

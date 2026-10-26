@@ -6,7 +6,7 @@ export const orderInput = z.object({
   quantities: z.object({ ADULT: quantity.optional(), CHILD: quantity.optional(), SENIOR: quantity.optional() }).strict(),
   expectedTotal: z.number().int().min(0).max(15_000_000_000),
   contact: z.object({ name: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9 ()-]{8,25}$/).refine(value=>{const length=value.replace(/\D/g,'').length;return length>=8&&length<=15;},'Số điện thoại cần 8–15 chữ số'), email: z.email().max(200).optional(), note: z.string().trim().max(1000).default('') }).strict(),
-  accepted: z.literal(true)
+  locale:z.enum(['vi','en']).optional(),accepted: z.literal(true)
 }).strict();
 export const lookupInput = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 const base = { requestId: z.uuid(), version: z.number().int().min(1), note: z.string().trim().min(1).max(1000) };

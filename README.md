@@ -1,7 +1,20 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.5 thêm cổng cộng tác viên, nhóm giá và sổ công nợ; giữ các chức năng ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.6 thêm website Việt–Anh và trung tâm bản dịch; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
 
+
+## Việt–Anh và trung tâm bản dịch (0.6)
+
+- Vào /admin/ban-dich: lọc vé/tour, bài viết, loại sản phẩm; xem tiếng Việt và nhập tiếng Anh song song. Có trạng thái Chưa dịch, Bản nháp, Cần cập nhật và Đã xuất bản. Bản dịch nháp cũ được giữ lại, cần bổ sung trường mới và duyệt trước khi xuất bản.
+- Dịch cả điểm đến, nội dung định dạng, tên gói, điều kiện người lớn/trẻ em/người cao tuổi, chuyên mục và SEO. Giá, lịch bán, tồn và mã vé không nhân bản. Các trường tiền không nằm trong biểu mẫu dịch.
+- Lưu nháp/gỡ bản English sẽ ẩn bản tiếng Anh. Muốn xuất bản phải tích xác nhận đã kiểm tra; backend kiểm tra nội dung và đủ gói/điều kiện. Nguồn cũng phải được xuất bản và tới giờ hẹn thì bản dịch mới xuất hiện.
+- Website tiếng Việt giữ nguyên URL; /en là trang chủ tiếng Anh, /en/ve/slug, /en/cam-nang/slug và /en/loai/slug dùng chung slug. Menu chuyển ngôn ngữ giữ đúng nội dung; ngày/gói/số khách và khóa tra cứu được giữ khi chuyển ở bước đặt/tra cứu. Biểu mẫu liên hệ chưa gửi không tự sao chép khi đổi ngôn ngữ; hãy chọn ngôn ngữ trước khi điền.
+- Nút chọn vé, đặt yêu cầu và tra cứu có giao diện tiếng Anh. Đơn tiếng Anh lưu locale, tên/điều kiện và thông báo chính sách tại lúc đặt. Nội dung hướng dẫn, ghi chú và mã vé do người vận hành/nhà cung cấp nhập được giữ nguyên; admin/CTV và trang nhận vé CTV vẫn tiếng Việt.
+- Đổi tên, mô tả, nội dung, SEO, gói hoặc điều kiện nguồn sẽ đánh dấu Cần cập nhật, tạm ẩn tiếng Anh cho tới khi duyệt lại. Chỉ đổi giá không bắt dịch lại. Hash nội dung nguồn và phiên bản thực thể chống ghi đè bản mới trong cửa sổ khác; bản dịch cũ không bị tự ghi đè.
+- Bản chưa dịch/nháp/cần cập nhật không xuất hiện ở danh sách, API English, sitemap hoặc hreflang; URL English trực tiếp trả 404. Không tự lấy nội dung tiếng Việt để giả làm bản tiếng Anh. Nội dung đã xuất bản có canonical theo ngôn ngữ, html lang, hreflang VI/EN/x-default và sitemap liên kết.
+- Đây là quy trình dịch thủ công theo hướng WPML, chưa phải plugin WPML, chưa có dịch AI, dịch slug riêng, thêm ngôn ngữ tùy ý hay dịch menu/chính sách tùy chỉnh qua admin. Chuỗi giao diện nằm ở dictionary; hiện hỗ trợ vi/en. Chưa kết nối dịch vụ dịch hoặc phát sinh phí dịch.
+
+Không cần biến môi trường hoặc database mới. Nội dung dịch lưu trong JSON của thực thể, dùng chung version/audit; không tạo lại sản phẩm, giá hoặc đơn cũ. Chạy kiểm tra luồng dịch và đặt một đơn thử sau khi cập nhật trên Ubuntu.
 
 ## Cộng tác viên và công nợ (0.5)
 
@@ -16,7 +29,7 @@ Tài khoản tạm dừng vẫn xem đơn/nợ nhưng không đặt mới hoặc
 
 Khóa dòng tài khoản và transaction bảo vệ hạn mức; request ID chống ghi nợ/trả nợ lặp. Bản cập nhật tự bổ sung bảng và nhập mã giao dịch cũ vào danh mục chống trùng, không đặt lại sản phẩm/đơn/ảnh. Tổng thu ở màn hình đơn chỉ tính đơn thanh toán trực tiếp trong danh sách, chưa phải báo cáo hợp nhất cả tiền trả nợ.
 
-Kiểm thử local gồm 11 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
+Kiểm thử local gồm 12 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
 
 ```bash
 JINGO_TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/jingo_credit_test npm run test:credit-postgres -w @jingo/api
@@ -28,7 +41,7 @@ Không có biến trên thì test báo SKIP. Chạy kiểm tra này và luồng 
 
 - `/admin`: tab Hình ảnh cho ảnh đại diện và tối đa 20 ảnh thông tin, sắp xếp thứ tự và mô tả alt. Tab Nội dung soạn quyền lợi/lịch trình/thông tin bằng trình định dạng có chèn ảnh. Trang chi tiết có gallery phóng lớn; danh sách hiển thị ảnh đại diện.
 - `/admin/loai-san-pham`: tạo/sửa loại như vé cáp treo, show diễn, tour đảo. Loại có tên/URL riêng, nhưng cách xử lý đặt vẫn chọn TICKET hoặc TOUR. Loại đang có sản phẩm không được lưu trữ để tránh đứt liên kết.
-- `/admin/bai-viet`: soạn thảo định dạng, ảnh bìa/ảnh trong bài, chuyên mục, tác giả, giới thiệu, sản phẩm liên quan, SEO, nháp và hẹn giờ theo giờ Việt Nam. Có ô nhập bản dịch tiếng Anh dạng nháp; chưa có route tiếng Anh/auto dịch hoặc workflow WPML hoàn chỉnh.
+- `/admin/bai-viet`: soạn thảo định dạng, ảnh bìa/ảnh trong bài, chuyên mục, tác giả, giới thiệu, sản phẩm liên quan, SEO, nháp và hẹn giờ theo giờ Việt Nam. Bản dịch chuyển sang trung tâm /admin/ban-dich, có xuất bản riêng và website /en.
 - `/cam-nang` và `/cam-nang/[slug]`: danh sách, chuyên mục, bài viết, mục lục từ H2/H3, thời gian đọc, khối vé liên quan lấy tên/giá hiện tại. Bài nháp và bài chưa đến giờ không xuất hiện ở API/trang công khai hoặc sitemap.
 - `/loai/[slug]`: trang nhóm sản phẩm; trang chủ có các nút nhóm. Đổi URL sản phẩm, bài viết hoặc loại sẽ lưu alias theo ID, trang web chuyển hướng 308 tới URL hiện tại; không tạo chuỗi chuyển hướng.
 
@@ -40,7 +53,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.5.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.6.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -56,7 +69,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo tự động, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.5.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.6.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 

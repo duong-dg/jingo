@@ -1,3 +1,4 @@
+import {translationState} from '../content/translations';
 import { z } from 'zod';
 import { validateDate } from '../pricing/pricing';
 import {imageRef} from '../content/content.schema';
@@ -19,7 +20,7 @@ export const productSchema = z.object({
     conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional() }).strict().optional()
   }).strict()).min(1).max(30),
   rules: z.array(rule).max(1000).default([]), closures: z.array(closure).max(500).default([]),
-  english: z.object({ name: text.max(200), description: text, seoTitle: text.max(200), seoDescription: text.max(500), status: z.enum(['DRAFT', 'PUBLISHED']) }).strict().optional(),
+  english: z.object({ name: text.max(200), description: text, seoTitle: text.max(200), seoDescription: text.max(500), destination:text.max(150).default(''),detailHtml:z.string().max(200000).default(''),variants:z.array(z.object({id,name:text.max(100),conditions:z.object({ADULT:text.max(300).optional(),CHILD:text.max(300).optional(),SENIOR:text.max(300).optional()}).strict().optional()}).strict()).max(30).default([]),...translationState }).strict().optional(),
   seoTitle: text.max(200).default(''), seoDescription: text.max(500).default('')
 }).strict().superRefine((product, ctx) => {
   const fail = (message: string) => ctx.addIssue({ code: 'custom', message });

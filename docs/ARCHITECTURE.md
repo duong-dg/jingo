@@ -12,7 +12,7 @@ Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một reposi
 - Admin tạo/sửa/nháp/xuất bản sản phẩm, gói và nhóm giá, điều kiện khách, SEO, lịch giá, ngày khóa và nháp tiếng Anh. Ngày khóa chặn cả endpoint rates lẫn quotes.
 - Public chỉ đọc sản phẩm xuất bản, không trả bản dịch nháp/lịch nội bộ. Seed ba sản phẩm mẫu một lần, không ghi đè khi restart.
 - Media module: admin guard trước multipart parsing, giới hạn file 5 MB, kiểm tra chữ ký và decode bằng Sharp, bỏ metadata và chuyển WebP. Một job tối ưu ảnh tại một thời điểm để giới hạn RAM. Volume ảnh marketing công khai tách khỏi vé riêng tư sẽ triển khai sau.
-- CMS: trình soạn Tiptap, sanitizer HTML phía server, bài/SEO/chuyên mục/ảnh/sản phẩm liên quan, nháp và hẹn giờ. Không cần worker cho lịch đăng: public read lọc thời gian hiện tại. Có bản tiếng Anh nháp, chưa có frontend đa ngôn ngữ.
+- CMS: trình soạn Tiptap, sanitizer HTML phía server, bài/SEO/chuyên mục/ảnh/sản phẩm liên quan, nháp và hẹn giờ. Không cần worker cho lịch đăng: public read lọc thời gian hiện tại. Có frontend Việt–Anh và trung tâm dịch song song ở phiên bản 0.6.
 - Product types là taxonomy do admin tạo, khác bookingKind TICKET/TOUR. Kiểm tra tham chiếu khi lưu và chặn lưu trữ loại đang dùng. Alias URL theo ID và giao dịch cùng thay đổi nội dung, web redirect 308.
 - Public blog SSR, mục lục, BlogPosting, canonical/OpenGraph; sitemap/robots đọc env runtime. Indexing opt-in, mặc định không lập chỉ mục. Admin/checkout/tra cứu luôn noindex.
 - Bảng quan hệ orders/payments/tickets/actions: snapshot bất biến, request idempotency, version optimistic locking và khóa hàng khi xử lý. Xác nhận nguồn cung thủ công, ghi nhận thu đủ chuyển khoản một lần, giao mã từng phần/đủ và hủy đơn chưa thu. Chưa giữ tồn hoặc gọi ngân hàng.
@@ -61,17 +61,14 @@ Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một reposi
 
 ## Đa ngôn ngữ kiểu WPML (yêu cầu đã chốt)
 
-Tiếng Việt mặc định, tiếng Anh là ngôn ngữ bổ sung đầu tiên. Admin đã có tab nhập bản dịch tiếng Anh dạng nháp liên kết cùng sản phẩm. Chưa có route tiếng Anh, dịch tự động hoặc workflow WPML đầy đủ; các mục sau là thiết kế đích.
+Phiên bản 0.6 triển khai tiếng Việt ở URL cũ, tiếng Anh ở /en. Nội dung dịch nằm trong JSON english của product/post/type, liên kết qua ID gốc và dùng chung version/audit. Chưa tách bảng theo locale; khi thêm nhiều ngôn ngữ có thể di chuyển cấu trúc này qua bảng dịch mà giữ nguyên ID thương mại.
 
-- Tách bản dịch nội dung khỏi thực thể thương mại. Product/variant giữ ID cố định; bảng product_translation và variant_translation có khóa (entity_id, locale). Giá, tồn, mã đối tác và vé không nhân bản theo ngôn ngữ.
-- Post, destination, category, menu, trang chính sách và trường SEO có bản dịch liên kết với thực thể gốc. Slug unique theo loại nội dung + locale. Lưu lịch sử slug để chuyển hướng 301.
-- Admin hiển thị các cột ngôn ngữ cùng biểu tượng chưa dịch/nháp/cần cập nhật/đã xuất bản, thêm bản dịch ngay trên nội dung gốc. Editor xem nguyên bản và bản dịch cạnh nhau, sao chép cấu trúc, preview trước khi publish.
-- Trạng thái xuất bản độc lập mỗi ngôn ngữ. Source revision thay đổi sẽ đánh dấu bản dịch cần cập nhật; không tự ghi đè nội dung đã biên tập. Điều kiện sử dụng/chính sách cần bản dịch được duyệt trước khi mở bán ngôn ngữ tương ứng.
-- URL công khai thống nhất /vi/... và /en/... khi bật locale routing; đường dẫn ban đầu chưa có locale phải chuyển hướng có chủ đích. Người dùng đổi ngôn ngữ vẫn ở đúng sản phẩm/bài tương ứng, giữ ngày/gói/số khách hợp lệ.
-- Mỗi trang có html lang, title/description, canonical tự trỏ ngôn ngữ đó, hreflang qua lại chỉ giữa bản dịch đã publish và x-default. Không đưa trang chưa dịch vào sitemap hoặc tạo trang tiếng Anh chứa nguyên văn tiếng Việt.
-- Chuỗi giao diện dùng dictionary key; không hard-code khắp component. Nội dung CMS dùng bảng dịch. Định dạng ngày/tiền qua Intl; đổi ngôn ngữ không tự đổi tiền tệ hoặc giá giao dịch.
-- API trả locale và availableLocales, tìm cùng sản phẩm bằng ID ổn định. App di động dùng lại nội dung dịch và API này.
-- Email, voucher JinGo và thông báo theo locale lưu trên booking; mã/QR vé gốc đối tác giữ nguyên. Không chỉnh nội dung vé gốc theo cách làm mất hiệu lực.
-- Có thể thêm gợi ý dịch máy sau này qua một adapter, luôn lưu nháp để con người duyệt; chưa tích hợp dịch vụ hoặc phát sinh chi phí dịch tự động.
+- /admin/ban-dich có trình dịch song song, trạng thái và bước xác nhận xuất bản; giá/tồn/mã vé dùng chung. Trường gói/điều kiện bám theo ID variant.
+- SHA-256 nội dung nguồn xác định bản dịch cần cập nhật; giá và lịch không tham gia hash. Nguồn đổi thì English tạm ẩn, không ghi đè bản dịch. Optimistic version chống mất cập nhật.
+- API lang=en chỉ trả nội dung đã duyệt, nguồn đang công khai và tới giờ xuất bản. Không fallback nguyên văn tiếng Việt. Danh sách trả languages để dựng liên kết tương ứng.
+- /en routes dùng lại component và nghiệp vụ Việt; dictionary dịch UI. Proxy ghi đè locale header theo URL, root html/lang và context theo request; chuyển ngôn ngữ tải tài liệu mới để không giữ context của ngôn ngữ cũ.
+- Canonical/hreflang/sitemap theo bản đã xuất bản; slug chung và alias cũ giữ chuyển hướng 308 trong cùng ngôn ngữ. Không tự chuyển theo Accept-Language để giữ URL ổn định.
+- Checkout/lookup có giao diện English; đơn lưu locale và snapshot tên/điều kiện/chính sách. Mã vé và hướng dẫn thủ công không tự dịch. CTV/admin vẫn Việt.
+- Chưa có dịch máy, slug riêng mỗi locale, thêm ngôn ngữ qua admin, bản dịch voucher/email hoặc dịch các trang chính sách tùy chỉnh. Có thể bổ sung sau; chưa có phí API dịch.
 
-Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, ledger công nợ, POS, cổng thanh toán và thông báo tự động; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.
+Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, POS, cổng thanh toán và thông báo tự động; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.

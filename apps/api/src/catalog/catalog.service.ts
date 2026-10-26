@@ -1,3 +1,4 @@
+import{markTranslation}from'../content/translations';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { DatabaseService } from '../database/database.module';
@@ -25,8 +26,8 @@ export class CatalogService {
     const parsed = productSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException(parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('\n'));
     const product = parsed.data;
-    product.detailHtml=cleanContent(product.detailHtml);
-    await this.media.validateIds([...(product.cover?[product.cover.id]:[]),...product.gallery.map(image=>image.id),...contentImageIds(product.detailHtml)]);
+    product.detailHtml=cleanContent(product.detailHtml);if(product.english)product.english.detailHtml=cleanContent(product.english.detailHtml);markTranslation('PRODUCT',product);
+    await this.media.validateIds([...(product.cover?[product.cover.id]:[]),...product.gallery.map(image=>image.id),...contentImageIds(product.detailHtml),...contentImageIds(product.english?.detailHtml||'') ]);
     const client = await this.db.pool.connect();
     try {
       await client.query('BEGIN');
