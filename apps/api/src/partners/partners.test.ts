@@ -26,7 +26,7 @@ test('CTV isolation, credit, repayments, global transfer references and price-fr
     assert.equal((await call('/partner/orders/'+first.id,undefined,bCookie)).status,404);
     assert.equal((await call(`/partner/orders/${first.id}/credit`,{requestId:randomUUID(),version:1,note:'unauthorized'},bCookie)).status,404);
     assert.equal((await call('/orders/lookup',{code:created.code,accessKey:input.accessKey})).status,404);
-    const confirm=(id:string)=>call(`/admin/orders/${id}/actions`,{requestId:randomUUID(),version:1,action:'CONFIRM',instructions:'TEST: supplier confirmed; use agreed payment terms.',note:'PRIVATE ADMIN NOTE - not shared'},adminCookie);
+    const confirm=(id:string)=>call(`/admin/orders/${id}/actions`,{requestId:randomUUID(),version:1,action:'INSTRUCTIONS',instructions:'TEST: supplier confirmed; use agreed payment terms.',note:'PRIVATE ADMIN NOTE - not shared'},adminCookie);
     assert.equal((await confirm(first.id)).status,201);
     const credit={requestId:randomUUID(),version:2,note:'CTV accepts debt'};res=await call(`/partner/orders/${first.id}/credit`,credit,aCookie);assert.equal(res.status,201);let detail=await res.json();assert.equal(detail.paymentStatus,'CREDIT');assert.equal(detail.history,undefined);
     assert.equal((await(await call(`/partner/orders/${first.id}/credit`,credit,aCookie)).json()).version,3);

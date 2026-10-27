@@ -7,7 +7,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { newDb } from 'pg-mem';
 import { AppModule } from '../app.module';
 
-test('request → confirm → collect → partial/full delivery; access control and retries',async()=>{
+test('immediate booking → collect → partial/full delivery; optional instructions, access control and retries',async()=>{
   process.env.ADMIN_EMAIL='orders@example.test';process.env.ADMIN_PASSWORD='orders-integration-test-123';process.env.PUBLIC_BASE_URL='http://localhost:3000';
   const memory=newDb({noAstCoverageCheck:true});const adapter=memory.adapters.createPg();const pool=new adapter.Pool();
   const module=await Test.createTestingModule({imports:[AppModule]}).overrideProvider('DB_POOL').useValue(pool).compile();
@@ -26,14 +26,14 @@ test('request → confirm → collect → partial/full delivery; access control 
     assert.equal((await call('/orders',{...input,contact:{...input.contact,name:'Another'}})).status,409);
     const lookup={code:result.code,accessKey:input.accessKey};
     assert.equal((await call('/orders/lookup',{...lookup,accessKey:'a'.repeat(64)})).status,404);
-    let guest=await(await call('/orders/lookup',lookup)).json();assert.equal(guest.contact,undefined);assert.equal(guest.bookingStatus,'REQUESTED');
+    let guest=await(await call('/orders/lookup',lookup)).json();assert.equal(guest.contact,undefined);assert.equal(guest.bookingStatus,'CONFIRMED');assert.equal(guest.paymentStatus,'UNPAID');assert.equal(guest.tickets.length,0);
     assert.equal((await call('/admin/orders')).status,401);
     const row=(await(await call('/admin/orders',undefined,true)).json()).data[0];const id=row.id;
     const act=(body:unknown,admin=true)=>call(`/admin/orders/${id}/actions`,body,admin);
-    assert.equal((await act({requestId:randomUUID(),version:1,action:'PAY',amount:input.expectedTotal,reference:'tx-before-confirm',note:'test'})).status,409);
-    const confirm={requestId:randomUUID(),version:1,action:'CONFIRM',instructions:'Test supplier confirmed; transfer instructions and cancellation policy.',note:'Supplier confirmed'};
+    assert.equal((await act({requestId:randomUUID(),version:1,action:'DELIVER',tickets:[{code:'UNPAID-TEST',kind:'SUPPLIER_CODE',covers:2,note:''}],note:'test'})).status,409,'booking confirmation does not count as payment');
+    const confirm={requestId:randomUUID(),version:1,action:'INSTRUCTIONS',instructions:'Test supplier confirmed; transfer instructions and cancellation policy.',note:'Supplier confirmed'};
     assert.equal((await act(confirm,false)).status,401);res=await act(confirm);assert.equal(res.status,201);
-    assert.equal((await(await act(confirm)).json()).version,2,'confirmation retry is idempotent');
+    assert.equal((await(await act(confirm)).json()).version,2,'instruction retry is idempotent');
     assert.equal((await act({...confirm,requestId:randomUUID()})).status,409,'stale version blocked');
     const pay={requestId:randomUUID(),version:2,action:'PAY',amount:input.expectedTotal,reference:'tx-001',note:'Checked bank statement'};
     assert.equal((await act({...pay,amount:1})).status,400);res=await act(pay);assert.equal(res.status,201);assert.equal((await res.json()).paymentStatus,'PAID');
@@ -49,5 +49,7 @@ test('request → confirm → collect → partial/full delivery; access control 
     const pendingInput={...input,requestId:randomUUID(),accessKey:randomBytes(32).toString('hex')};await call('/orders',pendingInput);
     const pendingRow=(await(await call('/admin/orders',undefined,true)).json()).data.find((r:{id:string})=>r.id!==id);
     res=await call(`/admin/orders/${pendingRow.id}/actions`,{requestId:randomUUID(),version:1,action:'CANCEL',note:'No supplier availability'},true);assert.equal(res.status,201);assert.equal((await res.json()).bookingStatus,'CANCELLED');
+    const directInput={...input,requestId:randomUUID(),accessKey:randomBytes(32).toString('hex')};const direct=await(await call('/orders',directInput)).json();const directRow=(await(await call('/admin/orders',undefined,true)).json()).data.find((r:{code:string})=>r.code===direct.code);assert.equal(directRow.booking_status,'CONFIRMED');assert.equal((await call(`/admin/orders/${directRow.id}/actions`,{requestId:randomUUID(),version:1,action:'PAY',amount:input.expectedTotal,reference:'DIRECT-PAY-TEST',note:'TEST payment; no source confirmation step'},true)).status,201);assert.equal((await call(`/admin/orders/${directRow.id}/actions`,{requestId:randomUUID(),version:2,action:'DELIVER',tickets:[{code:'DIRECT-DELIVERY-TEST',kind:'SUPPLIER_CODE',covers:2,note:''}],note:'TEST delivery after payment'},true)).status,201);
+
   }finally{await app.close();}
 });

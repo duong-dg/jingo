@@ -43,10 +43,10 @@ export class OrdersService {
       if(input.locale==='en'&&!translated('PRODUCT',product))throw new ConflictException('English content has changed. Please refresh before booking.');const view=input.locale==='en'?localizeProduct(product):product;const variant = view.variants.find((v:{id:string}) => v.id === input.variantId)!;
       const snapshot: OrderSnapshot = {...(quote.timeSlot?{timeSlot:quote.timeSlot}:{}), productId: product.id, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
         total: quote.total, lines: quote.lines, demo: false, conditions: variant.conditions || {},
-        policy: input.locale==='en'?'Booking requests require JinGo to confirm supplier availability. No reservation or ticket is guaranteed yet. Only pay after JinGo confirms and provides instructions and the applicable cancellation terms.':'Yêu cầu đặt cần JinGo xác nhận nguồn vé/chỗ. Chưa giữ chỗ hoặc bảo đảm có vé. Chỉ chuyển khoản sau khi JinGo xác nhận và cung cấp hướng dẫn. Chính sách đổi/hủy do JinGo xác nhận với nhà cung cấp trước khi bạn thanh toán.' };
+        policy: input.locale==='en'?'Your booking is recorded immediately. JinGo will send your tickets by email after processing. Booking confirmation does not mean payment has been received or tickets have been issued. Follow the payment instructions provided for your booking.':'Đơn đặt vé được ghi nhận ngay. JinGo sẽ gửi vé qua email sau khi xử lý. Xác nhận đặt vé không đồng nghĩa đã thanh toán hoặc đã xuất vé. Thanh toán theo hướng dẫn của đơn hàng.' };
       const code = 'JG' + randomBytes(5).toString('hex').toUpperCase();
       const id=randomUUID();
-      await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact,booking_status) VALUES ($1,$2,$3,$4,$5,$6,$7,\'CONFIRMED\')',
         [id, code, input.requestId, requestHash, hash(input.accessKey), JSON.stringify(snapshot),JSON.stringify(input.contact)]);
       if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,input.accessKey);await this.mail.enqueue(client,id,'CREATED',1);}
       await client.query('COMMIT'); return { code, accessKey: input.accessKey };
@@ -109,6 +109,9 @@ export class OrdersService {
       if (action.action === 'CONFIRM') {
         if (row.booking_status !== 'REQUESTED') throw new ConflictException('Đơn đã được xác nhận.');
         await client.query("UPDATE jingo_orders SET booking_status='CONFIRMED', instructions=$2 WHERE id=$1", [id,action.instructions]);
+      } else if(action.action==='INSTRUCTIONS'){
+        if(row.booking_status!=='CONFIRMED')throw new ConflictException('Chỉ cập nhật hướng dẫn cho đơn đã đặt.');
+        await client.query('UPDATE jingo_orders SET instructions=$2 WHERE id=$1',[id,action.instructions]);
       } else if (action.action === 'CANCEL') {
         if (row.payment_status !== 'UNPAID') throw new ConflictException('Đơn đã thu tiền hoặc ghi công nợ cần quy trình hoàn riêng; không thể hủy trực tiếp.');
         await client.query("UPDATE jingo_orders SET booking_status='CANCELLED' WHERE id=$1", [id]);

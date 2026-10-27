@@ -1,7 +1,15 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.7 thêm chọn vé trực tiếp, suất giờ, email khách bắt buộc và cấu hình SMTP; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
+Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.7 thêm chọn vé trực tiếp, suất giờ, email khách bắt buộc và cấu hình SMTP; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Đặt vé xác nhận ngay, thu chuyển khoản thủ công và giao mã qua email/link tra cứu. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
 
+
+## Đặt vé và xác nhận ngay (0.7.2)
+
+Khách bấm Đặt vé là tạo đơn CONFIRMED / UNPAID ngay, nhận thông báo thành công và email xác nhận nếu bật SMTP. Không cần bước admin xác nhận nguồn vé; không còn checkbox chờ kiểm tra ở form. Xác nhận đặt vé không đánh dấu đã thu tiền hoặc đã xuất vé. Giá, ngày khóa, giờ ngừng bán, email và chống trùng vẫn kiểm tra server.
+
+Admin có thể thu tiền/ghi công nợ ngay từ đơn mới; Gửi / cập nhật hướng dẫn là thao tác tùy chọn, có audit và email. Giao mã vẫn yêu cầu PAID hoặc CREDIT, sau đó email báo khách mở link nhận vé. Đơn cũ REQUESTED giữ nguyên, có thao tác Tiếp nhận đơn cũ; không tự đổi dữ liệu hoặc khoản thu cũ. CTV cũng đặt ngay và dùng hạn mức được cấp mà không cần chờ bước xác nhận nguồn.
+
+Kiểm thử bổ sung luồng thu tiền rồi giao vé trực tiếp từ đơn mới version 1, không qua CONFIRM hoặc INSTRUCTIONS; vẫn chặn giao vé trước khi thu/ghi nợ, kiểm tra sai số tiền và chống ghi thu trùng.
 
 ## Chỉnh giao diện chọn vé (0.7.1)
 
@@ -70,7 +78,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.7.1`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.7.2`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -86,7 +94,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.7.1`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.7.2`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
