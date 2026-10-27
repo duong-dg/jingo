@@ -251,3 +251,7 @@ Admin và nhân viên quầy có quyền DELIVER dùng cùng form. API kiểm tr
 ### v0.12.1 — sửa lưu tên tiếng Anh điểm đến
 
 Khi chọn điểm đến đã có trong cây, trình sửa nay chỉ gửi các trường được phép lưu; bỏ depth/path dùng để hiển thị cây. Sửa tên tiếng Anh hoặc thông tin điểm đến không còn lỗi Unrecognized keys. Giữ kiểm tra schema nghiêm ngặt ở API. Không cần đổi dữ liệu hoặc migration.
+
+### v0.12.2 — bố cục chuyên mục Blog
+
+Trang Chuyên mục chia thành khung tạo mới và danh sách có tìm kiếm/số bài. Trong bài viết, Chuyên mục và Tác giả nằm cùng hàng; bấm Tạo mới để mở khung nhập riêng, Tạo & chọn tự chọn chuyên mục vừa tạo. Thông báo hiện ngay trong khung tạo. Trên điện thoại các khung xếp một cột. Không đổi dữ liệu hay API chuyên mục.

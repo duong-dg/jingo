@@ -1,0 +1,42 @@
+.categories-layout{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:24px;align-items:start}
+.categories-layout .category-create-card{padding:26px;margin:0;min-width:0}
+.category-create-card .eyebrow{font-size:11px;letter-spacing:1.5px;margin:0 0 10px}
+.category-create-card h2,.category-directory h2{font-size:22px;margin:0;letter-spacing:-.4px}
+.category-create-card>.admin-hint{margin:12px 0 24px}
+.category-create-card fieldset{min-width:0;padding:0;margin:0;border:0;display:grid;gap:10px}
+.category-create-card label{margin:0}
+.category-create-card small{font-size:13px;line-height:1.6;color:#758173}
+.category-create-card .button{margin-top:10px;justify-content:center;min-height:46px}
+.category-create-card .admin-error,.category-create-card .admin-success{margin:4px 0 0}
+.category-directory{min-width:0}
+.category-directory-heading{padding:24px;border-bottom:1px solid #e5eae5}
+.category-directory-heading p{font-size:14px;color:#758173;margin:8px 0 0}
+.category-directory-search{padding:20px 24px;border-bottom:1px solid #e5eae5}
+.category-directory-search label{font-size:14px;margin:0 0 8px}
+.category-directory-list{list-style:none;margin:0;padding:0}
+.category-directory-list li{display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid #edf0e9;min-width:0}
+.category-directory-list li:last-child{border-bottom:0}
+.category-directory-icon{width:40px;height:40px;display:grid;place-items:center;border:1px solid #e0e8da;border-radius:10px;background:#f3f6ee;color:#57734b;font-size:20px;flex-shrink:0}
+.category-directory-list li>div{min-width:0;display:grid;gap:4px}
+.category-directory-list strong{font-size:16px;overflow-wrap:anywhere}
+.category-directory-list small{font-size:13px;color:#7a8776}
+.category-post-count{margin-left:auto;flex-shrink:0;padding:6px 11px;border-radius:20px;background:#f1f5eb;color:#516c43;font-size:13px;white-space:nowrap}
+.post-meta-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:24px}
+.cms-fields .post-meta-grid label{margin:0}
+.post-meta-grid>label{display:grid;grid-template-rows:22px 48px;gap:8px;line-height:22px}
+.post-category-field{min-width:0;display:grid;gap:8px}
+.post-field-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:22px}
+.post-field-heading label{line-height:22px}
+.post-category-toggle{padding:0;border:0;background:none;color:#b85731;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;line-height:22px}
+.post-category-toggle:hover{text-decoration:underline}
+.post-meta-grid input,.post-meta-grid select{min-height:48px;height:48px;width:100%;min-width:0}
+.post-category-create{padding:18px;border:1px solid #dee6d7;border-radius:10px;background:#f7f9f3;margin:-4px 0 24px}
+.cms-fields .post-category-create>label{margin:0 0 10px}
+.post-category-create-controls{display:flex;gap:12px;align-items:stretch}
+.post-category-create-controls input{flex:1;min-width:0}
+.post-category-create-controls .button{flex-shrink:0;min-height:46px;white-space:nowrap;padding:10px 18px}
+.post-category-create .admin-hint{font-size:13px;margin:10px 0 0}
+.post-category-create .admin-success,.post-category-create .admin-error{margin:12px 0 0}
+@media(max-width:1000px){.categories-layout{grid-template-columns:minmax(240px,.8fr) minmax(0,1.2fr);gap:18px}}
+@media(max-width:760px){.categories-layout{grid-template-columns:minmax(0,1fr)}.categories-layout .category-create-card{padding:22px}.category-directory-heading,.category-directory-search{padding:20px}.category-directory-list li{padding:16px 20px}}
+@media(max-width:540px){.post-meta-grid{grid-template-columns:minmax(0,1fr);gap:18px}.post-category-create{padding:15px}.post-category-create-controls{flex-direction:column}.post-category-create-controls .button{width:100%;justify-content:center}.post-field-heading{gap:16px}.category-create-card h2,.category-directory h2{font-size:20px}.category-directory-list li{gap:10px}.category-directory-icon{width:34px;height:34px}.category-directory-list strong{font-size:15px}}
