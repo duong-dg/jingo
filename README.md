@@ -267,3 +267,9 @@ Thư FAILED có nút Thử gửi lại nếu SMTP đang bật và đơn hỗ tr�
 Đơn hàng → áp dụng bộ lọc → Xuất CSV. File gồm toàn bộ kết quả theo bộ lọc đã áp dụng và trạng thái danh sách/thùng rác, không phụ thuộc trang hoặc số đơn mỗi trang. Chỉnh bộ lọc cần bấm Tìm đơn hàng trước khi xuất. Tối đa 10.000 đơn/lần; vượt giới hạn phải thu hẹp bộ lọc, không tự cắt bớt kết quả.
 
 CSV UTF-8 có BOM để hiển thị tiếng Việt trong Excel, cột ngày tạo theo giờ Việt Nam, thông tin khách/sản phẩm/gói/ngày/suất, số người lớn/trẻ em/người cao tuổi, giá trị đơn và trạng thái/kênh. Số điện thoại thêm dấu nháy đầu để giữ dạng văn bản; nội dung có thể được Excel diễn giải là công thức được vô hiệu hóa. Không xuất mã vé, khóa truy cập hoặc ghi chú nội bộ. Giá trị đơn không phải số tiền thực thu theo ngày nhận.
+
+### v0.15.0 — nhân bản sản phẩm
+
+Mở sản phẩm đã lưu → Nhân bản sản phẩm. Nút tạm khóa khi nội dung hoặc bản dịch còn thay đổi chưa lưu. Bản sao chỉ nằm trong trình soạn cho tới khi bấm Lưu thay đổi, luôn có trạng thái DRAFT, tên/slug mới và ID mới cho sản phẩm, gói, suất giờ, lịch giá. Nội dung, ảnh, giá cơ bản, điều kiện khách và các khoảng lịch/khóa ngày được giữ; các tham chiếu lịch trỏ về đúng gói mới.
+
+Bản dịch không được sao chép; tồn vé và bảng giá CTV là dữ liệu riêng theo ID nên cần cấp lại. Nhãn vé mẫu giữ theo sản phẩm gốc. Kiểm tra tên, URL, giá, lịch và tồn trước khi xuất bản. Không sao chép đơn, mã vé hay doanh thu.

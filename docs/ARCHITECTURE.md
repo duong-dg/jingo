@@ -130,3 +130,7 @@ Admin-only GET /admin/orders/:orderId/emails returns no-store, a scoped latest10
 ## Admin order CSV (0.14.0)
 
 Admin-only GET /admin/orders/export shares validated filters/SQL predicates with the paginated list but ignores page/pageSize. One SELECT provides a consistent result snapshot and fetches at most10001 rows; above10000 returns an error before emitting a CSV attachment. No silent truncation or repeated paginated reads. The frontend uses the applied filter snapshot and downloads a no-store UTF-8 BOM CSV. Columns explicitly project order/contact/snapshot fields, excluding ticket codes, customer-access keys and internal notes. Cells are quoted/escaped and spreadsheet formula prefixes neutralized; phone numbers are text. Booking value is distinct from receipt-based revenue.
+
+## Product duplication (0.15.0)
+
+A client-side deep clone creates an unsaved draft, then uses the existing authenticated/validated product save API. New UUIDs replace product, variant, slot and rule IDs; all rule/closure product and variant references are rebound. Source object remains untouched. Published status resets to DRAFT, version to0, SEO title to the default and English content is omitted. Images reference existing media-library assets. Inventory, partner net-price mappings, orders and ticket codes live separately and are not copied. UI requires saving existing source/translation edits before duplication and clearly states that the clone still needs saving.

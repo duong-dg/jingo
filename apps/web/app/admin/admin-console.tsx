@@ -1,4 +1,5 @@
 'use client';
+import{duplicateProduct}from'../../lib/duplicate-product';
 import{DestinationNode,destinationRows}from'../../lib/destinations';
 import{DatePicker}from'../components/date-picker';
 import{ProductScheduleEditor,TimeSlot}from'./shared/time-slots';
@@ -42,6 +43,7 @@ export function AdminConsole() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const[copySource,setCopySource]=useState('');
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('content');const[previewSlot,setPreviewSlot]=useState('');
   const [previewDate, setPreviewDate] = useState(today());
@@ -55,11 +57,12 @@ export function AdminConsole() {
   const change = (patch: Partial<Product>) => { setEditing(p => p ? { ...p, ...patch } : p); setDirty(true); setNotice(''); setPreviewResult(''); };
   const choose = (product: Product) => {
     if ((dirty||translationDirty) && !window.confirm('Bỏ những thay đổi chưa lưu?')) return;
-    setTranslationDirty(false);setEditing(structuredClone(product)); setDirty(false); setTab('content'); setError(''); setNotice(''); setPreviewResult(''); setPreviewVariant(product.variants[0].id);
+    setTranslationDirty(false);setCopySource('');setEditing(structuredClone(product)); setDirty(false); setTab('content'); setError(''); setNotice(''); setPreviewResult(''); setPreviewVariant(product.variants[0].id);
   };
+  const duplicate=()=>{if(!editing||busy||dirty||translationDirty||!editing.version)return;try{const copy=duplicateProduct(editing);setCopySource(editing.name);setEditing(copy);setDirty(true);setTranslationDirty(false);setTab('content');setPreviewVariant(copy.variants[0].id);setPreviewSlot('');setPreviewResult('');setError('');setNotice('Đã tạo bản nháp sao chép trên trình soạn. Kiểm tra tên, đường dẫn, giá và lịch bán rồi bấm Lưu thay đổi.');}catch(e){setError((e as Error).message);}};
   const save = async () => {
     if (!editing) return; setBusy(true); setError(''); setNotice('');
-    try { const result = await request('products', editing); setEditing(result.data); setDirty(false); await load(); setNotice('Đã lưu sản phẩm. Trang bán vé sử dụng dữ liệu mới.'); }
+    try { const result = await request('products', editing); setEditing(result.data); setDirty(false); await load(); setNotice(result.data.status==='DRAFT'?'Đã lưu nháp. Sản phẩm chưa hiển thị ngoài website.':'Đã lưu sản phẩm. Trang bán vé sử dụng dữ liệu mới.'); }
     catch (e) { const err = e as Error & { status?: number }; setError(err.message); if (err.status === 401) setUser(null); }
     finally { setBusy(false); }
   };
@@ -79,7 +82,7 @@ export function AdminConsole() {
     <div className={`admin-columns ${editing ? '' : 'no-editor'}`}><section className="product-list"><div className="list-heading"><h2>Danh sách sản phẩm</h2><input aria-label="Tìm sản phẩm" placeholder="Tìm tên hoặc điểm đến…" value={query} onChange={e => setQuery(e.target.value)}/></div>
     {items.filter(p => `${p.name} ${p.destination}`.toLowerCase().includes(query.toLowerCase())).map(p => <button disabled={busy} className={`product-list-item ${editing?.id === p.id ? 'selected' : ''}`} key={p.id} onClick={() => choose(p)}><span className="product-mark">{p.type === 'TOUR' ? '↗' : '▱'}</span><span><strong>{p.name}</strong><small>{p.destination} · {p.variants.length} gói vé</small></span><span className={`status-pill ${p.status === 'DRAFT' ? 'draft' : ''}`}>{p.status === 'DRAFT' ? 'Nháp' : 'Xuất bản'}</span></button>)}
     {!items.length && <p className="admin-empty">Chưa có sản phẩm. Tạo sản phẩm đầu tiên của bạn.</p>}</section>
-    {editing && <section className="product-editor"><div className="editor-heading"><div><small>{editing.version ? 'CHỈNH SỬA SẢN PHẨM' : 'SẢN PHẨM MỚI'}</small><h2>{editing.name || 'Chưa đặt tên'}</h2></div><span className="unsaved">{dirty ? '● Chưa lưu' : 'Đã lưu'}</span></div><div className="editor-tabs" role="tablist" aria-label="Nội dung sản phẩm">{[['content','Thông tin'],['images','Hình ảnh'],['details','Nội dung'],['variants','Gói & giá'],['calendar','Lịch bán'],['english','English']].map(([key,label]) => <button key={key} role="tab" aria-selected={tab === key} aria-controls={`panel-${key}`} id={`tab-${key}`} onClick={() => {if(key===tab)return;if(translationDirty&&!window.confirm('Bỏ bản dịch chưa lưu?'))return;setTranslationDirty(false);setTab(key);}}>{label}</button>)}</div>
+    {editing && <section className="product-editor"><div className="editor-heading"><div><small>{editing.version ? 'CHỈNH SỬA SẢN PHẨM' : 'SẢN PHẨM MỚI'}</small><h2>{editing.name || 'Chưa đặt tên'}</h2></div><span className="unsaved">{dirty ? '● Chưa lưu' : 'Đã lưu'}</span></div>{editing.version>0&&<div className="product-copy-bar"><p>{dirty||translationDirty?'Lưu thay đổi và bản dịch trước khi nhân bản.':'Tạo một bản nháp mới từ sản phẩm này.'}</p><button type="button" className="outline-button" disabled={busy||dirty||translationDirty} onClick={duplicate}>⧉ Nhân bản sản phẩm</button></div>}{!editing.version&&!!copySource&&<div className="product-copy-info"><strong>Bản sao đang ở trạng thái nháp</strong><p>Nội dung, ảnh, giá và lịch bán đã được sao chép. Kiểm tra lại trước khi lưu và xuất bản.</p><small>Tồn vé, giá CTV và bản dịch cần thiết lập riêng cho sản phẩm mới.</small></div>}<div className="editor-tabs" role="tablist" aria-label="Nội dung sản phẩm">{[['content','Thông tin'],['images','Hình ảnh'],['details','Nội dung'],['variants','Gói & giá'],['calendar','Lịch bán'],['english','English']].map(([key,label]) => <button key={key} role="tab" aria-selected={tab === key} aria-controls={`panel-${key}`} id={`tab-${key}`} onClick={() => {if(key===tab)return;if(translationDirty&&!window.confirm('Bỏ bản dịch chưa lưu?'))return;setTranslationDirty(false);setTab(key);}}>{label}</button>)}</div>
     <fieldset disabled={busy} className="editor-fields"><div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
     {tab==='images'&&<><ImageField label="Ảnh đại diện sản phẩm" value={editing.cover} onChange={cover=>change({cover})}/><GalleryField value={editing.gallery||[]} onChange={gallery=>change({gallery})}/></>}
     {tab==='details'&&<><h3>Thông tin chi tiết vé / tour</h3><p className="admin-hint">Thêm quyền lợi, lịch trình, điều kiện sử dụng, hình thông tin và liên kết cần thiết.</p><RichEditor key={editing.id} value={editing.detailHtml||''} disabled={busy} onChange={detailHtml=>change({detailHtml})}/></>}
