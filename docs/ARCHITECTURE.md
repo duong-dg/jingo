@@ -110,3 +110,9 @@ Separate configs, capacity buckets (product/variant/date/optional slot), and one
 Order creation and capacity changes acquire the same product row lock inside a READ COMMITTED transaction. Creation rechecks request id after the lock, validates fresh remaining stock, and inserts the order and allocation atomically. Day and slot limits both apply. Quotes are advisory and never reserve. Cancellation releases the allocation idempotently in the order transaction. Paid or credit archive retains stock; restoring cancelled orders does not reacquire it. No pending-order TTL.
 
 Admin bulk edits use optimistic config versions and reject capacity below occupied units. Public, POS and partner quotes expose remaining units; only admin routes edit capacity. External supplier inventory remains a future adapter. pg-mem integration covers lifecycle and date isolation but cannot prove PostgreSQL row-lock concurrency.
+
+## Admin order search (0.11.1)
+
+GET /admin/orders validates query parameters and filters in PostgreSQL. Literal case-insensitive substring search covers booking code and contact name/phone/email with bound parameters. Optional booking/payment/channel/date filters combine with the active/archive scope. Creation-date boundaries use Asia/Ho_Chi_Minh midnight; visit dates compare ISO snapshot dates. No new POS or CTV access is granted.
+
+Grouped totals and the selected page read within one REPEATABLE READ transaction. Rows sort by created_at DESC,id DESC with a supporting index and bounded page size (max100). Statistics cover all matching rows, not just the selected page; PAID value is booked order value. This does not replace the receipts report. Page overflow clamps to the last page after archival or concurrent changes. Offset pagination can shift between separate requests when new orders arrive.

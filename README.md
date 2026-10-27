@@ -235,3 +235,9 @@ Mỗi khách chiếm một suất, gồm cả vé miễn phí. Web, POS và CTV 
 Tổng tồn bao gồm số đã đặt và không được thấp hơn số này. Nếu muốn ngừng nhận thêm khi đã có đơn, đặt tổng tồn bằng số đã đặt. Nếu có cả giới hạn ngày và suất, đơn phải thỏa cả hai. Đơn cũ được chuyển sang sổ tồn một lần; đơn không xác định được gói/suất sẽ được tính thận trọng và hiện trong danh sách cần phân loại.
 
 Sau triển khai, health phải hiện `0.11.0`. Chưa có kết nối tồn nhà cung cấp. Kiểm thử tự động dùng pg-mem; cần kiểm tra tải mua đồng thời trên PostgreSQL thực trước khi vận hành lớn.
+
+### v0.11.1 — tìm và lọc toàn bộ đơn
+
+Trang Đơn hàng tìm trên toàn bộ dữ liệu theo mã booking, tên khách, điện thoại hoặc email, không còn chỉ tìm trong 200 đơn gần nhất. Có lọc trạng thái đơn, thanh toán, kênh Web/POS/CTV, ngày tạo đơn hoặc ngày sử dụng vé. Khoảng ngày có thể bỏ trống một hoặc cả hai đầu; ngày tạo tính theo múi giờ Việt Nam. Bấm Tìm đơn hàng để áp dụng, Xóa bộ lọc để trở về danh sách đầy đủ.
+
+Phân trang 25/50/100 đơn; thùng rác dùng cùng bộ lọc. Thống kê tính trên toàn bộ kết quả khớp, gồm tất cả trang. Giá trị đơn PAID là giá trị đặt vé, không phải báo cáo dòng tiền theo ngày nhận. Health phiên bản mới là `0.11.1`.

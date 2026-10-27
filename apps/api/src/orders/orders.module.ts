@@ -1,3 +1,4 @@
+import{OrderSearchService}from'./order-search.service';
 import{InventoryModule}from'../inventory/inventory.module';
 import{MailModule}from'../mail/mail.module';
 import { BadRequestException, Body, Controller, Get, Module, Param, Post, Req, Res, Query, HttpException } from '@nestjs/common';
@@ -23,10 +24,10 @@ class OrdersController {
 }
 @Controller('admin/orders')
 class AdminOrdersController {
-  constructor(private readonly orders: OrdersService, private readonly auth: AuthService) {}
-  @Get() async list(@Req() req: Request, @Res({ passthrough:true }) res: Response,@Query('archived')archived?:string) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return { data: await this.orders.list(archived==='true') }; }
+  constructor(private readonly orders: OrdersService, private readonly auth: AuthService,private readonly search:OrderSearchService) {}
+  @Get() async list(@Req() req: Request, @Res({ passthrough:true }) res: Response,@Query()query:Record<string,unknown>) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.search.search(query); }
   @Get(':id') async get(@Param('id') id: string, @Req() req: Request, @Res({ passthrough:true }) res: Response) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.orders.get(id); }
   @Post(':id/actions') async action(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req); return this.orders.act(id,parse(actionInput,body),admin.id); }
 }
-@Module({ imports:[AdminModule,MailModule,InventoryModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService],exports:[OrdersService] })
+@Module({ imports:[AdminModule,MailModule,InventoryModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService,OrderSearchService],exports:[OrdersService] })
 export class OrdersModule {}
