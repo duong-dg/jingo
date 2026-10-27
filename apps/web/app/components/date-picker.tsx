@@ -1,0 +1,18 @@
+'use client';
+import {useId,useRef,useState} from 'react';
+import {useLocale} from './locale-context';
+const iso=(date:Date)=>date.toISOString().slice(0,10);
+const localToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export function DatePicker({label,value,onChange,min,max,disabled=false}:{label:string;value:string;onChange:(value:string)=>void;min?:string;max?:string;disabled?:boolean}){
+ const locale=useLocale(),en=locale==='en',id=useId(),root=useRef<HTMLDetailsElement>(null),trigger=useRef<HTMLElement>(null);
+ const [month,setMonth]=useState(()=>((value||min||localToday()).slice(0,7)));
+ const [year,number]=month.split('-').map(Number),first=new Date(Date.UTC(year,number-1,1)),offset=(first.getUTCDay()+6)%7,days=new Date(Date.UTC(year,number,0)).getUTCDate();
+ const allowed=(date:string)=>(!min||date>=min)&&(!max||date<=max);
+ const choose=(date:string)=>{if(!allowed(date))return;onChange(date);if(root.current)root.current.open=false;trigger.current?.focus();};
+ const move=(delta:number)=>setMonth(iso(new Date(Date.UTC(year,number-1+delta,1))).slice(0,7));
+ const display=value?new Intl.DateTimeFormat(en?'en-GB':'vi-VN',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T00:00:00Z')):(en?'Choose a date':'Chọn ngày');
+ return <div className="date-field"><span id={id+'-label'} className="date-label">{label}</span><details ref={root} className="date-picker" onToggle={event=>{if(event.currentTarget.open)setMonth((value||min||localToday()).slice(0,7));}} onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.currentTarget.open=false;trigger.current?.focus();}}}>
+ <summary ref={trigger} aria-labelledby={id+'-label '+id+'-value'} aria-disabled={disabled} onClick={event=>{if(disabled)event.preventDefault();}}><span aria-hidden="true" className="date-icon">▦</span><span id={id+'-value'}>{display}</span><span aria-hidden="true">⌄</span></summary>
+ {!disabled&&<div className="date-popover"><div className="date-month"><button type="button" aria-label={en?'Previous month':'Tháng trước'} onClick={()=>move(-1)}>‹</button><select aria-label={en?'Month':'Tháng'} value={number} onChange={event=>setMonth(year+'-'+event.target.value.padStart(2,'0'))}>{Array.from({length:12},(_,i)=><option key={i} value={i+1}>{en?new Intl.DateTimeFormat('en',{month:'long',timeZone:'UTC'}).format(new Date(Date.UTC(2000,i,1))):'Tháng '+(i+1)}</option>)}</select><select aria-label={en?'Year':'Năm'} value={year} onChange={event=>setMonth(event.target.value+'-'+String(number).padStart(2,'0'))}>{Array.from({length:201},(_,i)=><option key={1900+i} value={1900+i}>{1900+i}</option>)}</select><button type="button" aria-label={en?'Next month':'Tháng sau'} onClick={()=>move(1)}>›</button></div><div className="date-grid">{(en?['Mo','Tu','We','Th','Fr','Sa','Su']:['T2','T3','T4','T5','T6','T7','CN']).map(day=><span className="date-weekday" key={day}>{day}</span>)}{Array.from({length:offset},(_,i)=><span key={'blank'+i}/>)}{Array.from({length:days},(_,i)=>{const date=month+'-'+String(i+1).padStart(2,'0');return <button type="button" key={date} aria-label={date} aria-pressed={date===value} disabled={!allowed(date)} className={date===value?'date-selected':date===localToday()?'date-today':''} onClick={()=>choose(date)}>{i+1}</button>;})}</div><div className="date-shortcuts">{[0,1].map(delta=>{const date=iso(new Date(new Date(localToday()+'T00:00:00Z').getTime()+delta*86400000));return <button type="button" key={delta} disabled={!allowed(date)} onClick={()=>choose(date)}>{delta?(en?'Tomorrow':'Ngày mai'):(en?'Today':'Hôm nay')}</button>;})}</div></div>}
+ </details></div>;
+}

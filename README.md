@@ -198,3 +198,8 @@ Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
 - Bài viết mới tự tạo slug từ tiêu đề cho tới khi sửa tay; bài cũ giữ URL. Tạo chuyên mục ngay trong trình soạn bài, lưu dùng chung trong PostgreSQL.
 - Thông báo lưu đặt ngay sau nút lưu ở các trình sửa sản phẩm, bài viết, loại sản phẩm, giá và tài khoản CTV.
 - Menu thu gọn trên điện thoại; tra cứu bằng mã booking + email đã đặt, link có khóa cũ vẫn hoạt động. CTV tiếp tục tra đơn trong tài khoản; link chia sẻ vé giữ khóa riêng.
+
+### v0.8.2 — chọn gói nhập giá và menu quản trị
+- Chọn sản phẩm / gói vé và nhập giá CTV trực tiếp. Chuyển gói giữ giá các gói đã nhập; nút lưu gửi toàn bộ bảng. Giá thường và giá theo ngày/mùa được chỉnh riêng.
+- Menu quản trị thu gọn theo Sản phẩm, Cộng tác viên, Blog, Cài đặt; Đơn hàng là mục riêng. Blog có trang chuyên mục dùng chung dữ liệu với trình soạn bài.
+- Lịch chọn ngày đồng bộ ở trang vé, CTV và lịch quản trị, có chọn tháng/năm, hôm nay/ngày mai, giới hạn ngày. Bỏ nhãn Giờ Việt Nam trên giao diện; xử lý ngày và ngừng bán vẫn dùng Asia/Ho_Chi_Minh.

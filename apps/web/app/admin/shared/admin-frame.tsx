@@ -2,7 +2,13 @@
 import{useEffect,useState}from'react';
 import Link from'next/link';
 import{adminApi}from'./admin-api';
-export function AdminNav({active}:{active:string}){return <nav className="admin-menu" aria-label="Phân hệ quản trị">{[['products','/admin','Sản phẩm & giá'],['orders','/admin/don-hang','Đơn hàng'],['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV'],['types','/admin/loai-san-pham','Loại sản phẩm'],['posts','/admin/bai-viet','Bài viết'],['translations','/admin/ban-dich','Ngôn ngữ & bản dịch'],['smtp','/admin/smtp','Email & SMTP']].map(([key,url,label])=><Link key={key} href={url} aria-current={active===key?'page':undefined}>{label}</Link>)}</nav>;}
+const menuGroups=[
+ {label:'Sản phẩm',items:[['products','/admin','Sản phẩm & giá'],['types','/admin/loai-san-pham','Loại sản phẩm']]},
+ {label:'Cộng tác viên',items:[['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV']]},
+ {label:'Blog',items:[['posts','/admin/bai-viet','Bài viết'],['categories','/admin/bai-viet?section=categories','Chuyên mục']]},
+ {label:'Cài đặt',items:[['smtp','/admin/smtp','Email & SMTP'],['translations','/admin/ban-dich','Ngôn ngữ & bản dịch']]}
+];
+export function AdminNav({active}:{active:string}){return <nav className="admin-menu" aria-label="Phân hệ quản trị"><Link href="/admin/don-hang" aria-current={active==='orders'?'page':undefined}>Đơn hàng</Link>{menuGroups.map(group=><details className="admin-nav-group" key={group.label} open={group.items.some(([key])=>key===active)}><summary>{group.label}<span aria-hidden="true">⌄</span></summary><div>{group.items.map(([key,url,label])=><Link key={key} href={url} aria-current={active===key?'page':undefined}>{label}</Link>)}</div></details>)}</nav>;}
 export function useUnsavedChanges(dirty:boolean){useEffect(()=>{const handler=(event:BeforeUnloadEvent)=>{if(dirty)event.preventDefault();};window.addEventListener('beforeunload',handler);return()=>window.removeEventListener('beforeunload',handler);},[dirty]);}
 export function AdminFrame({title,active,children}:{title:string;active:string;children:React.ReactNode}){
   const[user,setUser]=useState('');const[error,setError]=useState('');
