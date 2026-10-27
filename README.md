@@ -279,3 +279,7 @@ Bản dịch không được sao chép; tồn vé và bảng giá CTV là dữ l
 Sản phẩm → Nhà cung cấp: tạo hồ sơ, người liên hệ, điện thoại, email, website và ghi chú nội bộ. Chọn nhà cung cấp trong Thông tin sản phẩm; sản phẩm cũ không bắt buộc gắn. Danh sách hiển thị số sản phẩm liên kết, hỗ trợ tìm kiếm và lọc/lưu trữ/khôi phục. Nhà cung cấp còn sản phẩm (kể cả nháp) phải chuyển hoặc bỏ liên kết trước khi lưu trữ.
 
 Thông tin chỉ dành cho admin; chưa kết nối API, giá vốn hoặc công nợ nhà cung cấp. Xem [tiến độ và phần còn thiếu](docs/ROADMAP.md) để theo dõi phạm vi đầy đủ.
+
+### v0.16.1 — lọc nhanh đơn trong ngày
+
+Trong Đơn hàng, chọn Ngày tạo đơn hoặc Ngày sử dụng vé rồi bấm Hôm nay / Ngày mai. Hệ thống tự điền khoảng ngày theo giờ Việt Nam và áp dụng ngay cùng các bộ lọc đang chọn, quay về trang 1. Xuất CSV tiếp tục dùng đúng bộ lọc này.
