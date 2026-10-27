@@ -247,3 +247,7 @@ Phân trang 25/50/100 đơn; thùng rác dùng cùng bộ lọc. Thống kê tí
 Trong chi tiết đơn đã thanh toán/ghi công nợ, chọn Giao mã vé → Dán nhiều mã. Mỗi dòng là một mã; dòng trống được bỏ qua, mỗi mã mặc định cho một khách. Có thể đổi số khách cho mỗi mã nếu nhà cung cấp dùng mã nhóm. Xem trước danh sách, số mã và tổng khách trước khi lưu. Chế độ Một mã / mã nhóm giữ nguyên mã có nội dung nhiều dòng.
 
 Admin và nhân viên quầy có quyền DELIVER dùng cùng form. API kiểm tra số khách còn lại, mã trùng trong lô và mã đã giao trước khi ghi. Một lô lưu trong một transaction; request ID/version và unique code hash tiếp tục chống giao trùng khi thử lại hoặc cạnh tranh. Một lô tạo một sự kiện email khi SMTP đã bật cho đơn web/quầy; đơn CTV nhận vé qua tài khoản theo luồng hiện có. Không tự xác nhận mã còn hiệu lực tại nhà cung cấp. Lô tối đa 150 mã; nội dung quá lớn cần chia lô. Health phiên bản mới: `0.12.0`.
+
+### v0.12.1 — sửa lưu tên tiếng Anh điểm đến
+
+Khi chọn điểm đến đã có trong cây, trình sửa nay chỉ gửi các trường được phép lưu; bỏ depth/path dùng để hiển thị cây. Sửa tên tiếng Anh hoặc thông tin điểm đến không còn lỗi Unrecognized keys. Giữ kiểm tra schema nghiêm ngặt ở API. Không cần đổi dữ liệu hoặc migration.
