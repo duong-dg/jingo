@@ -1,5 +1,14 @@
 # JinGo
 
+## Ca quầy & bàn giao (0.21)
+
+- Admin → Bán hàng → Ca quầy & bàn giao hoặc POS `/quay/ca`. Quyền SHIFT mới cho nhân viên xem sổ ca tại các quầy được gán, mở ca và chốt ca do mình mở; admin chốt thay khi cần. Không tự cấp quyền mới cho nhân viên cũ. Khóa/gỡ quyền thu hồi phiên như trước.
+- Mỗi quầy có tối đa một ca đang mở, dùng chung cho các nhân viên thu tại quầy. Nhập tiền mặt đầu ca; mỗi lần PAY đơn POS khi có ca mở sẽ gắn payment vào ca trong cùng transaction, dù thu từ admin hay POS và dù đơn được tạo từ ca trước. Không gắn theo ngày tạo đơn, không lấy tiền thu website/CTV, không tự nhập lại khoản thu trước lúc mở ca.
+- Ca là tùy chọn để giữ luồng bán cũ: chưa mở ca vẫn bán/thu được, khoản thu đó chỉ ở báo cáo doanh thu và không thuộc ca. Đăng xuất không tự chốt. Chuyển ca cần chốt ca cũ rồi mở ca mới; không lưu trữ quầy khi còn ca mở.
+- Chốt ca ghi số tiền mặt thực đếm/bàn giao, ghi chú bắt buộc và xác nhận đã kiểm đếm. Tiền mặt phải bàn giao = đầu ca + khoản thu CASH trong ca; chênh lệch = thực đếm − phải bàn giao. BANK chỉ tổng hợp riêng, không cộng vào ngăn kéo tiền mặt. Chưa có rút/chi, hoàn tiền hoặc điều chuyển trong ca; chưa xác nhận riêng người nhận bàn giao.
+- Số liệu chốt là snapshot bất biến; không sửa/xóa/mở lại ca. Xem 50 ca gần nhất từng quầy và chi tiết khoản thu. Ca mở cần Tải lại để cập nhật khoản thu mới. Version/request hash, unique ca mở theo quầy, liên kết payment duy nhất, audit và khóa quầy dùng chung với PAY chống ghi trùng/chốt lệch thời điểm. Bộ test pg-mem chưa thay thế kiểm thử đồng thời trên PostgreSQL thật.
+
+
 ## Cảnh báo nguồn vé (0.20)
 
 - Sản phẩm → Nguồn vé & giá vốn: cảnh báo lô đang bật đã tới ngày sử dụng; ngưỡng mặc định còn tối đa 5 vé và sắp hết hạn trong 7 ngày (tùy chọn mỗi lần xem, không lưu cấu hình). Hết hạn tính trước ngày hôm nay tại Việt Nam; ngày cuối vẫn còn hiệu lực. Mỗi lô chỉ hiện một cảnh báo theo thứ tự hết hạn → hết vé → sắp hết hạn → sắp hết vé. Lô hết hạn đã hết vé, lô tắt và lô chưa tới ngày sử dụng không cảnh báo.

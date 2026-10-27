@@ -1,3 +1,4 @@
+import{ShiftsService}from'../shifts/shifts.module';
 import{SupplyService}from'../supply/supply.module';
 import{VouchersService}from'../vouchers/vouchers.module';
 import{InventoryService}from'../inventory/inventory.module';
@@ -19,7 +20,7 @@ export interface OrderSnapshot {discount?:{code:string;amount:number;subtotal:nu
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
-  constructor(private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService) {}
+  constructor(private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService,private readonly shifts:ShiftsService) {}
   private async checkPosStaff(client:Pick<PoolClient,'query'>,staffId:string,counterId:string,permission:string){const result=await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[staffId]);const user=result.rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.counterIds.includes(counterId)||!user.permissions.includes(permission))throw new ForbiddenException('Quyền hoặc quầy được gán đã thay đổi. Đăng nhập lại để tiếp tục.');}
   async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string}) {
     if(input.voucherCode&&(partnerId||pos))throw new BadRequestException('Mã giảm giá chỉ dùng cho đơn web bán lẻ.');
@@ -113,6 +114,7 @@ export class OrdersService {
       const result = await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE', [id]);
       if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn.');
       const row = result.rows[0] as OrderRow;
+      if(action.action==='PAY')await this.shifts.lockCounterForOrder(client,id);
       if(staffId){const pos=await client.query('SELECT counter_id FROM jingo_pos_orders WHERE order_id=$1',[id]);const permission=action.action==='PAY'?'COLLECT':action.action==='DELIVER'?'DELIVER':action.action==='CANCEL'?'CANCEL':null;if(!permission||!pos.rowCount)throw new ForbiddenException('Không được xử lý đơn này tại quầy.');await this.checkPosStaff(client,staffId,pos.rows[0].counter_id,permission);}
       const owner=await client.query('SELECT partner_id FROM jingo_partner_orders WHERE order_id=$1',[id]);
       if(partnerId&&(action.action!=='CREDIT'||owner.rows[0]?.partner_id!==partnerId))throw new NotFoundException('Không tìm thấy đơn CTV.');
@@ -146,6 +148,7 @@ export class OrdersService {
         await client.query('INSERT INTO jingo_payment_references(reference,kind,entity_id,amount)VALUES($1,$2,$3,$4)',[reference,'ORDER_PAYMENT',id,action.amount]);
         await client.query('INSERT INTO jingo_order_payments(id,order_id,amount,reference,admin_id) VALUES ($1,$2,$3,$4,$5)', [paymentId, id, action.amount, reference, adminId]);
         await client.query('INSERT INTO jingo_payment_methods(payment_id,method)VALUES($1,$2)',[paymentId,action.method||'BANK']);
+        await this.shifts.attachPayment(client,id,paymentId);
         await client.query("UPDATE jingo_orders SET payment_status='PAID' WHERE id=$1", [id]);
       } else if(action.action==='CREDIT'){
         if(row.booking_status!=='CONFIRMED'||row.payment_status!=='UNPAID'||!owner.rowCount)throw new ConflictException('Chỉ ghi công nợ cho đơn CTV đã xác nhận và chưa thanh toán.');

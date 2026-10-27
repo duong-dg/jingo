@@ -162,3 +162,11 @@ Supplier payments are immutable, use request hash/id plus unique outgoing refere
 ## Cảnh báo nguồn vé (0.20)
 
 GET admin/supply/alerts là read-only, AdminGuard, no-store, validate threshold/days/page. Ngày hiện tại theo Asia/Ho_Chi_Minh; phân loại lô bằng hàm thuần với ưu tiên hết hạn → hết vé → sắp hết hạn → sắp hết. Không cảnh báo lô tắt/chưa tới ngày hoặc lô hết hạn đã dùng hết. Tổng hợp số thiếu theo nhóm khách của snapshot trừ allocation chưa release, bỏ đơn hủy/lưu trữ, thứ tự created_at/id và phân trang 25. REPEATABLE READ giữ các lần đọc nhất quán trên PostgreSQL; pg-mem chỉ kiểm logic. Không sửa tồn, tiền, đơn hoặc allocation. Chưa có push/email; tổng hợp hiện đọc các đơn/allocations đang có, cần SQL aggregation/index review khi quy mô lớn. Vé nhập không trả NCC theo quyết định nghiệp vụ.
+
+## Ca quầy (0.21)
+
+ShiftsModule độc lập OrdersModule; POS controller dùng PosAuth, admin dùng AdminGuard. SHIFT là quyền riêng, không mặc định thêm cho user cũ; staff chỉ chốt ca mình mở, admin có thể chốt thay. Các truy vấn chi tiết không trả liên hệ hoặc khóa nhận vé khách.
+
+`jingo_pos_shifts` giữ thông tin mở/chốt, hash retry và summary chốt. `jingo_pos_open_shifts` có PK counter_id/unique shift_id giữ một ca mở mỗi quầy; `jingo_pos_shift_receipts` có PK payment_id để mỗi khoản thu thuộc tối đa một ca. Mở/chốt khóa quầy trước user/shift. PAY khóa order → counter → staff; attach payment trong transaction PAY sau tạo payment/method. Như vậy close giữ counter lock thì không có khoản thu mới chèn vào ca đang chốt. Orders.create không gắn ca, không dựa timestamp để cộng lại. Counter archive cũng khóa counter và chặn nếu đang có ca. PosUsers.save đang khóa counter SHARE trước user UPDATE, giữ cùng thứ tự counter/user với mở/chốt/PAY.
+
+Ca chốt lưu tổng CASH, BANK, expectedCash, countedCash, difference, receiptCount bất biến. Không có tiền chi/rút/hoàn hoặc điều chỉnh sau chốt. Ca tùy chọn: PAY không có ca mở vẫn ghi thu bình thường và không gắn ca về sau. Kiểm thử pg-mem xác nhận logic, chưa chứng minh row-lock concurrency PostgreSQL thật.

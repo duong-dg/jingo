@@ -49,6 +49,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS jingo_order_payments_created ON jingo_order_payments(created_at);
       CREATE TABLE IF NOT EXISTS jingo_counters(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_pos_orders(order_id text PRIMARY KEY REFERENCES jingo_orders(id),counter_id text NOT NULL REFERENCES jingo_counters(id),admin_id text NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_pos_shifts(id text PRIMARY KEY,counter_id text NOT NULL REFERENCES jingo_counters(id),opened_by text NOT NULL,opened_name text NOT NULL,counter_name text NOT NULL,opening_cash bigint NOT NULL,opening_note text NOT NULL,open_hash text NOT NULL,opened_at timestamptz NOT NULL DEFAULT now(),closed_at timestamptz,closed_by text,close_request text UNIQUE,close_hash text,close_note text,summary jsonb,version integer NOT NULL DEFAULT 1);
+      CREATE INDEX IF NOT EXISTS jingo_pos_shifts_counter ON jingo_pos_shifts(counter_id,opened_at DESC);
+      CREATE TABLE IF NOT EXISTS jingo_pos_open_shifts(counter_id text PRIMARY KEY REFERENCES jingo_counters(id),shift_id text NOT NULL UNIQUE REFERENCES jingo_pos_shifts(id));
+      CREATE TABLE IF NOT EXISTS jingo_pos_shift_receipts(payment_id text PRIMARY KEY REFERENCES jingo_order_payments(id),shift_id text NOT NULL REFERENCES jingo_pos_shifts(id));
+      CREATE INDEX IF NOT EXISTS jingo_pos_shift_receipts_shift ON jingo_pos_shift_receipts(shift_id);
       CREATE TABLE IF NOT EXISTS jingo_payment_methods(payment_id text PRIMARY KEY REFERENCES jingo_order_payments(id),method text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_order_tickets (
         id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), code text NOT NULL, code_hash text NOT NULL UNIQUE,
