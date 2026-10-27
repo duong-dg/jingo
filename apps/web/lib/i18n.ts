@@ -2,6 +2,7 @@ export type Locale='vi'|'en';
 export const localizedPath=(path:string,locale:Locale)=>locale==='en'?`/en${path==='/'?'':path}`:path;
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
+ 'Mã giảm giá không áp dụng cho sản phẩm hoặc gói vé đang chọn.':'This voucher does not apply to the selected experience or ticket package.',
  'Mã giảm giá không hợp lệ.':'Invalid voucher code.',
  'Mã giảm giá không tồn tại, chưa có hiệu lực hoặc đã hết hạn.':'This voucher is invalid, not yet active or expired.',
  'Đơn chưa đạt giá trị tối thiểu của mã giảm giá.':'This booking does not meet the voucher minimum spend.',

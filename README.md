@@ -1,5 +1,14 @@
 # JinGo
 
+## Voucher theo sản phẩm / gói vé (0.23)
+
+- Admin → Mã giảm giá & voucher: chọn ALL (mọi sản phẩm), PRODUCTS (mọi gói của các sản phẩm được chọn), VARIANTS (đúng cặp sản phẩm + gói). Có tìm kiếm, danh sách đã chọn và bỏ từng mục, tối đa 200 mục. PRODUCTS bao gồm cả gói thêm sau; VARIANTS không tự áp dụng gói mới.
+- Voucher cũ thiếu scope/targets giữ hành vi ALL; không đổi giá hay tiền giảm của đơn cũ. Mã vẫn chỉ cho web bán lẻ, một mã mỗi đơn, giữ nguyên cách tính tiền, hạn theo ngày đặt, số lượt giữ/trả và chính sách CTV/POS.
+- Server kiểm cấu hình danh sách không rỗng/lặp, đúng loại phạm vi, sản phẩm/gói tồn tại. Quote và Orders.create đều kiểm phạm vi từ productId/variantId đã được kiểm giá; tạo đơn kiểm lại trong transaction với khóa voucher, không tin giá đã quote. Sửa phạm vi có hiệu lực với đơn mới; retry request đã tạo vẫn lấy đơn cũ và snapshot cũ.
+- Public quote chỉ trả mã và số tiền giảm như trước, không công khai danh sách điều kiện hoặc ghi chú nội bộ. Lỗi sai phạm vi có thông báo Việt/Anh. Tính thử trong admin chỉ minh họa số tiền, không kiểm điều kiện phạm vi/ngày/lượt.
+- Chưa có ưu đãi riêng nhóm tuổi, điều kiện ngày sử dụng, kênh CTV/POS hoặc cộng dồn. Khi đổi phạm vi trong form, danh sách đang chọn được xóa để chọn lại đúng loại. Gói bị xóa/đổi ID không tự chuyển ưu đãi sang gói khác.
+
+
 ## Xem trước & lịch sử bài viết (0.22)
 
 - Blog → Bài viết: lưu bài rồi bấm Xem trước bản đã lưu; dùng được cho nháp, hẹn giờ và bài xuất bản, có lựa chọn Việt/Anh. Bản dịch chưa có tiêu đề chưa xem được. Bản xem trước dùng chung ArticleView với trang công khai: ảnh, nội dung, mục lục và sản phẩm liên quan đang xuất bản.

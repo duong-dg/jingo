@@ -1,0 +1,15 @@
+'use client';
+import {useState} from 'react';
+export type VoucherTarget={productId:string;variantId?:string};
+export type VoucherScope='ALL'|'PRODUCTS'|'VARIANTS';
+export type ScopeProduct={id:string;name:string;status:string;variants:{id:string;name:string}[]};
+export function VoucherScopePicker({scope,targets,products,onChange}:{scope:VoucherScope;targets:VoucherTarget[];products:ScopeProduct[];onChange:(scope:VoucherScope,targets:VoucherTarget[])=>void}){
+ const[search,setSearch]=useState('');
+ const same=(a:VoucherTarget,b:VoucherTarget)=>a.productId===b.productId&&a.variantId===b.variantId;
+ const toggle=(target:VoucherTarget,checked:boolean)=>onChange(scope,checked?[...targets,target]:targets.filter(t=>!same(t,target)));
+ return <section className="voucher-scope"><h3>Phạm vi áp dụng</h3><label>Áp dụng mã cho<select value={scope} onChange={e=>onChange(e.target.value as VoucherScope,[])}><option value="ALL">Tất cả sản phẩm web</option><option value="PRODUCTS">Các sản phẩm được chọn</option><option value="VARIANTS">Các gói vé được chọn</option></select></label>
+ <p className="admin-hint">{scope==='ALL'?'Áp dụng mọi sản phẩm / gói bán lẻ trên web, kể cả sản phẩm thêm sau.':scope==='PRODUCTS'?'Áp dụng mọi gói của sản phẩm được chọn, kể cả gói thêm sau.':'Chỉ áp dụng đúng gói đã chọn; gói thêm sau không tự có ưu đãi.'}</p>
+ {scope!=='ALL'&&<><label>Tìm sản phẩm<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nhập tên sản phẩm…"/></label><div className="voucher-scope-options">{products.filter(p=>p.name.toLocaleLowerCase('vi').includes(search.trim().toLocaleLowerCase('vi'))).map(p=><div className="voucher-scope-product" key={p.id}>{scope==='PRODUCTS'?<label className="checkbox-label"><input type="checkbox" checked={targets.some(t=>t.productId===p.id)} onChange={e=>toggle({productId:p.id},e.target.checked)}/><strong>{p.name}{p.status==='DRAFT'?' (nháp)':''}</strong></label>:<><strong>{p.name}{p.status==='DRAFT'?' (nháp)':''}</strong>{p.variants.map(v=><label className="checkbox-label" key={v.id}><input type="checkbox" checked={targets.some(t=>t.productId===p.id&&t.variantId===v.id)} onChange={e=>toggle({productId:p.id,variantId:v.id},e.target.checked)}/>{v.name}</label>)}</>}</div>)}{!products.some(p=>p.name.toLocaleLowerCase('vi').includes(search.trim().toLocaleLowerCase('vi')))&&<p>Không có sản phẩm phù hợp.</p>}</div>
+ <p className="admin-hint">Đã chọn {targets.length}/{200} {scope==='PRODUCTS'?'sản phẩm':'gói vé'}. Cần chọn ít nhất một mục.</p><div className="voucher-scope-selected">{targets.map(target=>{const product=products.find(p=>p.id===target.productId),variant=product?.variants.find(v=>v.id===target.variantId);return <div key={target.productId+':'+(target.variantId||'')}><span>{product?.name||'Sản phẩm không còn tồn tại'}{target.variantId?' · '+(variant?.name||'Gói không còn tồn tại'):''}</span><button type="button" className="quiet" onClick={()=>toggle(target,false)}>Bỏ chọn</button></div>;})}</div></>}
+ </section>;
+}
