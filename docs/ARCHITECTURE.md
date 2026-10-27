@@ -140,3 +140,7 @@ A client-side deep clone creates an unsaved draft, then uses the existing authen
 ## Suppliers (0.16.0)
 
 Admin-only jingo_suppliers stores contact information/notes and optimistic versions. Products optionally reference supplierId; existing products stay valid without a supplier. Product save and supplier archive acquire the same migration-marker mutex in READ COMMITTED transactions so an archive cannot race a new product association. Archive is blocked while any draft or published product references the supplier. Public catalog projections remove supplierId; POS/CTV product DTOs already project explicit fields. This is current catalog attribution, not historical supplier cost/debt tracking. Supplier data is not translated or exposed as customer-facing content.
+
+## Voucher configuration (0.17.0)
+
+Admin-only voucher CRUD stores canonical uppercase unique codes, immutable code identity, integer discount terms, validity dates, planned usage cap and enabled flag. Strict validation, version locking and audit are enforced. The list explicitly reports checkoutEnabled:false. Frontend math is illustrative only; no public voucher lookup, quote/order discount or redemption accounting is implemented in this phase. Enabling config cannot change a booking total.

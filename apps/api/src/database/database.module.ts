@@ -10,6 +10,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS jingo_settings(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_vouchers(id text PRIMARY KEY,code text NOT NULL UNIQUE,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_suppliers(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_destinations(id text PRIMARY KEY,slug text NOT NULL UNIQUE,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_products (id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1, updated_at timestamptz NOT NULL DEFAULT now());

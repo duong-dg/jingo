@@ -283,3 +283,9 @@ Thông tin chỉ dành cho admin; chưa kết nối API, giá vốn hoặc công
 ### v0.16.1 — lọc nhanh đơn trong ngày
 
 Trong Đơn hàng, chọn Ngày tạo đơn hoặc Ngày sử dụng vé rồi bấm Hôm nay / Ngày mai. Hệ thống tự điền khoảng ngày theo giờ Việt Nam và áp dụng ngay cùng các bộ lọc đang chọn, quay về trang 1. Xuất CSV tiếp tục dùng đúng bộ lọc này.
+
+### v0.17.0 — cấu hình voucher (chưa kết nối checkout)
+
+Bán hàng → Mã giảm giá & voucher: tạo/sửa mức giảm phần trăm hoặc VND, đơn tối thiểu, mức giảm tối đa cho %, khoảng ngày, tổng lượt dự kiến và bật/tắt cấu hình. Mã tự chuẩn hóa chữ hoa, không được trùng, giữ cố định sau khi tạo. Có tính thử minh họa bằng giá trị đơn giả lập.
+
+Đây là bước chuẩn bị cấu hình: checkout chưa nhận mã, chưa giảm tiền và chưa thực thi/trừ giới hạn lượt dùng. Các thông báo trên màn hình luôn nhắc giới hạn này. Cần nối báo giá/đơn/tồn lượt trong transaction và bổ sung kiểm thử trước khi công bố chương trình cho khách.

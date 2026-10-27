@@ -1,0 +1,5 @@
+import{test}from'node:test';import assert from'node:assert/strict';import{voucherPreview}from'../../../web/lib/voucher-preview';
+test('voucher illustration handles percentage floor, caps, minimum order and cannot yield negative payable',()=>{
+ assert.deepEqual(voucherPreview(999,'PERCENT',10,0,null),{discount:99,total:900,eligible:true});assert.equal(voucherPreview(1000000,'PERCENT',20,0,50000).discount,50000);assert.equal(voucherPreview(100000,'FIXED',200000,0,null).total,0);assert.equal(voucherPreview(0,'PERCENT',100,0,null).discount,0);assert.equal(voucherPreview(999,'PERCENT',10,1000,null).eligible,false);assert.equal(voucherPreview(1000,'PERCENT',10,1000,null).eligible,true);
+ for(const result of[voucherPreview(1000,'PERCENT',101,0,null),voucherPreview(1000,'PERCENT',-1,0,null),voucherPreview(1000,'PERCENT',10,0,-100),voucherPreview(NaN,'FIXED',100,0,null),voucherPreview(-100,'FIXED',10,0,null)]){assert.equal(result.eligible,false);assert.ok(result.total>=0);assert.equal(result.discount,0);}
+});

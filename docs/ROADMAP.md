@@ -16,7 +16,7 @@
 2. **Hoàn hủy:** yêu cầu hủy, ghi xác nhận nhà cung cấp, vô hiệu hóa mã theo khả năng đối tác, hoàn tiền đúng người mua hoặc CTV, điều chỉnh sổ công nợ và báo cáo. Tách trạng thái yêu cầu/đã hoàn; không coi bấm hủy là ngân hàng đã trả tiền.
 3. **Ca quầy:** mở/đóng ca, tiền đầu ca, tổng thu tiền mặt/CK, tiền bàn giao và chênh lệch, phân quyền chốt ca và lịch sử sửa.
 4. **Giá vốn/đối soát nhà cung cấp:** lưu nguồn cung và giá vốn theo thời điểm bán; báo cáo phải giữ đúng lịch sử khi đổi nhà cung cấp sản phẩm. Liên kết sản phẩm hiện tại chưa phải báo cáo công nợ nhà cung cấp.
-5. **Khuyến mãi/voucher:** thời hạn, điều kiện gói/ngày/kênh, giới hạn lượt, chống dùng trùng và quy tắc với giá CTV.
+5. **Khuyến mãi/voucher:** đã có quản trị cấu hình và phép tính minh họa (0.17), chưa kết nối checkout hoặc sử dụng lượt. Còn: thời hạn, điều kiện gói/ngày/kênh, giới hạn lượt, chống dùng trùng và quy tắc với giá CTV.
 6. **Cổng thanh toán:** kết nối cổng được chọn với tài khoản merchant/sandbox, xác thực chữ ký callback, chống thông báo trùng, đối soát số tiền và hoàn tiền theo quy trình của cổng. Cần thông tin merchant trước khi kiểm thử kết nối thực.
 7. **Nội dung/quản trị:** lịch sử phiên bản bài viết, xem trước bản nháp, thêm ngôn ngữ, trang chính sách/điều khoản và phân quyền biên tập.
 8. **Vận hành:** quy trình sao lưu cả PostgreSQL/ảnh/khóa SMTP, thử khôi phục, giám sát, giới hạn truy cập sau reverse proxy và kiểm thử mua đồng thời trên PostgreSQL thật.
