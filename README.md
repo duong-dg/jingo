@@ -241,3 +241,9 @@ Sau triển khai, health phải hiện `0.11.0`. Chưa có kết nối tồn nh�
 Trang Đơn hàng tìm trên toàn bộ dữ liệu theo mã booking, tên khách, điện thoại hoặc email, không còn chỉ tìm trong 200 đơn gần nhất. Có lọc trạng thái đơn, thanh toán, kênh Web/POS/CTV, ngày tạo đơn hoặc ngày sử dụng vé. Khoảng ngày có thể bỏ trống một hoặc cả hai đầu; ngày tạo tính theo múi giờ Việt Nam. Bấm Tìm đơn hàng để áp dụng, Xóa bộ lọc để trở về danh sách đầy đủ.
 
 Phân trang 25/50/100 đơn; thùng rác dùng cùng bộ lọc. Thống kê tính trên toàn bộ kết quả khớp, gồm tất cả trang. Giá trị đơn PAID là giá trị đặt vé, không phải báo cáo dòng tiền theo ngày nhận. Health phiên bản mới là `0.11.1`.
+
+### v0.12.0 — giao nhiều mã vé một lần
+
+Trong chi tiết đơn đã thanh toán/ghi công nợ, chọn Giao mã vé → Dán nhiều mã. Mỗi dòng là một mã; dòng trống được bỏ qua, mỗi mã mặc định cho một khách. Có thể đổi số khách cho mỗi mã nếu nhà cung cấp dùng mã nhóm. Xem trước danh sách, số mã và tổng khách trước khi lưu. Chế độ Một mã / mã nhóm giữ nguyên mã có nội dung nhiều dòng.
+
+Admin và nhân viên quầy có quyền DELIVER dùng cùng form. API kiểm tra số khách còn lại, mã trùng trong lô và mã đã giao trước khi ghi. Một lô lưu trong một transaction; request ID/version và unique code hash tiếp tục chống giao trùng khi thử lại hoặc cạnh tranh. Một lô tạo một sự kiện email khi SMTP đã bật cho đơn web/quầy; đơn CTV nhận vé qua tài khoản theo luồng hiện có. Không tự xác nhận mã còn hiệu lực tại nhà cung cấp. Lô tối đa 150 mã; nội dung quá lớn cần chia lô. Health phiên bản mới: `0.12.0`.

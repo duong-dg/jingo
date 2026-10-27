@@ -156,6 +156,10 @@ export class OrdersService {
         const issued = existing.rows.reduce((sum, ticket) => sum + ticket.covers, 0);
         const needed = row.snapshot.lines.reduce((sum, line) => sum + line.quantity, 0);
         if (issued + action.tickets.reduce((sum, ticket) => sum + ticket.covers, 0) > needed) throw new BadRequestException('Số khách được cấp vé vượt số khách trong đơn.');
+        const hashes=action.tickets.map(ticket=>hash(ticket.code));
+        if(new Set(hashes).size!==hashes.length)throw new BadRequestException('Danh sách có mã vé trùng. Kiểm tra lại trước khi giao.');
+        const used=await client.query('SELECT id FROM jingo_order_tickets WHERE code_hash IN ('+hashes.map((_,index)=>'$'+(index+1)).join(',')+')',hashes);
+        if(used.rowCount)throw new ConflictException('Có mã vé đã được giao. Kiểm tra lại danh sách trước khi lưu.');
         for (const ticket of action.tickets) await client.query('INSERT INTO jingo_order_tickets(id,order_id,code,code_hash,kind,covers,note) VALUES ($1,$2,$3,$4,$5,$6,$7)',
           [randomUUID(), id, ticket.code, hash(ticket.code), ticket.kind, ticket.covers, ticket.note]);
       }
