@@ -6,6 +6,7 @@ export function applyNetPricing(retail:ReturnType<typeof calculateQuote>,group:P
   const lines=retail.lines.map(line=>{
     const rules=group.rules.filter(rule=>rule.productId===retail.productId&&rule.variantId===retail.variantId&&rule.customerType===line.customerType&&rule.startDate<=retail.date&&retail.date<=rule.endDate).sort((a,b)=>b.priority-a.priority);
     if(rules.length>1&&rules[0].priority===rules[1].priority)throw new BadRequestException('Giá CTV bị xung đột.');
+    if(group.pricingMode==='DIRECT'&&!rules.length)throw new BadRequestException('Chưa có giá cấp CTV cho gói / nhóm khách trong ngày này.');
     const unitPrice=rules[0]?.amount??(group.discountType==='AMOUNT'?Math.max(0,line.unitPrice-group.discountValue):Math.floor(line.unitPrice*(10000-group.discountValue)/10000));
     return{customerType:line.customerType,quantity:line.quantity,unitPrice,subtotal:unitPrice*line.quantity};
   });

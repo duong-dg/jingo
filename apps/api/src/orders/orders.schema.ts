@@ -11,6 +11,8 @@ export const orderInput = z.object({
 export const lookupInput = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 const base = { requestId: z.uuid(), version: z.number().int().min(1), note: z.string().trim().min(1).max(1000) };
 export const actionInput = z.discriminatedUnion('action', [
+  z.object({...base,action:z.literal('ARCHIVE')}).strict(),
+  z.object({...base,action:z.literal('RESTORE')}).strict(),
   z.object({...base,action:z.literal('INSTRUCTIONS'),instructions:z.string().trim().min(1).max(4000)}).strict(),
   z.object({ ...base, action: z.literal('CONFIRM'), instructions: z.string().trim().min(10).max(4000) }).strict(),
   z.object({ ...base, action: z.literal('CANCEL') }).strict(),

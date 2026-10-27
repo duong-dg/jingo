@@ -21,6 +21,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE INDEX IF NOT EXISTS jingo_orders_created ON jingo_orders(created_at);
+      CREATE TABLE IF NOT EXISTS jingo_order_archives(order_id text PRIMARY KEY REFERENCES jingo_orders(id),archived_by text NOT NULL,reason text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_order_payments (
         id text PRIMARY KEY, order_id text NOT NULL UNIQUE REFERENCES jingo_orders(id), amount bigint NOT NULL,
         reference text NOT NULL UNIQUE, admin_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()

@@ -78,3 +78,9 @@ Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/gi
 Gói vé có timeSlots tùy chọn, dùng ngày đặt + giờ bắt đầu GMT+7 để kiểm tra cutoff tại cùng hàm báo giá cho khách/CTV và lúc tạo đơn. Snapshot giữ suất giờ độc lập với thay đổi lịch sau này. Email mới bắt buộc; đơn cũ không bị cập nhật ngược.
 
 SMTP trong admin, bí mật AES-256-GCM với khóa file ẩn trong volume media. Outbox PostgreSQL cùng transaction đơn, API polling mỗi 10 giây, claim FOR UPDATE SKIP LOCKED và lease 2 phút; retry tối đa 5 lần rồi admin có thể đưa lại vào hàng đợi. Gửi theo at-least-once, có thể trùng email nếu SMTP nhận rồi tiến trình chết trước khi ghi SENT. Không dùng thông báo email làm căn cứ thu tiền/giữ chỗ. Sao lưu cả DB và volume gồm .smtp-key.
+
+## Cập nhật 0.8
+
+Bảng giá CTV mới pricingMode=DIRECT: rule.amount là giá JinGo bán cho CTV, thiếu rule thì chặn báo giá thay vì fallback giá lẻ. Nhóm không có pricingMode giữ cách giảm cũ; chuyển đổi là thao tác admin chủ động. Catalog CTV lọc gói và nhóm khách theo giá đã cấp, không trả giá lẻ.
+
+Xóa/lưu trữ đơn dùng bảng jingo_order_archives liên kết order_id, không DELETE đơn hoặc ledger. ARCHIVE/RESTORE qua cùng transaction, row lock, version và request ID của thao tác đơn. Xóa đơn UNPAID chưa giao vé đổi sang CANCELLED; khôi phục không đổi trạng thái kinh doanh. PAID/CREDIT giữ nguyên tiền/nợ/vé. API admin mặc định lọc active, archived=true xem thùng rác; khách và CTV vẫn tra cứu theo quyền gốc.
