@@ -1,3 +1,4 @@
+import{SupplyModule}from'../supply/supply.module';
 import{VouchersModule}from'../vouchers/vouchers.module';
 import{ordersCsv}from'./orders-csv';
 import{OrderSearchService}from'./order-search.service';
@@ -32,5 +33,5 @@ class AdminOrdersController {
   @Get(':id') async get(@Param('id') id: string, @Req() req: Request, @Res({ passthrough:true }) res: Response) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.orders.get(id); }
   @Post(':id/actions') async action(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req); return this.orders.act(id,parse(actionInput,body),admin.id); }
 }
-@Module({ imports:[VouchersModule,AdminModule,MailModule,InventoryModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService,OrderSearchService],exports:[OrdersService] })
+@Module({ imports:[SupplyModule,VouchersModule,AdminModule,MailModule,InventoryModule], controllers:[OrdersController,AdminOrdersController], providers:[OrdersService,OrderSearchService],exports:[OrdersService] })
 export class OrdersModule {}

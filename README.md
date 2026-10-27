@@ -297,3 +297,15 @@ Khách nhập mã ở checkout, bấm Áp dụng để lấy lại báo giá t�
 Báo giá không giữ lượt; đơn tạo thành công giữ một lượt kể cả chưa thanh toán. Hủy/lưu trữ đơn chưa thu tiền trả lượt một lần; khôi phục đơn đã hủy không giữ lại lượt. Lưu trữ đơn đã thu tiền vẫn giữ lượt. Cấu hình không được hạ giới hạn dưới số lượt đang dùng. Snapshot tiền giảm giữ nguyên khi sửa voucher.
 
 Chi tiết đơn, tra cứu, phiếu in và CSV thể hiện mã/tiền giảm; báo cáo giá trị đơn theo số sau giảm. Chưa có cộng dồn mã, điều kiện riêng sản phẩm/gói hoặc quy trình trả lượt cho hoàn tiền đơn đã thu. Giới hạn đồng thời dùng khóa hàng PostgreSQL, cần kiểm chứng tải thật trên PostgreSQL trước khi phát hành chiến dịch lớn.
+
+### v0.19.0 — giá vốn theo lô, nhiều nguồn và công nợ NCC
+
+Sản phẩm → Nguồn vé & giá vốn: nhập lô theo nhà cung cấp, sản phẩm/gói, nhóm khách, khoảng ngày sử dụng, giá mua và số lượng. **Nhập lô nghĩa là đã mua/nhận toàn bộ lô**, không chỉ ghi bảng giá báo của đối tác; toàn bộ giá trị lô được ghi nhận phải trả NCC. Giá mua/số lượng đã nhập cố định, chỉ đổi bật/tắt và ưu tiên. Nhà cung cấp còn lô đang bật không được lưu trữ.
+
+Trong chi tiết đơn, chọn nguồn thủ công hoặc tự phân bổ. Ưu tiên số nhỏ trước, cùng ưu tiên lấy giá mua rẻ trước rồi lô nhập trước. Ví dụ 10 vé A giá390k và 2 vé B giá410k ghi vốn4.720.000đ. Mỗi lô chiếm số lượng đã phân bổ dùng chung các ngày/kênh. Nếu sản phẩm đã có lô nguồn cung, thao tác giao mã tự phân bổ phần còn thiếu; thiếu bất kỳ nhóm khách sẽ chặn giao trước khi ghi mã. Vé miễn phí cũng cần lô giá0đ để ghi đủ nguồn. Sản phẩm chưa có lô vẫn giao theo luồng cũ và báo thiếu giá vốn.
+
+Đơn chưa thu hủy/lưu trữ trả số lượng lô, giữ lịch sử phân bổ cũ; không giảm nghĩa vụ trả NCC vì vé vẫn thuộc kho đã mua. Khôi phục đơn đã hủy không lấy lại nguồn. Đơn đã thu/ghi nợ giữ vốn khi lưu trữ. Đây là sổ số lượng/giá vốn, chưa nhập/giao mã thật từ kho.
+
+Công nợ NCC = giá trị toàn bộ lô nhập − khoản đã trả ghi nhận. Nhập mã chuyển khoản hoặc xác nhận tiền mặt sau khi trả thực tế; không chuyển tiền ngân hàng từ ứng dụng. Có chống ghi trùng/chi vượt công nợ và lịch sử thanh toán. Chưa hỗ trợ trả trước hoặc hoàn/trả lô đã nhập.
+
+Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa hủy đã phân bổ đủ nguồn: doanh thu sau giảm − giá vốn. Bao gồm đơn lưu trữ, tách rõ đơn chưa đủ vốn (không tự coi vốn bằng0). Công nợ NCC là toàn bộ thời gian, tách bộ lọc ngày. Không phải dòng tiền, không trừ phí vận hành/thuế và chưa có hoàn tiền. Giá vốn/chứng từ nội bộ không xuất ra web/CTV/POS. Cần kiểm thử mua/phân bổ đồng thời trên PostgreSQL thật trước khi vận hành lớn.

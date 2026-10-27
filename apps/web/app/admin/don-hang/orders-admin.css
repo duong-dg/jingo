@@ -7,3 +7,5 @@
 .order-export-hint{font-size:13px;line-height:1.6;color:#758173;margin:14px 0 0}.order-search-actions button{min-height:44px}
 
 .order-quick-dates{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}.order-quick-dates>span{font-size:14px;font-weight:600}.order-quick-dates small{font-size:13px;color:#758173}.order-quick-dates button{min-height:44px}@media(max-width:600px){.order-quick-dates small{flex-basis:100%}}
+
+.order-supply-panel{padding:18px;border:1px solid #e1dfca;border-radius:12px;background:#fdfbf2;margin:24px 0}.order-supply-panel h3{margin:0 0 12px}.order-supply-panel>p{font-size:14px;line-height:1.7}.supply-cost-entry{padding:12px;background:#fff;border:1px solid #e7e5d8;border-radius:8px}.supply-manual{margin:16px 0;font-size:14px}.supply-manual summary{cursor:pointer;font-weight:600}.supply-manual label{display:grid;grid-template-columns:minmax(0,1fr) 80px;gap:12px;align-items:center;font-size:13px;margin:14px 0!important}.supply-manual input{min-width:0}.order-supply-panel .text-link{font-size:13px}

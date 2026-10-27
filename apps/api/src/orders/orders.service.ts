@@ -1,3 +1,4 @@
+import{SupplyService}from'../supply/supply.module';
 import{VouchersService}from'../vouchers/vouchers.module';
 import{InventoryService}from'../inventory/inventory.module';
 import{MailService}from'../mail/mail.module';
@@ -18,7 +19,7 @@ export interface OrderSnapshot {discount?:{code:string;amount:number;subtotal:nu
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
-  constructor(private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService) {}
+  constructor(private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService) {}
   private async checkPosStaff(client:Pick<PoolClient,'query'>,staffId:string,counterId:string,permission:string){const result=await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[staffId]);const user=result.rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.counterIds.includes(counterId)||!user.permissions.includes(permission))throw new ForbiddenException('Quyền hoặc quầy được gán đã thay đổi. Đăng nhập lại để tiếp tục.');}
   async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string}) {
     if(input.voucherCode&&(partnerId||pos))throw new BadRequestException('Mã giảm giá chỉ dùng cho đơn web bán lẻ.');
@@ -127,7 +128,7 @@ export class OrdersService {
       if (row.booking_status === 'CANCELLED'&&!['ARCHIVE','RESTORE'].includes(action.action)) throw new ConflictException('Đơn đã hủy.');
       if(action.action==='ARCHIVE'){
         await client.query('INSERT INTO jingo_order_archives(order_id,archived_by,reason)VALUES($1,$2,$3)',[id,adminId,action.note]);
-        if(row.payment_status==='UNPAID'){const issued=await client.query('SELECT id FROM jingo_order_tickets WHERE order_id=$1',[id]);if(!issued.rowCount&&row.booking_status!=='CANCELLED'){await client.query("UPDATE jingo_orders SET booking_status='CANCELLED' WHERE id=$1",[id]);await this.inventory.release(client,id);await this.vouchers.release(client,id);await this.mail.enqueue(client,id,'CANCEL',row.version+1);}}
+        if(row.payment_status==='UNPAID'){const issued=await client.query('SELECT id FROM jingo_order_tickets WHERE order_id=$1',[id]);if(!issued.rowCount&&row.booking_status!=='CANCELLED'){await client.query("UPDATE jingo_orders SET booking_status='CANCELLED' WHERE id=$1",[id]);await this.inventory.release(client,id);await this.vouchers.release(client,id);await this.supply.release(client,id);await this.mail.enqueue(client,id,'CANCEL',row.version+1);}}
       }else if(action.action==='RESTORE'){await client.query('DELETE FROM jingo_order_archives WHERE order_id=$1',[id]);
       }else if (action.action === 'CONFIRM') {
         if (row.booking_status !== 'REQUESTED') throw new ConflictException('Đơn đã được xác nhận.');
@@ -137,7 +138,7 @@ export class OrdersService {
         await client.query('UPDATE jingo_orders SET instructions=$2 WHERE id=$1',[id,action.instructions]);
       } else if (action.action === 'CANCEL') {
         if (row.payment_status !== 'UNPAID') throw new ConflictException('Đơn đã thu tiền hoặc ghi công nợ cần quy trình hoàn riêng; không thể hủy trực tiếp.');
-        await client.query("UPDATE jingo_orders SET booking_status='CANCELLED' WHERE id=$1", [id]);await this.inventory.release(client,id);await this.vouchers.release(client,id);
+        await client.query("UPDATE jingo_orders SET booking_status='CANCELLED' WHERE id=$1", [id]);await this.inventory.release(client,id);await this.vouchers.release(client,id);await this.supply.release(client,id);
       } else if (action.action === 'PAY') {
         if (row.booking_status !== 'CONFIRMED' || row.payment_status !== 'UNPAID') throw new ConflictException('Đơn đã xác nhận và chưa được thu tiền/ghi công nợ mới được thu tiền.');
         if (action.amount !== row.snapshot.total) throw new BadRequestException('Số tiền phải đúng tổng đơn. Thanh toán thiếu/thừa cần xử lý riêng.');
@@ -164,6 +165,7 @@ export class OrdersService {
         if(new Set(hashes).size!==hashes.length)throw new BadRequestException('Danh sách có mã vé trùng. Kiểm tra lại trước khi giao.');
         const used=await client.query('SELECT id FROM jingo_order_tickets WHERE code_hash IN ('+hashes.map((_,index)=>'$'+(index+1)).join(',')+')',hashes);
         if(used.rowCount)throw new ConflictException('Có mã vé đã được giao. Kiểm tra lại danh sách trước khi lưu.');
+        await this.supply.forDelivery(client,row,adminId);
         for (const ticket of action.tickets) await client.query('INSERT INTO jingo_order_tickets(id,order_id,code,code_hash,kind,covers,note) VALUES ($1,$2,$3,$4,$5,$6,$7)',
           [randomUUID(), id, ticket.code, hash(ticket.code), ticket.kind, ticket.covers, ticket.note]);
       }

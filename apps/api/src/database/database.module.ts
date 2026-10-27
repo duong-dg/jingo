@@ -27,6 +27,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         booking_status text NOT NULL DEFAULT 'REQUESTED', payment_status text NOT NULL DEFAULT 'UNPAID', instructions text NOT NULL DEFAULT '',
         version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_supply_lots(id text PRIMARY KEY,request_hash text NOT NULL,supplier_id text NOT NULL REFERENCES jingo_suppliers(id),product_id text NOT NULL REFERENCES jingo_products(id),variant_id text NOT NULL,customer_type text NOT NULL,unit_cost bigint NOT NULL,total_quantity integer NOT NULL,valid_from text NOT NULL,valid_to text NOT NULL,priority integer NOT NULL DEFAULT 100,enabled boolean NOT NULL DEFAULT true,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_supply_lots_product ON jingo_supply_lots(product_id);
+      CREATE TABLE IF NOT EXISTS jingo_supply_allocations(order_id text NOT NULL REFERENCES jingo_orders(id),lot_id text NOT NULL REFERENCES jingo_supply_lots(id),quantity integer NOT NULL,unit_cost bigint NOT NULL,released boolean NOT NULL DEFAULT false,PRIMARY KEY(order_id,lot_id));
+      CREATE INDEX IF NOT EXISTS jingo_supply_allocation_lot ON jingo_supply_allocations(lot_id);
+      CREATE TABLE IF NOT EXISTS jingo_supply_actions(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),request_hash text NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_supplier_payments(id text PRIMARY KEY,supplier_id text NOT NULL REFERENCES jingo_suppliers(id),amount bigint NOT NULL,method text NOT NULL,reference text NOT NULL UNIQUE,note text NOT NULL,request_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE INDEX IF NOT EXISTS jingo_orders_created ON jingo_orders(created_at);
       CREATE INDEX IF NOT EXISTS jingo_orders_created_page ON jingo_orders(created_at DESC,id DESC);
       CREATE TABLE IF NOT EXISTS jingo_inventory_configs(product_id text PRIMARY KEY REFERENCES jingo_products(id),enabled boolean NOT NULL DEFAULT false,version integer NOT NULL DEFAULT 1);
