@@ -8,3 +8,6 @@ coverage/
 *.tsbuildinfo
 *.log
 apps/api/data/
+
+# Runtime data may also be created when commands start at the repository root.
+/data/

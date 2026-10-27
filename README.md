@@ -65,7 +65,7 @@ Tài khoản tạm dừng vẫn xem đơn/nợ nhưng không đặt mới hoặc
 
 Khóa dòng tài khoản và transaction bảo vệ hạn mức; request ID chống ghi nợ/trả nợ lặp. Bản cập nhật tự bổ sung bảng và nhập mã giao dịch cũ vào danh mục chống trùng, không đặt lại sản phẩm/đơn/ảnh. Tổng thu ở màn hình đơn chỉ tính đơn thanh toán trực tiếp trong danh sách, chưa phải báo cáo hợp nhất cả tiền trả nợ.
 
-Kiểm thử local gồm 16 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
+Kiểm thử local gồm 17 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
 
 ```bash
 JINGO_TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/jingo_credit_test npm run test:credit-postgres -w @jingo/api
@@ -89,7 +89,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.9.1`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.10.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -105,7 +105,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.9.1`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.10.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
@@ -133,7 +133,7 @@ docker compose logs --tail=80 api
 
 Mở `https://your-domain.example/admin`, đăng nhập bằng tài khoản đã thiết lập. API tự tạo bảng và nhập ba sản phẩm mẫu một lần; khởi động lại không ghi đè dữ liệu đã sửa. Có thể chuyển sản phẩm mẫu sang nháp và tạo sản phẩm thật. Nếu gặp lỗi nguồn yêu cầu, kiểm tra PUBLIC_BASE_URL và recreate API bằng `docker compose up -d`.
 
-Admin hỗ trợ sản phẩm/ảnh/nội dung/giá/lịch khóa, loại sản phẩm, blog, SEO, bản dịch nháp và đơn tại `/admin/don-hang`. Có POS cho tài khoản quản trị; chưa có phân quyền nhiều nhân viên.
+Admin hỗ trợ sản phẩm/ảnh/nội dung/giá/lịch khóa, loại sản phẩm, blog, SEO, bản dịch nháp và đơn tại `/admin/don-hang`. Có tài khoản nhân viên POS với quyền theo quầy tại /admin/nhan-vien-quay.
 
 Sau triển khai, kiểm tra đăng nhập, lưu giá, tải lại trang, chặn ngày khóa và restart API để xác minh dữ liệu còn nguyên.
 
@@ -214,4 +214,14 @@ Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
 
 ### v0.9.1 — trang quầy riêng
 - /quay có trang đăng nhập và không gian bán vé riêng. Đăng nhập thành công mở thẳng POS, phiên còn hiệu lực bỏ qua form. Đăng xuất/phiên hết hạn quay về đăng nhập quầy.
-- /admin và /admin/ban-tai-quay giữ luồng cũ. Trang quầy tái sử dụng cùng đơn, giá và thanh toán. Đây là lối vào riêng dùng tài khoản/phiên quản trị hiện có, chưa phải tài khoản thu ngân giới hạn quyền.
+- /admin và /admin/ban-tai-quay giữ luồng cũ. Trang quầy tái sử dụng cùng đơn, giá và thanh toán. Ở bản 0.9.1, đây là lối vào dùng phiên quản trị; từ 0.10 đã thay bằng tài khoản và phiên POS riêng (xem bên dưới).
+
+### v0.10.0 — nhân viên và phân quyền POS
+- Admin → Bán hàng → Nhân viên & phân quyền (/admin/nhan-vien-quay): tạo nhân viên, gán các quầy được làm việc và quyền SELL/COLLECT/DELIVER/PRINT/CANCEL. Mặc định chỉ bán và in; các quyền thu tiền, giao vé, hủy cần cấp thêm.
+- Nhân viên đăng nhập /quay bằng tài khoản riêng. /quay/don-hang chỉ hiển thị đơn POS thuộc các quầy được gán, bao gồm đơn của đồng nghiệp cùng quầy. Không truy cập đơn web/CTV/quầy khác, giá CTV, cấu hình hay báo cáo toàn hệ thống.
+- Session POS jingo_pos riêng với jingo_admin, cookie HttpOnly/SameSite Strict scoped /api/v1/pos. Không nhận cookie admin thay cho POS; chủ vẫn có thể đăng nhập POS bằng tài khoản quản trị và có toàn quyền quầy. Admin đăng nhập độc lập tại /admin.
+- API /pos kiểm tra quyền và quầy theo dữ liệu hiện tại; tạo đơn và thao tác tài chính còn kiểm tra nhân viên trong transaction. Đổi quyền/quầy/email/mật khẩu hoặc khóa tài khoản thu hồi các phiên POS nhân viên cũ. Không bao giờ trả password_hash về client.
+- Nhân viên chỉ được gọi PAY/DELIVER/CANCEL theo quyền, không được ARCHIVE/RESTORE/CREDIT hoặc tự nâng quyền. Quyền PRINT hoặc DELIVER mới được nhận mã vé trong chi tiết; endpoint in bắt buộc PRINT. Thu tiền/hủy/giao vé tiếp tục có version, request ID và audit người thực hiện.
+- /admin/ban-tai-quay giữ luồng quản trị cũ. Sau cập nhật, /quay cần đăng nhập vào phiên POS riêng. Chưa có phân quyền thu ngân theo ca, hoàn tiền hay hạn mức thu tiền cá nhân.
+
+Với đơn POS, tra cứu bằng mã đơn + email chỉ xem trạng thái; khách mở link trong email JinGo để xem mã vé. Khóa thật do server sinh cho đơn POS mới, nhân viên không được cấp quyền không lấy được mã qua khóa tự gửi khi tạo đơn. Đơn web giữ cách tra cứu email hiện có.

@@ -17,11 +17,13 @@ interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact:
 @Injectable()
 export class OrdersService {
   constructor(private readonly db: DatabaseService,private readonly mail:MailService) {}
-  async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string}) {
+  private async checkPosStaff(client:Pick<PoolClient,'query'>,staffId:string,counterId:string,permission:string){const result=await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[staffId]);const user=result.rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.counterIds.includes(counterId)||!user.permissions.includes(permission))throw new ForbiddenException('Quyền hoặc quầy được gán đã thay đổi. Đăng nhập lại để tiếp tục.');}
+  async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string}) {
     const requestHash = hash(JSON.stringify(pos?{pos,input}:partnerId?{partnerId,input}:input));
     const client = await this.db.pool.connect();
     try {
       await client.query('BEGIN');
+      if(pos?.staffId)await this.checkPosStaff(client,pos.staffId,pos.counterId,'SELL');
       const prior = await client.query('SELECT id,code,request_hash FROM jingo_orders WHERE request_id=$1', [input.requestId]);
       if (prior.rowCount) {
         if (prior.rows[0].request_hash !== requestHash) throw new ConflictException('Yêu cầu này đã được dùng với nội dung khác.');
@@ -46,11 +48,11 @@ export class OrdersService {
         total: quote.total, lines: quote.lines, demo: false, conditions: variant.conditions || {},
         policy: input.locale==='en'?'Your booking is recorded immediately. JinGo will send your tickets by email after processing. Booking confirmation does not mean payment has been received or tickets have been issued. Follow the payment instructions provided for your booking.':'Đơn đặt vé được ghi nhận ngay. JinGo sẽ gửi vé qua email sau khi xử lý. Xác nhận đặt vé không đồng nghĩa đã thanh toán hoặc đã xuất vé. Thanh toán theo hướng dẫn của đơn hàng.' };
       const code = 'JG' + randomBytes(5).toString('hex').toUpperCase();
-      const id=randomUUID();
+      const id=randomUUID();const customerAccessKey=pos?randomBytes(32).toString('hex'):input.accessKey;
       await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact,booking_status) VALUES ($1,$2,$3,$4,$5,$6,$7,\'CONFIRMED\')',
-        [id, code, input.requestId, requestHash, hash(input.accessKey), JSON.stringify(snapshot),JSON.stringify(input.contact)]);
+        [id, code, input.requestId, requestHash, hash(customerAccessKey), JSON.stringify(snapshot),JSON.stringify(input.contact)]);
       if(pos){await client.query('INSERT INTO jingo_pos_orders(order_id,counter_id,admin_id)VALUES($1,$2,$3)',[id,pos.counterId,pos.adminId]);await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),pos.adminId,'pos.order-create',id]);}
-      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,input.accessKey);await this.mail.enqueue(client,id,'CREATED',1);}
+      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,customerAccessKey);await this.mail.enqueue(client,id,'CREATED',1);}
       await client.query('COMMIT'); return { code, accessKey: input.accessKey };
     } catch (e) {
       await client.query('ROLLBACK');
@@ -83,7 +85,7 @@ export class OrdersService {
     if(!accessKey&&(!email||result.rows[0]?.contact?.email?.trim().toLowerCase()!==email.trim().toLowerCase()))throw new NotFoundException('Không tìm thấy đơn hàng.');
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn hoặc khóa tra cứu không đúng.');
     if((await this.db.pool.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)throw new NotFoundException('Đơn CTV chỉ tra cứu trong tài khoản CTV.');
-    return this.detail(result.rows[0], false);
+    const response=await this.detail(result.rows[0],false);if(!accessKey&&(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)return{...response,tickets:[],ticketAccess:'EMAIL_LINK' as const};return response;
   }
   async list(archived=false) {
     const result = await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.version,o.created_at FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id WHERE '+(archived?'a.order_id IS NOT NULL':'a.order_id IS NULL')+' ORDER BY o.created_at DESC LIMIT 200');
@@ -94,7 +96,7 @@ export class OrdersService {
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn.');
     return this.detail(result.rows[0], true);
   }
-  async act(id: string, action: ActionInput, adminId: string,partnerId?:string) {
+  async act(id: string, action: ActionInput, adminId: string,partnerId?:string,staffId?:string) {
     const client = await this.db.pool.connect();
     const requestHash = hash(JSON.stringify({ id, action }));
     try {
@@ -102,6 +104,7 @@ export class OrdersService {
       const result = await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE', [id]);
       if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn.');
       const row = result.rows[0] as OrderRow;
+      if(staffId){const pos=await client.query('SELECT counter_id FROM jingo_pos_orders WHERE order_id=$1',[id]);const permission=action.action==='PAY'?'COLLECT':action.action==='DELIVER'?'DELIVER':action.action==='CANCEL'?'CANCEL':null;if(!permission||!pos.rowCount)throw new ForbiddenException('Không được xử lý đơn này tại quầy.');await this.checkPosStaff(client,staffId,pos.rows[0].counter_id,permission);}
       const owner=await client.query('SELECT partner_id FROM jingo_partner_orders WHERE order_id=$1',[id]);
       if(partnerId&&(action.action!=='CREDIT'||owner.rows[0]?.partner_id!==partnerId))throw new NotFoundException('Không tìm thấy đơn CTV.');
       const prior = await client.query('SELECT request_hash FROM jingo_order_actions WHERE id=$1', [action.requestId]);

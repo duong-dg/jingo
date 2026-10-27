@@ -15,6 +15,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS jingo_admins (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_sessions (token_hash text PRIMARY KEY, admin_id text NOT NULL REFERENCES jingo_admins(id), expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_sessions_expiry ON jingo_sessions(expires_at);
+      CREATE TABLE IF NOT EXISTS jingo_pos_users(id text PRIMARY KEY,email text NOT NULL UNIQUE,password_hash text NOT NULL,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS jingo_pos_sessions(token_hash text PRIMARY KEY,user_id text NOT NULL,role text NOT NULL,expires_at timestamptz NOT NULL);
+      CREATE INDEX IF NOT EXISTS jingo_pos_sessions_expiry ON jingo_pos_sessions(expires_at);
       CREATE TABLE IF NOT EXISTS jingo_audit (id text PRIMARY KEY, admin_id text NOT NULL, action text NOT NULL, entity_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_orders (
         id text PRIMARY KEY, code text NOT NULL UNIQUE, request_id text NOT NULL UNIQUE, request_hash text NOT NULL,
