@@ -74,6 +74,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       );
       CREATE TABLE IF NOT EXISTS jingo_order_mail_keys(order_id text PRIMARY KEY REFERENCES jingo_orders(id),secret text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_mail_outbox(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),event text NOT NULL,status text NOT NULL DEFAULT 'PENDING',attempts integer NOT NULL DEFAULT 0,next_at timestamptz NOT NULL DEFAULT now(),last_error text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),sent_at timestamptz);
+      CREATE INDEX IF NOT EXISTS jingo_mail_order_history ON jingo_mail_outbox(order_id,created_at DESC,id DESC);
       CREATE INDEX IF NOT EXISTS jingo_partner_ledger_owner ON jingo_partner_ledger(partner_id);
     `);
     const registered=await this.pool.query("SELECT id FROM jingo_migrations WHERE id='005_payment_references'");

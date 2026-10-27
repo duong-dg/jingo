@@ -255,3 +255,9 @@ Khi chọn điểm đến đã có trong cây, trình sửa nay chỉ gửi các
 ### v0.12.2 — bố cục chuyên mục Blog
 
 Trang Chuyên mục chia thành khung tạo mới và danh sách có tìm kiếm/số bài. Trong bài viết, Chuyên mục và Tác giả nằm cùng hàng; bấm Tạo mới để mở khung nhập riêng, Tạo & chọn tự chọn chuyên mục vừa tạo. Thông báo hiện ngay trong khung tạo. Trên điện thoại các khung xếp một cột. Không đổi dữ liệu hay API chuyên mục.
+
+### v0.13.0 — email trong chi tiết đơn
+
+Admin → Đơn hàng → chọn đơn có khung Email của đơn hàng, tối đa 100 thư của riêng đơn đó. Xem loại thông báo, số lần thử, thời gian và trạng thái; tự cập nhật mỗi 15 giây khi còn thư chờ và trang đang hiển thị. SMTP đã nhận thư không có nghĩa thư chắc chắn vào hộp thư đến.
+
+Thư FAILED có nút Thử gửi lại nếu SMTP đang bật và đơn hỗ trợ email. Thao tác đưa vào hàng đợi, không gửi ngay trong request. Không gửi lại thư đã SENT hoặc đang PENDING/SENDING. Retry ghi audit trong cùng transaction và chỉ tác động thư thuộc đúng đơn. Đơn CTV tiếp tục nhận vé trong tài khoản, không gửi trực tiếp cho khách của CTV. Việc bật SMTP sau này không tự tạo bù email cho sự kiện cũ.
