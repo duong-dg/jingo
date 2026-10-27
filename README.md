@@ -1,5 +1,14 @@
 # JinGo
 
+## Xem trước & lịch sử bài viết (0.22)
+
+- Blog → Bài viết: lưu bài rồi bấm Xem trước bản đã lưu; dùng được cho nháp, hẹn giờ và bài xuất bản, có lựa chọn Việt/Anh. Bản dịch chưa có tiêu đề chưa xem được. Bản xem trước dùng chung ArticleView với trang công khai: ảnh, nội dung, mục lục và sản phẩm liên quan đang xuất bản.
+- Bản xem trước yêu cầu phiên admin ở API, không nhận token chia sẻ qua URL, private/no-store và noindex/nofollow/noarchive. Trang HTML/RSC chỉ có vỏ giao diện, nội dung nháp tải từ API sau xác thực; không gắn BlogPosting/canonical/sitemap cho bản xem trước. Lưu ý thư viện ảnh vẫn là thư viện công khai như trước, không phải kho file riêng tư.
+- Mỗi lần lưu bài hoặc lưu bản dịch tạo revision bất biến trong cùng transaction với bản hiện tại, có version/thời điểm/người lưu và audit. Bài cũ được giữ bản baseline trước lần sửa đầu tiên sau nâng cấp. Không khôi phục được các lần sửa xảy ra trước khi có lịch sử; không tự tạo lịch sử giả.
+- Hiện 50 phiên bản gần nhất, có xem trước từng phiên bản. Khôi phục yêu cầu lưu/bỏ thay đổi đang sửa, xác nhận chọn bản cũ, dùng optimistic version chống ghi đè. Khôi phục tạo revision mới, giữ slug hiện tại, chuyển bài và bản dịch về nháp, bỏ lịch hẹn giờ; bài đang công khai sẽ tạm ẩn đến khi xuất bản lại. Không xóa lịch sử hay đổi vé/đơn/giá.
+- Xem trước bản cũ vẫn dùng thông tin/giá hiện tại của sản phẩm liên quan đã xuất bản; không phải ảnh chụp lịch sử giá vé. Chưa có so sánh diff, tự lưu khi đang gõ, chia sẻ preview công khai hoặc giới hạn dung lượng lịch sử tự động.
+
+
 ## Ca quầy & bàn giao (0.21)
 
 - Admin → Bán hàng → Ca quầy & bàn giao hoặc POS `/quay/ca`. Quyền SHIFT mới cho nhân viên xem sổ ca tại các quầy được gán, mở ca và chốt ca do mình mở; admin chốt thay khi cần. Không tự cấp quyền mới cho nhân viên cũ. Khóa/gỡ quyền thu hồi phiên như trước.

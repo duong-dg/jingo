@@ -18,7 +18,7 @@
 4. **Giá vốn/đối soát nhà cung cấp:** đã có lô nhiều NCC, phân bổ giá vốn, công nợ/ghi tiền trả và lợi nhuận gộp (0.19). Đã có cảnh báo nguồn sắp hết/hết hạn và danh sách đơn thiếu nguồn (0.20). Còn trả trước, chứng từ/đối soát và điều chỉnh hoàn tiền; không làm trả lô vì vé nhập không được trả NCC. Thiết kế đã có: lưu nguồn cung và giá vốn theo thời điểm bán; báo cáo phải giữ đúng lịch sử khi đổi nhà cung cấp sản phẩm. Liên kết sản phẩm là nguồn mặc định; nguồn/giá vốn thực tế theo từng lô phân bổ.
 5. **Khuyến mãi/voucher:** đã có cấu hình và checkout web bán lẻ, giữ/trả lượt và snapshot tiền giảm (0.18). Còn điều kiện riêng sản phẩm/gói/kênh, cộng dồn, khuyến mãi CTV/POS và hoàn tiền: thời hạn, điều kiện gói/ngày/kênh, giới hạn lượt, chống dùng trùng và quy tắc với giá CTV.
 6. **Cổng thanh toán:** kết nối cổng được chọn với tài khoản merchant/sandbox, xác thực chữ ký callback, chống thông báo trùng, đối soát số tiền và hoàn tiền theo quy trình của cổng. Cần thông tin merchant trước khi kiểm thử kết nối thực.
-7. **Nội dung/quản trị:** lịch sử phiên bản bài viết, xem trước bản nháp, thêm ngôn ngữ, trang chính sách/điều khoản và phân quyền biên tập.
+7. **Nội dung/quản trị:** đã có xem trước bài nháp/Việt–Anh, lịch sử phiên bản và khôi phục thành nháp (0.22). Còn so sánh diff, tự lưu, thêm ngôn ngữ, trang chính sách/điều khoản và phân quyền biên tập.
 8. **Vận hành:** quy trình sao lưu cả PostgreSQL/ảnh/khóa SMTP, thử khôi phục, giám sát, giới hạn truy cập sau reverse proxy và kiểm thử mua đồng thời trên PostgreSQL thật.
 
 ## Quyết định giữ nguyên

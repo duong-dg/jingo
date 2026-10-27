@@ -75,6 +75,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         id text PRIMARY KEY, slug text NOT NULL UNIQUE, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1,
         created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_post_revisions(post_id text NOT NULL REFERENCES jingo_posts(id),version integer NOT NULL,data jsonb NOT NULL,saved_by text NOT NULL,reason text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(post_id,version));
       CREATE TABLE IF NOT EXISTS jingo_slug_aliases (kind text NOT NULL, slug text NOT NULL, entity_id text NOT NULL, PRIMARY KEY(kind,slug));
       CREATE TABLE IF NOT EXISTS jingo_price_groups (id text PRIMARY KEY, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_partners (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL, data jsonb NOT NULL, version integer NOT NULL DEFAULT 1);

@@ -1,3 +1,3 @@
 import{NextResponse,type NextRequest}from'next/server';
-export function proxy(request:NextRequest){const headers=new Headers(request.headers);headers.set('x-jingo-locale',request.nextUrl.pathname==='/en'||request.nextUrl.pathname.startsWith('/en/')?'en':'vi');return NextResponse.next({request:{headers}});}
+export function proxy(request:NextRequest){const headers=new Headers(request.headers);headers.set('x-jingo-locale',request.nextUrl.pathname==='/en'||request.nextUrl.pathname.startsWith('/en/')?'en':'vi');const response=NextResponse.next({request:{headers}});if(request.nextUrl.pathname.startsWith('/admin/bai-viet/xem-truoc/')){response.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');response.headers.set('Cache-Control','private, no-store');}return response;}
 export const config={matcher:['/((?!api|_next|favicon.ico|robots.txt|sitemap.xml).*)']};
