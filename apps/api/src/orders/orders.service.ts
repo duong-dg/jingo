@@ -12,7 +12,7 @@ import{applyNetPricing}from'../partners/net-pricing';
 import{ledgerRows,creditSummary,checkCredit}from'../partners/credit';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-export interface OrderSnapshot {timeSlot?:{id:string;start:string;end?:string}; locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
+export interface OrderSnapshot {timeSlot?:{id:string;start:string;end?:string;requiresSelection?:boolean}; locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {

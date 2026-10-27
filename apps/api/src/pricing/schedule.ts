@@ -6,5 +6,5 @@ export function checkSchedule(variant:{timeSlots?:TimeSlot[]},date:string,slotId
  if(!slots.length){if(slotId)throw new Error('Gói này không sử dụng khung giờ.');return undefined;}
  const slot=slots.find(slot=>slot.id===slotId);if(!slot)throw new Error('Chọn khung giờ sử dụng.');
  if(now>=new Date(`${date}T${slot.start}:00+07:00`).getTime())throw new Error('Đã quá giờ bắt đầu. Vui lòng chọn khung giờ hoặc ngày khác.');
- return slot;
+ return {...slot,requiresSelection:slots.length>1};
 }

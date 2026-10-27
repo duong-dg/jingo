@@ -3,10 +3,14 @@
 Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.7 thêm chọn vé trực tiếp, suất giờ, email khách bắt buộc và cấu hình SMTP; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Giữ nguyên luồng yêu cầu đặt, tra cứu, thu chuyển khoản thủ công và giao mã vé. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
 
 
+## Chỉnh giao diện chọn vé (0.7.1)
+
+Tên nhóm khách và giá cùng dòng, giá màu cam và khoảng cách thu gọn. Bỏ câu điều kiện mặc định; điều kiện thực tế do admin nhập vẫn hiển thị. Một suất giờ tự chọn, ẩn bộ chọn và dòng giờ trên checkout; nhiều suất vẫn cho chọn. Thông tin giờ luôn giữ trong snapshot và email, cutoff server không thay đổi. Đơn cũ chưa có cờ hiển thị vẫn giữ dòng giờ khi tra cứu. Cấu hình suất giờ chuyển sang Lịch bán, có áp dụng chung hoặc từng gói; dữ liệu gói/giá cũ được giữ nguyên.
+
 ## Chọn vé, suất giờ và email (0.7)
 
 - Trang vé hiện sẵn ngày, gói, giá người lớn/trẻ em/người cao tuổi và số lượng; không cần mở popup. Menu website sticky, giảm hiệu ứng rê chuột. Admin dùng menu trái trên desktop, menu thu gọn trên điện thoại; không còn hàng tab phân hệ phía trên.
-- Admin > Sản phẩm > Gói & giá: thêm tối đa 30 suất giờ cho mỗi gói, có giờ bắt đầu và kết thúc tùy chọn. Để trống là dùng cả ngày. Suất lặp theo ngày sử dụng; ngày khóa/lịch giá vẫn áp dụng như cũ. Chưa cấu hình suất riêng từng thứ hoặc chuyến qua đêm.
+- Admin > Sản phẩm > Lịch bán: cài lịch chung một lần cho mọi gói hoặc riêng từng gói, tối đa 30 suất giờ cho mỗi gói, có giờ bắt đầu và kết thúc tùy chọn. Để trống là dùng cả ngày. Suất lặp theo ngày sử dụng; ngày khóa/lịch giá vẫn áp dụng như cũ. Chưa cấu hình suất riêng từng thứ hoặc chuyến qua đêm.
 - Tới đúng giờ bắt đầu (Asia/Ho_Chi_Minh, GMT+7), server chặn báo giá/tạo đơn mới cho suất đó, cả khách lẻ và CTV. Client kiểm tra lại mỗi 15 giây; kiểm tra server lúc tạo đơn là quyết định cuối. Ngày/gói/giờ được lưu cùng snapshot đơn, sửa lịch không đổi đơn cũ.
 - Email khách bắt buộc ở form và API đặt vé; CTV dùng email tài khoản của họ. Đơn cũ không có email vẫn xem/xử lý được. Tab English cũ trong sản phẩm/bài viết có trình dịch trực tiếp, đồng bộ cùng trung tâm /admin/ban-dich; lưu nguồn trước khi dịch.
 - /admin/smtp: điền máy chủ, cổng, TLS/STARTTLS, tài khoản, mật khẩu ứng dụng, tên và email gửi. Lưu rồi gửi thử đến địa chỉ của bạn; chỉ bật tự động khi đã kiểm tra. Không có thông tin SMTP hoặc dịch vụ email mặc định.
@@ -66,7 +70,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.7.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.7.1`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -82,7 +86,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.7.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.7.1`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
