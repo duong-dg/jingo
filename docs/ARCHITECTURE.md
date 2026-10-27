@@ -144,3 +144,9 @@ Admin-only jingo_suppliers stores contact information/notes and optimistic versi
 ## Voucher configuration (0.17.0)
 
 Admin-only voucher CRUD stores canonical uppercase unique codes, immutable code identity, integer discount terms, validity dates, planned usage cap and enabled flag. Strict validation, version locking and audit are enforced. The list explicitly reports checkoutEnabled:false. Frontend math is illustrative only; no public voucher lookup, quote/order discount or redemption accounting is implemented in this phase. Enabling config cannot change a booking total.
+
+## Retail voucher redemption (0.18.0)
+
+VouchersModule is injected into public quotes and OrdersService. Orders optionally accept one normalized voucherCode; POS/partner contexts reject it. Product row lock precedes voucher row FOR UPDATE in READ COMMITTED. Fresh active-use COUNT and terms checks run before inserting an immutable discount snapshot and jingo_voucher_uses allocation in the same order transaction. Quotes do not lock/reserve. Admin terms changes lock the same voucher and cannot lower maxUses below occupied uses.
+
+Unpaid cancellation first releases inventory (product lock), then voucher (voucher lock); released flag makes this idempotent. Paid/CREDIT archival retains usage. Restore keeps the cancellation. Order idempotency is checked before fresh voucher validation, so retrying a committed request still succeeds after expiry/cap/disable. Guest lines retain retail unit prices; total and receipt amounts use net total; discount/subtotal are explicitly rendered and exported. Existing financial reports already sum snapshot.total. Actual PostgreSQL concurrent-order verification is still required; pg-mem validates lifecycle and API rules only.

@@ -289,3 +289,11 @@ Trong Đơn hàng, chọn Ngày tạo đơn hoặc Ngày sử dụng vé rồi b
 Bán hàng → Mã giảm giá & voucher: tạo/sửa mức giảm phần trăm hoặc VND, đơn tối thiểu, mức giảm tối đa cho %, khoảng ngày, tổng lượt dự kiến và bật/tắt cấu hình. Mã tự chuẩn hóa chữ hoa, không được trùng, giữ cố định sau khi tạo. Có tính thử minh họa bằng giá trị đơn giả lập.
 
 Đây là bước chuẩn bị cấu hình: checkout chưa nhận mã, chưa giảm tiền và chưa thực thi/trừ giới hạn lượt dùng. Các thông báo trên màn hình luôn nhắc giới hạn này. Cần nối báo giá/đơn/tồn lượt trong transaction và bổ sung kiểm thử trước khi công bố chương trình cho khách.
+
+### v0.18.0 — voucher tại checkout bán lẻ
+
+Khách nhập mã ở checkout, bấm Áp dụng để lấy lại báo giá từ server. Mỗi đơn một mã, áp dụng toàn bộ sản phẩm web bán lẻ; không áp dụng CTV/POS. Thời hạn tính theo ngày đặt đơn (giờ Việt Nam), không theo ngày sử dụng vé. Server kiểm tra bật/tắt, ngày, giá trị đơn tối thiểu, mức giảm tối đa và lượt còn lại; tính lại khi tạo đơn.
+
+Báo giá không giữ lượt; đơn tạo thành công giữ một lượt kể cả chưa thanh toán. Hủy/lưu trữ đơn chưa thu tiền trả lượt một lần; khôi phục đơn đã hủy không giữ lại lượt. Lưu trữ đơn đã thu tiền vẫn giữ lượt. Cấu hình không được hạ giới hạn dưới số lượt đang dùng. Snapshot tiền giảm giữ nguyên khi sửa voucher.
+
+Chi tiết đơn, tra cứu, phiếu in và CSV thể hiện mã/tiền giảm; báo cáo giá trị đơn theo số sau giảm. Chưa có cộng dồn mã, điều kiện riêng sản phẩm/gói hoặc quy trình trả lượt cho hoàn tiền đơn đã thu. Giới hạn đồng thời dùng khóa hàng PostgreSQL, cần kiểm chứng tải thật trên PostgreSQL trước khi phát hành chiến dịch lớn.

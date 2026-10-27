@@ -2,6 +2,11 @@ export type Locale='vi'|'en';
 export const localizedPath=(path:string,locale:Locale)=>locale==='en'?`/en${path==='/'?'':path}`:path;
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
+ 'Mã giảm giá không hợp lệ.':'Invalid voucher code.',
+ 'Mã giảm giá không tồn tại, chưa có hiệu lực hoặc đã hết hạn.':'This voucher is invalid, not yet active or expired.',
+ 'Đơn chưa đạt giá trị tối thiểu của mã giảm giá.':'This booking does not meet the voucher minimum spend.',
+ 'Mã giảm giá đã hết lượt sử dụng.':'This voucher has reached its usage limit.',
+ 'Mã giảm giá không áp dụng cho đơn miễn phí.':'Vouchers cannot be used on free bookings.',
  'Ngày / khung giờ này chưa được mở tồn vé. Vui lòng chọn ngày khác.':'This date / time is not open for sale. Please choose another date.',
  'Đã thanh toán':'Paid','Chưa thanh toán':'Unpaid','Đã đặt vé':'Booked','Đặt vé thành công. JinGo sẽ gửi vé qua email sau khi xử lý.':'Booking successful. JinGo will email your tickets after processing.',
  'Vé & trải nghiệm':'Tickets & experiences','Tour địa phương':'Local tours','Cẩm nang':'Travel journal','Đi gần hơn. Trải nghiệm nhiều hơn.':'Go local. Experience more.',

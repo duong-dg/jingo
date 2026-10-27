@@ -32,6 +32,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS jingo_inventory_configs(product_id text PRIMARY KEY REFERENCES jingo_products(id),enabled boolean NOT NULL DEFAULT false,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_inventory_buckets(product_id text NOT NULL REFERENCES jingo_products(id),variant_id text NOT NULL,visit_date text NOT NULL,slot_id text NOT NULL DEFAULT '',capacity integer NOT NULL,low_stock_threshold integer NOT NULL DEFAULT 5,PRIMARY KEY(product_id,variant_id,visit_date,slot_id));
       CREATE TABLE IF NOT EXISTS jingo_inventory_allocations(order_id text PRIMARY KEY REFERENCES jingo_orders(id),product_id text NOT NULL REFERENCES jingo_products(id),variant_id text NOT NULL,visit_date text NOT NULL,slot_id text NOT NULL DEFAULT '',quantity integer NOT NULL,released boolean NOT NULL DEFAULT false,version integer NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS jingo_voucher_uses(order_id text PRIMARY KEY REFERENCES jingo_orders(id),voucher_id text NOT NULL REFERENCES jingo_vouchers(id),released boolean NOT NULL DEFAULT false);
+      CREATE INDEX IF NOT EXISTS jingo_voucher_usage ON jingo_voucher_uses(voucher_id);
       CREATE INDEX IF NOT EXISTS jingo_inventory_allocations_scope ON jingo_inventory_allocations(product_id,visit_date);
       CREATE TABLE IF NOT EXISTS jingo_order_archives(order_id text PRIMARY KEY REFERENCES jingo_orders(id),archived_by text NOT NULL,reason text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_order_payments (
