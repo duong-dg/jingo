@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{ReportsDashboard}from'./reports-dashboard';import'../admin.css';import'../operations.css';export const metadata={title:'Báo cáo doanh thu',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Doanh thu & công nợ" active="reports"><ReportsDashboard/></AdminFrame>;}

@@ -34,14 +34,14 @@ test('admin authentication, persistent catalog, schedules and public isolation',
     cookie = res.headers.get('set-cookie')!.split(';')[0];
     assert.equal((await call('/admin/me')).status, 200);
     const product = (await (await call('/admin/products')).json()).data[0];
-    assert.equal(product.version, 1);
+    const initialVersion=product.version;assert.ok(initialVersion>=1);assert.ok(product.destinationId);
     product.name = 'Edited product';
     product.english = { name: 'Private draft', description: '', seoTitle: '', seoDescription: '', status: 'DRAFT' };
     product.variants[0].prices.ADULT = 123000;
     product.rules = [{ id: 'summer', productId: product.id, variantId: product.variants[0].id, customerType: 'ADULT', startDate: '2027-06-01', endDate: '2027-08-31', priority: 10, amount: 456000 }];
     res = await call('/admin/products', product, false); assert.equal(res.status, 401);
     res = await call('/admin/products', product, true, { Origin: 'https://evil.example' }); assert.equal(res.status, 403);
-    res = await call('/admin/products', product); assert.equal(res.status, 201); const saved = (await res.json()).data; assert.equal(saved.version, 2);
+    res = await call('/admin/products', product); assert.equal(res.status, 201); const saved = (await res.json()).data; assert.equal(saved.version, initialVersion+1);
     assert.equal((await call('/admin/products', product)).status, 409, 'stale edit must not overwrite');
     const publicData = (await (await call(`/products/${product.slug}`)).json()).data;
     assert.equal(publicData.name, 'Edited product'); assert.equal(publicData.english, undefined); assert.equal(publicData.rules, undefined);
@@ -58,7 +58,7 @@ test('admin authentication, persistent catalog, schedules and public isolation',
     assert.equal((await call(`/products/${product.slug}`)).status, 404);
     assert.equal((await (await call('/products')).json()).data.some((p: { id: string }) => p.id === product.id), false);
     await module.get(DatabaseService).onModuleInit();
-    assert.equal((await module.get(DatabaseService).pool.query('SELECT version FROM jingo_products WHERE id=$1', [product.id])).rows[0].version, 4, 'restart must not overwrite edits');
+    assert.equal((await module.get(DatabaseService).pool.query('SELECT version FROM jingo_products WHERE id=$1', [product.id])).rows[0].version, initialVersion+3, 'restart must not overwrite edits');
     const fresh = { ...product, id: 'new-product', slug: 'new-product', version: 0, rules: [], closures: [], status: 'DRAFT' };
     assert.equal((await call('/admin/products', { ...fresh, name: '' })).status, 400);
     res = await call('/admin/products', fresh); assert.equal(res.status, 201); assert.equal((await res.json()).data.version, 1);

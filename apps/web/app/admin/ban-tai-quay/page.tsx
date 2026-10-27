@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{PosDesk}from'./pos-desk';import'../admin.css';import'../shared/content-admin.css';import'../operations.css';export const metadata={title:'Bán vé tại quầy',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Bán vé tại quầy" active="pos"><PosDesk/></AdminFrame>;}

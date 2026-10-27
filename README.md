@@ -1,6 +1,6 @@
 # JinGo
 
-Website bán vé/tour và quản trị sản phẩm. Phiên bản 0.7 thêm chọn vé trực tiếp, suất giờ, email khách bắt buộc và cấu hình SMTP; giữ CTV, nhóm giá, công nợ, ảnh, loại sản phẩm và CMS blog. Đặt vé xác nhận ngay, thu chuyển khoản thủ công và giao mã qua email/link tra cứu. Chưa có cổng thanh toán, POS, kho file vé riêng tư hoặc hoàn tiền.
+Website bán vé/tour với cây điểm đến, tìm kiếm/bộ lọc, quầy bán và in phiếu, báo cáo doanh thu–công nợ. Giữ chọn vé trực tiếp, suất giờ, email/SMTP, CTV, giá cấp, ảnh, loại sản phẩm và CMS blog. Đặt vé xác nhận ngay, thu thủ công bằng tiền mặt/chuyển khoản và giao mã qua email/link tra cứu. Chưa có cổng thanh toán, kho file vé riêng tư hoặc hoàn tiền.
 
 
 ## Giá bán trực tiếp cho CTV và thùng rác đơn hàng (0.8)
@@ -65,13 +65,13 @@ Tài khoản tạm dừng vẫn xem đơn/nợ nhưng không đặt mới hoặc
 
 Khóa dòng tài khoản và transaction bảo vệ hạn mức; request ID chống ghi nợ/trả nợ lặp. Bản cập nhật tự bổ sung bảng và nhập mã giao dịch cũ vào danh mục chống trùng, không đặt lại sản phẩm/đơn/ảnh. Tổng thu ở màn hình đơn chỉ tính đơn thanh toán trực tiếp trong danh sách, chưa phải báo cáo hợp nhất cả tiền trả nợ.
 
-Kiểm thử local gồm 15 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
+Kiểm thử local gồm 16 test, dùng pg-mem. Kiểm tra đồng thời trên PostgreSQL thật là bước riêng chưa chạy tại môi trường này. Chỉ dùng database thử riêng có tên dạng jingo_credit_test, không trỏ vào database vận hành:
 
 ```bash
 JINGO_TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/jingo_credit_test npm run test:credit-postgres -w @jingo/api
 ```
 
-Không có biến trên thì test báo SKIP. Chạy kiểm tra này và luồng đơn thử trước khi cấp công nợ thật. Chưa tích hợp POS, API kho đối tác hay cổng thanh toán tự động.
+Không có biến trên thì test báo SKIP. Chạy kiểm tra này và luồng đơn thử trước khi cấp công nợ thật. POS cho quản trị đã có ở 0.9; chưa tích hợp API kho đối tác hay cổng thanh toán tự động.
 
 ## Ảnh, loại sản phẩm và blog (0.4)
 
@@ -89,7 +89,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.8.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.9.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -105,7 +105,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.8.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.9.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
@@ -133,7 +133,7 @@ docker compose logs --tail=80 api
 
 Mở `https://your-domain.example/admin`, đăng nhập bằng tài khoản đã thiết lập. API tự tạo bảng và nhập ba sản phẩm mẫu một lần; khởi động lại không ghi đè dữ liệu đã sửa. Có thể chuyển sản phẩm mẫu sang nháp và tạo sản phẩm thật. Nếu gặp lỗi nguồn yêu cầu, kiểm tra PUBLIC_BASE_URL và recreate API bằng `docker compose up -d`.
 
-Admin hỗ trợ sản phẩm/ảnh/nội dung/giá/lịch khóa, loại sản phẩm, blog, SEO, bản dịch nháp và đơn tại `/admin/don-hang`. Chưa có POS hoặc quản lý nhiều nhân viên.
+Admin hỗ trợ sản phẩm/ảnh/nội dung/giá/lịch khóa, loại sản phẩm, blog, SEO, bản dịch nháp và đơn tại `/admin/don-hang`. Có POS cho tài khoản quản trị; chưa có phân quyền nhiều nhân viên.
 
 Sau triển khai, kiểm tra đăng nhập, lưu giá, tải lại trang, chặn ngày khóa và restart API để xác minh dữ liệu còn nguyên.
 
@@ -203,3 +203,11 @@ Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
 - Chọn sản phẩm / gói vé và nhập giá CTV trực tiếp. Chuyển gói giữ giá các gói đã nhập; nút lưu gửi toàn bộ bảng. Giá thường và giá theo ngày/mùa được chỉnh riêng.
 - Menu quản trị thu gọn theo Sản phẩm, Cộng tác viên, Blog, Cài đặt; Đơn hàng là mục riêng. Blog có trang chuyên mục dùng chung dữ liệu với trình soạn bài.
 - Lịch chọn ngày đồng bộ ở trang vé, CTV và lịch quản trị, có chọn tháng/năm, hôm nay/ngày mai, giới hạn ngày. Bỏ nhãn Giờ Việt Nam trên giao diện; xử lý ngày và ngừng bán vẫn dùng Asia/Ho_Chi_Minh.
+
+### v0.9.0 — điểm đến, quầy bán và báo cáo
+- Điểm đến dạng cây tại /admin/diem-den, tối đa 10 cấp, chặn vòng lặp và lưu trữ mục còn được dùng. Migration một lần tạo danh mục từ tên điểm đến cũ, gắn destinationId và tăng version sản phẩm; giữ nguyên tên, giá và bản dịch.
+- Sản phẩm chọn điểm đến có cấp cha. Trang chủ có tìm kiếm không dấu, lọc điểm đến gồm các điểm con, loại vé/tour, sắp xếp giá và URL chia sẻ bộ lọc. API products hỗ trợ destination, q và type.
+- /admin/ban-tai-quay tạo đơn thật theo giá/lịch chung, ghi quầy/người bán, chống gửi trùng và hỗ trợ nhận tiền mặt/chuyển khoản qua xác nhận riêng. Tạo/lưu trữ quầy ngay trong màn hình POS; quầy lưu trữ vẫn có số liệu lịch sử.
+- /admin/in-don/:id in phiếu đặt vé và mã đã giao, hiện rõ chưa thanh toán/đã thanh toán/công nợ, không tạo mã giả. Chưa có mã vé thì phiếu không dùng vào cổng. Không phải hóa đơn thuế.
+- /admin/bao-cao: lọc ngày/kênh/quầy, giá trị đặt theo ngày tạo, thực thu theo ngày nhận tiền, tách tiền mặt/chuyển khoản và CTV trả nợ. Công nợ hiện tại toàn hệ thống giữ riêng khỏi bộ lọc. Số liệu gồm cả đơn lưu trữ, không bị giới hạn 200 đơn; có CSV. Chưa có giá vốn/hoàn tiền nên không tính lợi nhuận.
+- Chưa phân quyền thu ngân riêng, ca mở/đóng quầy, tồn kho giữ chỗ hoặc tự lấy vé đối tác. POS hiện dùng tài khoản quản trị.

@@ -3,7 +3,8 @@ import{useEffect,useState}from'react';
 import Link from'next/link';
 import{adminApi}from'./admin-api';
 const menuGroups=[
- {label:'Sản phẩm',items:[['products','/admin','Sản phẩm & giá'],['types','/admin/loai-san-pham','Loại sản phẩm']]},
+ {label:'Bán hàng',items:[['pos','/admin/ban-tai-quay','Bán vé tại quầy'],['reports','/admin/bao-cao','Báo cáo doanh thu']]},
+ {label:'Sản phẩm',items:[['products','/admin','Sản phẩm & giá'],['types','/admin/loai-san-pham','Loại sản phẩm'],['destinations','/admin/diem-den','Điểm đến']]},
  {label:'Cộng tác viên',items:[['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV']]},
  {label:'Blog',items:[['posts','/admin/bai-viet','Bài viết'],['categories','/admin/bai-viet?section=categories','Chuyên mục']]},
  {label:'Cài đặt',items:[['smtp','/admin/smtp','Email & SMTP'],['translations','/admin/ban-dich','Ngôn ngữ & bản dịch']]}

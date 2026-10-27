@@ -71,7 +71,7 @@ Phiên bản 0.6 triển khai tiếng Việt ở URL cũ, tiếng Anh ở /en. N
 - Checkout/lookup có giao diện English; đơn lưu locale và snapshot tên/điều kiện/chính sách. Mã vé và hướng dẫn thủ công không tự dịch. CTV/admin vẫn Việt.
 - Chưa có dịch máy, slug riêng mỗi locale, thêm ngôn ngữ qua admin, bản dịch voucher/email hoặc dịch các trang chính sách tùy chỉnh. Có thể bổ sung sau; chưa có phí API dịch.
 
-Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, POS, cổng thanh toán và thông báo SMS/push; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.
+Các mục 1–5 thuộc phạm vi đã thống nhất. Đã có sản phẩm/giá/ảnh/loại/blog/admin chủ và luồng yêu cầu đặt, thu thủ công, giao mã. Các phần còn thiếu gồm inventory hold, file vé riêng tư, refund, cổng thanh toán (POS cho quản trị bổ sung ở 0.9) và thông báo SMS/push; CMS còn thiếu revision history, preview riêng, workflow dịch đầy đủ và phân quyền biên tập viên.
 
 ## Cập nhật 0.7
 
@@ -84,3 +84,11 @@ SMTP trong admin, bí mật AES-256-GCM với khóa file ẩn trong volume media
 Bảng giá CTV mới pricingMode=DIRECT: rule.amount là giá JinGo bán cho CTV, thiếu rule thì chặn báo giá thay vì fallback giá lẻ. Nhóm không có pricingMode giữ cách giảm cũ; chuyển đổi là thao tác admin chủ động. Catalog CTV lọc gói và nhóm khách theo giá đã cấp, không trả giá lẻ.
 
 Xóa/lưu trữ đơn dùng bảng jingo_order_archives liên kết order_id, không DELETE đơn hoặc ledger. ARCHIVE/RESTORE qua cùng transaction, row lock, version và request ID của thao tác đơn. Xóa đơn UNPAID chưa giao vé đổi sang CANCELLED; khôi phục không đổi trạng thái kinh doanh. PAID/CREDIT giữ nguyên tiền/nợ/vé. API admin mặc định lọc active, archived=true xem thùng rác; khách và CTV vẫn tra cứu theo quyền gốc.
+
+## Cập nhật 0.9
+
+Điểm đến là adjacency list lưu trong jingo_destinations (parentId, thứ tự, trạng thái, version). Khóa hàng 009_destination_lock chung cho đổi cây và lưu sản phẩm để kiểm tra vòng lặp, độ sâu, cấp cha và sản phẩm tham chiếu trong cùng transaction. Migration danh mục chạy một lần có khóa, giữ nguyên nhãn cũ và gắn ID; client đang mở cần tải lại nếu gặp version conflict. Lọc cấp cha mở rộng descendant theo ID.
+
+Đơn POS dùng OrdersService.create và cùng báo giá/khóa ngày/cutoff/demo guard/snapshot/email outbox; ngữ cảnh quầy + admin nằm trong request hash và jingo_pos_orders, client công khai không tự đặt kênh bán. Quầy phải active khi tạo đơn. Thu tiền là thao tác PAY riêng có method BANK/CASH, method lưu theo payment_id; tiền mặt dùng reference server CASH:requestId, tất cả giữ idempotency và version. Các khoản ngân hàng cũ được phân loại BANK. Mọi thao tác POS/điểm đến/báo cáo đều cần admin, in phiếu đọc API riêng có auth và no-store.
+
+Báo cáo đọc trong transaction REPEATABLE READ, ngày biên Asia/Ho_Chi_Minh [from00:00,to+1day00:00), tối đa 367 ngày. Không lọc archives và không dùng danh sách đơn limit200. Đơn hủy không vào giá trị đặt; receipts tính theo thời điểm thanh toán, trả nợ CTV là dòng riêng không cộng trùng; công nợ hiện tại áp dụng FIFO toàn hệ thống. Đây là báo cáo vận hành, chưa có refund/giá vốn/lợi nhuận, ca quầy hay phân quyền thu ngân. Bộ kiểm thử pg-mem không thay kiểm tra concurrency và triển khai PostgreSQL thật.

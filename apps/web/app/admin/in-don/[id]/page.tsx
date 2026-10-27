@@ -1,0 +1,1 @@
+import{PrintOrder}from'./print-order';import'../../admin.css';import'../../operations.css';export const metadata={title:'In phiếu đặt vé',robots:{index:false,follow:false}};export default async function Page({params}:{params:Promise<{id:string}>}){return <PrintOrder id={(await params).id}/>;}

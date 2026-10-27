@@ -17,7 +17,7 @@ export const actionInput = z.discriminatedUnion('action', [
   z.object({ ...base, action: z.literal('CONFIRM'), instructions: z.string().trim().min(10).max(4000) }).strict(),
   z.object({ ...base, action: z.literal('CANCEL') }).strict(),
   z.object({ ...base, action: z.literal('CREDIT') }).strict(),
-  z.object({ ...base, action: z.literal('PAY'), amount: z.number().int().min(0).max(15_000_000_000), reference: z.string().trim().min(1).max(200) }).strict(),
+  z.object({ ...base, action: z.literal('PAY'), method:z.enum(['BANK','CASH']).optional(), amount: z.number().int().min(0).max(15_000_000_000), reference: z.string().trim().min(1).max(200) }).strict(),
   z.object({ ...base, action: z.literal('DELIVER'), tickets: z.array(z.object({ code: z.string().trim().min(1).max(2000), kind: z.enum(['SUPPLIER_CODE','TOUR_VOUCHER']), covers: z.number().int().min(1).max(150), note: z.string().trim().max(1000).default('') }).strict()).min(1).max(150) }).strict()
 ]);
 export type OrderInput = z.infer<typeof orderInput>;

@@ -17,8 +17,8 @@ interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact:
 @Injectable()
 export class OrdersService {
   constructor(private readonly db: DatabaseService,private readonly mail:MailService) {}
-  async create(input: OrderInput,partnerId?:string) {
-    const requestHash = hash(JSON.stringify(partnerId?{partnerId,input}:input));
+  async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string}) {
+    const requestHash = hash(JSON.stringify(pos?{pos,input}:partnerId?{partnerId,input}:input));
     const client = await this.db.pool.connect();
     try {
       await client.query('BEGIN');
@@ -27,6 +27,7 @@ export class OrdersService {
         if (prior.rows[0].request_hash !== requestHash) throw new ConflictException('Yêu cầu này đã được dùng với nội dung khác.');
         await client.query('COMMIT'); return { code: prior.rows[0].code, accessKey: input.accessKey };
       }
+      if(pos){const counter=await client.query('SELECT data FROM jingo_counters WHERE id=$1 FOR SHARE',[pos.counterId]);if(!counter.rowCount||counter.rows[0].data.status!=='ACTIVE')throw new BadRequestException('Chọn quầy đang hoạt động.');}
       let group:PriceGroup|undefined;
       if(partnerId){const owner=await client.query('SELECT data FROM jingo_partners WHERE id=$1 FOR UPDATE',[partnerId]);const account=owner.rows[0]?.data as PartnerAccount|undefined;if(!account||account.status!=='ACTIVE')throw new ForbiddenException('CTV không được tạo đơn mới.');const price=await client.query('SELECT data,version FROM jingo_price_groups WHERE id=$1 FOR SHARE',[account.groupId]);if(!price.rowCount)throw new BadRequestException('Không tìm thấy bảng giá CTV.');group={...price.rows[0].data,version:price.rows[0].version};}
       const result = await client.query('SELECT data FROM jingo_products WHERE id=$1 FOR SHARE', [input.productId]);
@@ -48,6 +49,7 @@ export class OrdersService {
       const id=randomUUID();
       await client.query('INSERT INTO jingo_orders(id,code,request_id,request_hash,access_hash,snapshot,contact,booking_status) VALUES ($1,$2,$3,$4,$5,$6,$7,\'CONFIRMED\')',
         [id, code, input.requestId, requestHash, hash(input.accessKey), JSON.stringify(snapshot),JSON.stringify(input.contact)]);
+      if(pos){await client.query('INSERT INTO jingo_pos_orders(order_id,counter_id,admin_id)VALUES($1,$2,$3)',[id,pos.counterId,pos.adminId]);await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),pos.adminId,'pos.order-create',id]);}
       if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,input.accessKey);await this.mail.enqueue(client,id,'CREATED',1);}
       await client.query('COMMIT'); return { code, accessKey: input.accessKey };
     } catch (e) {
@@ -68,12 +70,13 @@ export class OrdersService {
       fulfillmentStatus: issued === 0 ? 'PENDING' : issued >= totalGuests ? 'DELIVERED' : 'PARTIAL', tickets: tickets.rows,
       version: row.version, createdAt: row.created_at, deliveredGuests: issued, totalGuests, instructions: row.instructions };
     if (!admin) return response;
-    const payments = await client.query('SELECT amount,reference,created_at FROM jingo_order_payments WHERE order_id=$1', [row.id]);
+    const payments = await client.query('SELECT p.amount,p.reference,p.created_at,m.method FROM jingo_order_payments p LEFT JOIN jingo_payment_methods m ON m.payment_id=p.id WHERE p.order_id=$1', [row.id]);
+    const pos=await client.query('SELECT p.counter_id,c.data FROM jingo_pos_orders p JOIN jingo_counters c ON c.id=p.counter_id WHERE p.order_id=$1',[row.id]);
     const history = await client.query('SELECT action,note,created_at FROM jingo_order_actions WHERE order_id=$1 ORDER BY created_at', [row.id]);
     const owner=await client.query('SELECT p.data FROM jingo_partner_orders o JOIN jingo_partners p ON p.id=o.partner_id WHERE o.order_id=$1',[row.id]);
     const partner=owner.rows[0]?.data as PartnerAccount|undefined;
     const archived=await client.query('SELECT reason,created_at FROM jingo_order_archives WHERE order_id=$1',[row.id]);
-    return { ...response,archived:!!archived.rowCount,archiveReason:archived.rows[0]?.reason||'', contact: row.contact, payments: payments.rows, history: history.rows,...(partner?{partner:{id:partner.id,name:partner.name,creditEnabled:partner.creditEnabled}}:{}) };
+    return { ...response,channel:pos.rowCount?'POS':partner?'CTV':'WEB',counter:pos.rows[0]?{id:pos.rows[0].counter_id,name:pos.rows[0].data.name}:null,archived:!!archived.rowCount,archiveReason:archived.rows[0]?.reason||'', contact: row.contact, payments: payments.rows, history: history.rows,...(partner?{partner:{id:partner.id,name:partner.name,creditEnabled:partner.creditEnabled}}:{}) };
   }
   async lookup(code: string, accessKey?: string, email?: string) {
     const result = accessKey?await this.db.pool.query('SELECT * FROM jingo_orders WHERE code=$1 AND access_hash=$2', [code, hash(accessKey)]):await this.db.pool.query('SELECT * FROM jingo_orders WHERE code=$1',[code]);
@@ -127,8 +130,10 @@ export class OrdersService {
       } else if (action.action === 'PAY') {
         if (row.booking_status !== 'CONFIRMED' || row.payment_status !== 'UNPAID') throw new ConflictException('Đơn đã xác nhận và chưa được thu tiền/ghi công nợ mới được thu tiền.');
         if (action.amount !== row.snapshot.total) throw new BadRequestException('Số tiền phải đúng tổng đơn. Thanh toán thiếu/thừa cần xử lý riêng.');
-        await client.query('INSERT INTO jingo_payment_references(reference,kind,entity_id,amount)VALUES($1,$2,$3,$4)',[action.reference.toUpperCase(),'ORDER_PAYMENT',id,action.amount]);
-        await client.query('INSERT INTO jingo_order_payments(id,order_id,amount,reference,admin_id) VALUES ($1,$2,$3,$4,$5)', [randomUUID(), id, action.amount, action.reference.toUpperCase(), adminId]);
+        const reference=action.method==='CASH'?'CASH:'+action.requestId:action.reference.toUpperCase();const paymentId=randomUUID();
+        await client.query('INSERT INTO jingo_payment_references(reference,kind,entity_id,amount)VALUES($1,$2,$3,$4)',[reference,'ORDER_PAYMENT',id,action.amount]);
+        await client.query('INSERT INTO jingo_order_payments(id,order_id,amount,reference,admin_id) VALUES ($1,$2,$3,$4,$5)', [paymentId, id, action.amount, reference, adminId]);
+        await client.query('INSERT INTO jingo_payment_methods(payment_id,method)VALUES($1,$2)',[paymentId,action.method||'BANK']);
         await client.query("UPDATE jingo_orders SET payment_status='PAID' WHERE id=$1", [id]);
       } else if(action.action==='CREDIT'){
         if(row.booking_status!=='CONFIRMED'||row.payment_status!=='UNPAID'||!owner.rowCount)throw new ConflictException('Chỉ ghi công nợ cho đơn CTV đã xác nhận và chưa thanh toán.');

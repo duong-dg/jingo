@@ -1,3 +1,4 @@
+import{OperationsModule}from'./operations/operations.module';
 import{TranslationsModule}from'./content/translations.module';
 import { Controller, Get, Module } from '@nestjs/common';
 import { CatalogModule } from './catalog/catalog.module';
@@ -10,8 +11,8 @@ import{PartnersModule}from'./partners/partners.module';
 
 @Controller('health')
 class HealthController {
-  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.8.2' }; }
+  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.9.0' }; }
 }
 
-@Module({ imports: [DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule], controllers: [HealthController] })
+@Module({ imports: [DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule], controllers: [HealthController] })
 export class AppModule {}

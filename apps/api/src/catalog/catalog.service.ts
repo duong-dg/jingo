@@ -31,6 +31,10 @@ export class CatalogService {
     const client = await this.db.pool.connect();
     try {
       await client.query('BEGIN');
+      await client.query("SELECT id FROM jingo_migrations WHERE id='009_destination_lock' FOR UPDATE");
+      if(product.destinationId){const destinations=await client.query('SELECT id,data FROM jingo_destinations');const map=new Map(destinations.rows.map(row=>[row.id,row.data]));let node=map.get(product.destinationId);const seen=new Set<string>();if(!node)throw new BadRequestException('Điểm đến không tồn tại.');product.destination=node.name;while(node){if(node.status!=='ACTIVE'||seen.has(node.id))throw new BadRequestException('Chọn điểm đến đang hoạt động.');seen.add(node.id);if(!node.parentId)break;node=map.get(node.parentId);if(!node)throw new BadRequestException('Điểm đến thiếu cấp cha.');}}
+
+      markTranslation('PRODUCT',product);
       const type=await client.query('SELECT data FROM jingo_product_types WHERE id=$1 FOR SHARE',[product.type]);
       if(!type.rowCount||type.rows[0].data.status!=='ACTIVE')throw new BadRequestException('Chọn loại sản phẩm đang hoạt động.');
       const current=product.version?await client.query('SELECT slug FROM jingo_products WHERE id=$1 FOR UPDATE',[product.id]):null;
