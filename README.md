@@ -89,7 +89,7 @@ Nếu upload báo 413 khi dùng Nginx/OpenResty/Nginx Proxy Manager, cấu hình
 
 SEO có title/description, canonical, Open Graph, BlogPosting, sitemap và robots. Mặc định `SEO_INDEXING=false` để không index nội dung mẫu. Khi domain và nội dung thật sẵn sàng, thêm `SEO_INDEXING=true` vào `.env`, rồi `docker compose up -d web`. Xem `/robots.txt` và `/sitemap.xml`; admin, API nghiệp vụ, checkout và tra cứu không index. Riêng ảnh công khai được cho phép crawl. Các chức năng này không bảo đảm thứ hạng tìm kiếm.
 
-Sau cập nhật, health phải hiện `0.9.0`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
+Sau cập nhật, health phải hiện `0.9.1`. Không có dữ liệu mẫu mới ghi đè sản phẩm/đơn cũ. Hai loại mặc định được bổ sung nếu thiếu. Kiểm tra upload, lưu sản phẩm, bài nháp/hẹn giờ, đổi URL và ảnh sau restart trên Ubuntu trước khi vận hành rộng. Backup/restore PostgreSQL và volume ảnh chưa được chạy trên server của bạn.
 
 ## Luồng đặt vé và xử lý đơn (0.3)
 
@@ -105,7 +105,7 @@ Giá/tên gói/điều kiện lúc đặt được lưu snapshot; sửa giá sau
 
 Trang đơn hiển thị 200 đơn gần nhất; tổng đã thu trên màn hình chỉ tính danh sách đó, chưa phải báo cáo doanh thu đầy đủ. Chưa có giao file vé PDF/ảnh riêng tư, QR tự sinh, hạn mức tồn, xác nhận từ API đối tác, thông báo SMS/push, refund hoặc đối soát ngân hàng. Người giữ link tra cứu có quyền xem mã vé nên không chia sẻ công khai.
 
-Sau khi cập nhật container, `/api/v1/health` phải trả version `0.9.0`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
+Sau khi cập nhật container, `/api/v1/health` phải trả version `0.9.1`. Trên Ubuntu cần kiểm tra trọn luồng bằng một sản phẩm thử riêng và thông tin thử, không dùng giao dịch ngân hàng thật để thử phần mềm. Bộ test local dùng pg-mem; chưa thay thế kiểm tra transaction/concurrency và backup trên PostgreSQL thật.
 
 ## Cập nhật trên Ubuntu đã chạy bản cũ
 
@@ -211,3 +211,7 @@ Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
 - /admin/in-don/:id in phiếu đặt vé và mã đã giao, hiện rõ chưa thanh toán/đã thanh toán/công nợ, không tạo mã giả. Chưa có mã vé thì phiếu không dùng vào cổng. Không phải hóa đơn thuế.
 - /admin/bao-cao: lọc ngày/kênh/quầy, giá trị đặt theo ngày tạo, thực thu theo ngày nhận tiền, tách tiền mặt/chuyển khoản và CTV trả nợ. Công nợ hiện tại toàn hệ thống giữ riêng khỏi bộ lọc. Số liệu gồm cả đơn lưu trữ, không bị giới hạn 200 đơn; có CSV. Chưa có giá vốn/hoàn tiền nên không tính lợi nhuận.
 - Chưa phân quyền thu ngân riêng, ca mở/đóng quầy, tồn kho giữ chỗ hoặc tự lấy vé đối tác. POS hiện dùng tài khoản quản trị.
+
+### v0.9.1 — trang quầy riêng
+- /quay có trang đăng nhập và không gian bán vé riêng. Đăng nhập thành công mở thẳng POS, phiên còn hiệu lực bỏ qua form. Đăng xuất/phiên hết hạn quay về đăng nhập quầy.
+- /admin và /admin/ban-tai-quay giữ luồng cũ. Trang quầy tái sử dụng cùng đơn, giá và thanh toán. Đây là lối vào riêng dùng tài khoản/phiên quản trị hiện có, chưa phải tài khoản thu ngân giới hạn quyền.
