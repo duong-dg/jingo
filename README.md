@@ -1,5 +1,13 @@
 # JinGo
 
+## Cảnh báo nguồn vé (0.20)
+
+- Sản phẩm → Nguồn vé & giá vốn: cảnh báo lô đang bật đã tới ngày sử dụng; ngưỡng mặc định còn tối đa 5 vé và sắp hết hạn trong 7 ngày (tùy chọn mỗi lần xem, không lưu cấu hình). Hết hạn tính trước ngày hôm nay tại Việt Nam; ngày cuối vẫn còn hiệu lực. Mỗi lô chỉ hiện một cảnh báo theo thứ tự hết hạn → hết vé → sắp hết hạn → sắp hết vé. Lô hết hạn đã hết vé, lô tắt và lô chưa tới ngày sử dụng không cảnh báo.
+- Cảnh báo không tự khóa ngày bán, không đổi tồn theo ngày, công nợ hoặc giá vốn. Lô hết hạn còn vé vẫn giữ nghĩa vụ trả tiền NCC. Nguồn vé nhập không trả lại nhà cung cấp; không có luồng trả lô.
+- Danh sách đơn đang xử lý chưa đủ nguồn/giá vốn, kể cả chưa thu tiền, phân trang 25 đơn và mở đúng chi tiết đơn. Đơn hủy/lưu trữ không hiện. Số thiếu tính theo từng nhóm khách và phần đã chốt nguồn; đây không phải khẳng định hết vé tại nhà cung cấp.
+- Dữ liệu admin-only, không có liên hệ/khóa tra cứu của khách trong danh sách. Cảnh báo cập nhật khi tải lại, thay ngưỡng hoặc thao tác lô trong trang; không gửi email và không tự phân bổ. Bản này tổng hợp từ dữ liệu nguồn/đơn hiện có trong một snapshot đọc; cần tối ưu truy vấn tổng hợp khi dữ liệu đơn rất lớn.
+
+
 Website bán vé/tour với cây điểm đến, tìm kiếm/bộ lọc, quầy bán và in phiếu, báo cáo doanh thu–công nợ. Giữ chọn vé trực tiếp, suất giờ, email/SMTP, CTV, giá cấp, ảnh, loại sản phẩm và CMS blog. Đặt vé xác nhận ngay, thu thủ công bằng tiền mặt/chuyển khoản và giao mã qua email/link tra cứu. Chưa có cổng thanh toán, kho file vé riêng tư hoặc hoàn tiền.
 
 
@@ -306,6 +314,6 @@ Trong chi tiết đơn, chọn nguồn thủ công hoặc tự phân bổ. Ưu t
 
 Đơn chưa thu hủy/lưu trữ trả số lượng lô, giữ lịch sử phân bổ cũ; không giảm nghĩa vụ trả NCC vì vé vẫn thuộc kho đã mua. Khôi phục đơn đã hủy không lấy lại nguồn. Đơn đã thu/ghi nợ giữ vốn khi lưu trữ. Đây là sổ số lượng/giá vốn, chưa nhập/giao mã thật từ kho.
 
-Công nợ NCC = giá trị toàn bộ lô nhập − khoản đã trả ghi nhận. Nhập mã chuyển khoản hoặc xác nhận tiền mặt sau khi trả thực tế; không chuyển tiền ngân hàng từ ứng dụng. Có chống ghi trùng/chi vượt công nợ và lịch sử thanh toán. Chưa hỗ trợ trả trước hoặc hoàn/trả lô đã nhập.
+Công nợ NCC = giá trị toàn bộ lô nhập − khoản đã trả ghi nhận. Nhập mã chuyển khoản hoặc xác nhận tiền mặt sau khi trả thực tế; không chuyển tiền ngân hàng từ ứng dụng. Có chống ghi trùng/chi vượt công nợ và lịch sử thanh toán. Chưa hỗ trợ trả trước. Vé nhập không trả lại nhà cung cấp theo nghiệp vụ đã chốt.
 
 Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa hủy đã phân bổ đủ nguồn: doanh thu sau giảm − giá vốn. Bao gồm đơn lưu trữ, tách rõ đơn chưa đủ vốn (không tự coi vốn bằng0). Công nợ NCC là toàn bộ thời gian, tách bộ lọc ngày. Không phải dòng tiền, không trừ phí vận hành/thuế và chưa có hoàn tiền. Giá vốn/chứng từ nội bộ không xuất ra web/CTV/POS. Cần kiểm thử mua/phân bổ đồng thời trên PostgreSQL thật trước khi vận hành lớn.
