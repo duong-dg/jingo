@@ -1,3 +1,4 @@
+import{InventoryModule,InventoryService}from'../inventory/inventory.module';
 import{Destination,DestinationsModule,DestinationsService,destinationIds}from'../destinations/destinations.module';
 import{translated,localizeProduct}from'../content/translations';
 import { BadRequestException, NotFoundException, Controller, Get, Module, Param, Query } from '@nestjs/common';
@@ -16,7 +17,7 @@ function publicProduct(product:ManagedProduct,types:ProductType[],lang?:string,n
 
 @Controller('products')
 class CatalogController {
-  constructor(private readonly catalog: CatalogService,private readonly types:TypesService,private readonly destinations:DestinationsService) {}
+  constructor(private readonly catalog: CatalogService,private readonly types:TypesService,private readonly destinations:DestinationsService,private readonly inventory:InventoryService) {}
   @Get() async list(@Query('type')type?:string,@Query('lang')lang?:string,@Query('destination')destination?:string,@Query('q')q?:string) { const nodes=await this.destinations.list();const ids=destination?destinationIds(nodes,destination):null;const types=await this.types.list();return { data: (await this.catalog.list()).filter(product=>(!type||product.type===type)&&(!ids||!!product.destinationId&&ids.has(product.destinationId))&&(!q||searchText(product.name+' '+product.destination+' '+(()=>{const names:string[]=[];let node=nodes.find(n=>n.id===product.destinationId);const seen=new Set<string>();while(node&&!seen.has(node.id)){seen.add(node.id);names.push(node.name,node.englishName);node=nodes.find(n=>n.id===node!.parentId);}return names.join(' ');})()).includes(searchText(q.slice(0,200))))&&(lang!=='en'||translated('PRODUCT',product))).map(product=>{const{detailHtml,gallery,english,...summary}=publicProduct(product,types,lang,nodes);return summary;}) }; }
   @Get(':slug/prices') async prices(@Param('slug') slug: string, @Query('date') date: string, @Query('variantId') variantId: string,@Query('lang')lang?:string,@Query('slotId')slotId?:string) {
     const product = await this.catalog.find(slug, true);
@@ -24,10 +25,10 @@ class CatalogController {
     if (!variant) throw new BadRequestException('Gói vé không tồn tại.');
     try {
       const quantities = Object.fromEntries(Object.keys(variant.prices).map(type => [type, 1]));
-      return calculateQuote(view, variantId, date, quantities, product.rules, product.closures,slotId);
+      const quote=calculateQuote(view, variantId, date, quantities, product.rules, product.closures,slotId);return{...quote,inventory:await this.inventory.availability(product.id,variantId,date,quote.timeSlot?.id||'')};
     } catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
   }
   @Get(':slug') async detail(@Param('slug') slug: string,@Query('lang')lang?:string) {const product=await this.catalog.find(slug,true);if(lang==='en'&&!translated('PRODUCT',product))throw new NotFoundException('Translation unavailable.');return { data: publicProduct(product,await this.types.list(),lang,await this.destinations.list()) }; }
 }
-@Module({ imports:[MediaModule,TypesModule,DestinationsModule],controllers: [CatalogController], providers: [CatalogService], exports: [CatalogService] })
+@Module({ imports:[MediaModule,TypesModule,DestinationsModule,InventoryModule],controllers: [CatalogController], providers: [CatalogService], exports: [CatalogService] })
 export class CatalogModule {}

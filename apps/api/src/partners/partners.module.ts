@@ -1,3 +1,4 @@
+import{InventoryModule}from'../inventory/inventory.module';
 import{BadRequestException,Body,Controller,Get,Module,Param,Post,Req,Res,UseGuards}from'@nestjs/common';import type{Request,Response}from'express';import{z}from'zod';
 import{AdminGuard,AuthModule}from'../admin/auth.module';import{CatalogModule}from'../catalog/catalog.module';import{TypesModule}from'../content/types.module';import{OrdersModule}from'../orders/orders.module';import{OrdersService}from'../orders/orders.service';import{orderInput,lookupInput}from'../orders/orders.schema';
 import{PartnersService}from'./partners.service';import{PartnerAuthService}from'./partner-auth.service';import{partnerLogin,partnerSelection,repaymentSchema,creditRequest}from'./partners.schema';
@@ -31,4 +32,4 @@ function parse<T>(schema:z.ZodType<T>,body:unknown):T{const result=schema.safePa
   constructor(private readonly orders:OrdersService){}
   @Post('lookup')async lookup(@Body()body:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');const input=parse(z.object({code:z.string().regex(/^JG[A-F0-9]{10}$/),accessKey:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),body);return this.orders.deliveryLookup(input.code,input.accessKey);}
 }
-@Module({imports:[AuthModule,CatalogModule,TypesModule,OrdersModule],providers:[PartnersService,PartnerAuthService],controllers:[AdminPartnersController,AdminGroupsController,PartnerController,DeliveryController]})export class PartnersModule{}
+@Module({imports:[AuthModule,CatalogModule,TypesModule,OrdersModule,InventoryModule],providers:[PartnersService,PartnerAuthService],controllers:[AdminPartnersController,AdminGroupsController,PartnerController,DeliveryController]})export class PartnersModule{}

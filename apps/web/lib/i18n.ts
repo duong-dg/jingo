@@ -2,6 +2,7 @@ export type Locale='vi'|'en';
 export const localizedPath=(path:string,locale:Locale)=>locale==='en'?`/en${path==='/'?'':path}`:path;
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
+ 'Ngày / khung giờ này chưa được mở tồn vé. Vui lòng chọn ngày khác.':'This date / time is not open for sale. Please choose another date.',
  'Đã thanh toán':'Paid','Chưa thanh toán':'Unpaid','Đã đặt vé':'Booked','Đặt vé thành công. JinGo sẽ gửi vé qua email sau khi xử lý.':'Booking successful. JinGo will email your tickets after processing.',
  'Vé & trải nghiệm':'Tickets & experiences','Tour địa phương':'Local tours','Cẩm nang':'Travel journal','Đi gần hơn. Trải nghiệm nhiều hơn.':'Go local. Experience more.',
  'Đặt vé trực tuyến · Nhận vé qua email sau khi xử lý':'Book online · Receive your tickets by email after processing',
@@ -16,4 +17,4 @@ export const english:Record<string,string>={
  'Mở ảnh sản phẩm':'Open product photos','Xem':'View','ảnh':'photos','Mở ảnh':'Open photo','Xem ảnh sản phẩm':'Product photos','Đóng xem ảnh':'Close photos','Ảnh trước':'Previous photo','Ảnh sau':'Next photo'
 };
 export const translator=(locale:Locale)=>(text:string)=>locale==='en'?(english[text]??text):text;
-export const errorText=(message:string,locale:Locale)=>locale==='en'?(english[message]||'Unable to complete this request. Please refresh availability or contact JinGo for help.'):message;
+export const errorText=(message:string,locale:Locale)=>{if(locale!=='en')return message;const stock=message.match(/^Chỉ còn (\d+) suất cho ngày/);if(stock)return 'Only '+stock[1]+' spots remain for this date / time. Reduce the number of guests or choose another date.';return english[message]||'Unable to complete this request. Please refresh availability or contact JinGo for help.';};

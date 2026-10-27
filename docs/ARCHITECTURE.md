@@ -102,3 +102,11 @@ PosModule chỉ xuất API /pos có cookie jingo_pos path /api/v1/pos và CSRF h
 Chi tiết POS là projection cho vận hành, không lộ sổ công nợ, lịch sử nội bộ, payment references hay metadata xác thực. Mã đã giao chỉ xuất hiện khi có PRINT hoặc DELIVER; in cần PRINT và cùng phạm vi quầy. Danh sách của nhân viên là các đơn POS thuộc quầy được gán, không phải chỉ đơn tự tạo. Quyền thu tiền không tự cấp quyền giao/in mã, và hủy chỉ được với đơn chưa thanh toán theo rule chung. Kiểm thử pg-mem bao gồm quyền, IDOR, CSRF, giả mạo role, cookie scope, reset/khóa/reassign và chống gọi thẳng service ngoài scope; chưa kiểm tra concurrency bằng PostgreSQL thật.
 
 Mã truy cập khách cho đơn POS mới được sinh phía server, mã client gửi chỉ tham gia idempotency và không mở được vé. Khóa thật được mã hóa cho email outbox, không trả cho nhân viên. Tra cứu POS công khai bằng mã đơn + email chỉ trả trạng thái, ẩn tickets và gắn ticketAccess=EMAIL_LINK; link email có khóa thật vẫn xem mã. Nhờ đó quyền in/xem mã không bị vượt qua bằng API tra cứu công khai. Đơn web tiếp tục tra bằng email như cũ.
+
+## Inventory (v0.11.0)
+
+Separate configs, capacity buckets (product/variant/date/optional slot), and one allocation per order. All guest types consume the same pool. New orders allocate even while limits are disabled. Migration 011 backfills existing snapshots once; unresolved variants/slots count conservatively across matching pools until classified by an admin.
+
+Order creation and capacity changes acquire the same product row lock inside a READ COMMITTED transaction. Creation rechecks request id after the lock, validates fresh remaining stock, and inserts the order and allocation atomically. Day and slot limits both apply. Quotes are advisory and never reserve. Cancellation releases the allocation idempotently in the order transaction. Paid or credit archive retains stock; restoring cancelled orders does not reacquire it. No pending-order TTL.
+
+Admin bulk edits use optimistic config versions and reject capacity below occupied units. Public, POS and partner quotes expose remaining units; only admin routes edit capacity. External supplier inventory remains a future adapter. pg-mem integration covers lifecycle and date isolation but cannot prove PostgreSQL row-lock concurrency.

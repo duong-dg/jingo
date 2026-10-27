@@ -1,0 +1,60 @@
+import 'reflect-metadata';
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {Test} from '@nestjs/testing';
+import {newDb} from 'pg-mem';
+import {AppModule} from '../app.module';
+import {InventoryService} from './inventory.module';
+import {OrdersService} from '../orders/orders.service';
+import {DatabaseService} from '../database/database.module';
+
+test('day and slot limits both apply; legacy unknown scopes count conservatively',async()=>{
+ const allocations=[{variant_id:'v',slot_id:'morning',quantity:2,released:false},{variant_id:'v',slot_id:'evening',quantity:3,released:false},{variant_id:'',slot_id:'',quantity:1,released:false},{variant_id:'other',slot_id:'morning',quantity:9,released:false}];
+ const service=new InventoryService({pool:{query:async(sql:string)=>({rows:sql.includes('configs')?[{enabled:true}]:sql.includes('buckets')?[{slot_id:'',capacity:8,low_stock_threshold:1},{slot_id:'morning',capacity:4,low_stock_threshold:1}]:allocations})}} as unknown as DatabaseService);
+ assert.equal((await service.availability('p','v','2099-01-01','morning')).remaining,1,'slot has one remaining although day has two');
+ assert.equal((await service.availability('p','v','2099-01-01','evening')).remaining,2,'other slot still shares daily pool');
+ await assert.rejects(service.check('p','v','2099-01-01','morning',2),/Chỉ còn 1/);
+});
+
+test('inventory: shared guest units, day isolation, non-reserving quotes, retries and cancellation lifecycle',async()=>{
+ const media=await mkdtemp(join(tmpdir(),'jingo-stock-'));process.env.MEDIA_DIR=media;process.env.ADMIN_EMAIL='';process.env.ADMIN_PASSWORD='';
+ const memory=newDb({noAstCoverageCheck:true}),adapter=memory.adapters.createPg(),pool=new adapter.Pool();
+ const module=await Test.createTestingModule({imports:[AppModule]}).overrideProvider('DB_POOL').useValue(pool).compile(),app=module.createNestApplication();
+ try{await app.init();const inventory=module.get(InventoryService),orders=module.get(OrdersService);
+ const row=(await pool.query('SELECT id,data FROM jingo_products')).rows[0],product={...row.data,demo:false};product.variants[0].prices.CHILD=0;
+ await pool.query('UPDATE jingo_products SET data=$1 WHERE id=$2',[JSON.stringify(product),row.id]);
+ const productId=row.id,variantId=product.variants[0].id,day='2099-06-01',next='2099-06-02',actor='inventory-test';let version=0;
+ const capacity=async(startDate:string,endDate:string,total:number)=>{const result=await inventory.setCapacity({productId,variantId,version,startDate,endDate,capacity:total},actor);version=result.version;};
+ const make=(date=day)=>({requestId:randomUUID(),accessKey:randomBytes(32).toString('hex'),productId,variantId,date,quantities:{ADULT:1,CHILD:1},expectedTotal:product.variants[0].prices.ADULT,contact:{name:'Stock test',phone:'0901234567',email:'stock@example.test',note:''},accepted:true as const});
+ assert.equal((await inventory.availability(productId,variantId,day)).limited,false);
+ await capacity(day,next,2);version=(await inventory.configure({productId,version,enabled:true},actor)).version;
+ await assert.rejects(inventory.configure({productId,version:0,enabled:false},actor),/thay đổi/);
+ assert.equal((await inventory.availability(productId,variantId,'2099-06-03')).remaining,0);
+ await inventory.check(productId,variantId,day,'',2);await inventory.check(productId,variantId,day,'',2);
+ assert.equal((await inventory.availability(productId,variantId,day)).remaining,2,'quotes never reserve');
+ const input=make(),created=await orders.create(input);assert.equal((await orders.create(input)).code,created.code);
+ assert.equal((await pool.query('SELECT * FROM jingo_inventory_allocations')).rowCount,1);
+ assert.equal((await inventory.availability(productId,variantId,day)).remaining,0,'free child consumes a unit');
+ assert.equal((await inventory.availability(productId,variantId,next)).remaining,2);
+ let view=await inventory.read(productId,day,next);assert.deepEqual(view.rows.map(r=>r.used),[2,0],'admin totals scoped to each day');assert.equal(view.rows[0].pending,2);
+ await assert.rejects(orders.create(make()),/Chỉ còn 0/);
+ await assert.rejects(capacity(day,next,1),/không được nhỏ hơn/);
+ assert.equal((await inventory.read(productId,day,next)).rows[1].capacity,2);
+ const order=(await pool.query('SELECT id FROM jingo_orders WHERE code=$1',[created.code])).rows[0];
+ const cancel={requestId:randomUUID(),version:1,action:'CANCEL' as const,note:'Inventory test cancellation'};
+ await orders.act(order.id,cancel,actor);await orders.act(order.id,cancel,actor);
+ assert.equal((await inventory.availability(productId,variantId,day)).remaining,2);
+ const paid=await orders.create(make());const paidId=(await pool.query('SELECT id FROM jingo_orders WHERE code=$1',[paid.code])).rows[0].id;
+ await orders.act(paidId,{requestId:randomUUID(),version:1,action:'PAY',amount:input.expectedTotal,reference:randomUUID(),note:'Fixture payment'},actor);
+ await orders.act(paidId,{requestId:randomUUID(),version:2,action:'ARCHIVE',note:'Fixture archive'},actor);
+ assert.equal((await inventory.availability(productId,variantId,day)).remaining,0,'paid archive retains allocation');
+ const unpaid=await orders.create(make(next));const unpaidId=(await pool.query('SELECT id FROM jingo_orders WHERE code=$1',[unpaid.code])).rows[0].id;
+ await orders.act(unpaidId,{requestId:randomUUID(),version:1,action:'ARCHIVE',note:'Fixture unpaid archive'},actor);
+ await orders.act(unpaidId,{requestId:randomUUID(),version:2,action:'RESTORE',note:'Fixture restore'},actor);
+ assert.equal((await inventory.availability(productId,variantId,next)).remaining,2,'restore cancelled order does not reserve again');
+ }finally{await app.close();await rm(media,{recursive:true,force:true});}
+});

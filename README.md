@@ -225,3 +225,13 @@ Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
 - /admin/ban-tai-quay giữ luồng quản trị cũ. Sau cập nhật, /quay cần đăng nhập vào phiên POS riêng. Chưa có phân quyền thu ngân theo ca, hoàn tiền hay hạn mức thu tiền cá nhân.
 
 Với đơn POS, tra cứu bằng mã đơn + email chỉ xem trạng thái; khách mở link trong email JinGo để xem mã vé. Khóa thật do server sinh cho đơn POS mới, nhân viên không được cấp quyền không lấy được mã qua khóa tự gửi khi tạo đơn. Đơn web giữ cách tra cứu email hiện có.
+
+### v0.11.0 — tồn vé dùng chung
+
+Vào **Sản phẩm → Tồn vé** (`/admin/ton-ve`). Chọn sản phẩm, gói, khoảng ngày và các thứ; nhập **tổng số suất** rồi áp dụng. Có thể cấp chung cả ngày hoặc riêng từng suất giờ. Bật giới hạn sau khi cấp tồn. Ngày chưa cấp tồn sẽ dừng nhận đơn khi giới hạn đang bật; mặc định sản phẩm cũ vẫn không giới hạn.
+
+Mỗi khách chiếm một suất, gồm cả vé miễn phí. Web, POS và CTV cùng trừ tồn khi tạo đơn thành công. Báo giá chưa giữ chỗ. Đơn chưa thanh toán giữ tồn tới khi hủy hoặc lưu trữ; đơn đã thanh toán/công nợ vẫn chiếm tồn khi lưu trữ. Khôi phục đơn đã hủy không giữ chỗ trở lại. Không tự hết hạn đơn chờ thanh toán.
+
+Tổng tồn bao gồm số đã đặt và không được thấp hơn số này. Nếu muốn ngừng nhận thêm khi đã có đơn, đặt tổng tồn bằng số đã đặt. Nếu có cả giới hạn ngày và suất, đơn phải thỏa cả hai. Đơn cũ được chuyển sang sổ tồn một lần; đơn không xác định được gói/suất sẽ được tính thận trọng và hiện trong danh sách cần phân loại.
+
+Sau triển khai, health phải hiện `0.11.0`. Chưa có kết nối tồn nhà cung cấp. Kiểm thử tự động dùng pg-mem; cần kiểm tra tải mua đồng thời trên PostgreSQL thực trước khi vận hành lớn.
