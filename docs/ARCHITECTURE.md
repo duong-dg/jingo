@@ -1,10 +1,12 @@
 # JinGo — kiến trúc và phạm vi
 
+Tiến độ hiện tại và các phần còn thiếu: [ROADMAP.md](ROADMAP.md). Các mục phiên bản bên dưới ghi lại từng giai đoạn triển khai.
+
 ## Quyết định kiến trúc
 
 Modular monolith, TypeScript, Next.js frontend và NestJS REST API. Một repository với ba ứng dụng web/api/worker. PostgreSQL là nguồn dữ liệu chính; Redis cho queue/cache; file vé riêng tư dùng object storage khi triển khai nghiệp vụ. App di động sau này dùng cùng API. Chưa triển khai khách sạn hoặc API nhà cung cấp.
 
-## Trạng thái hiện tại (0.4)
+## Lịch sử nền tảng (0.4)
 
 - Web tiếng Việt responsive: danh mục, chọn vé trực tiếp trên trang, checkout yêu cầu đặt và tra cứu bằng mã + khóa riêng. Chưa có giỏ hàng hoặc cổng thanh toán.
 - Admin /admin: login/logout cookie HttpOnly, phiên hash PostgreSQL hết hạn 8 giờ, giới hạn đăng nhập sai, kiểm tra nguồn mutation và header chống CSRF. Chủ tài khoản tạo qua env, mật khẩu scrypt; chưa có quản lý nhiều vai trò.
@@ -134,3 +136,7 @@ Admin-only GET /admin/orders/export shares validated filters/SQL predicates with
 ## Product duplication (0.15.0)
 
 A client-side deep clone creates an unsaved draft, then uses the existing authenticated/validated product save API. New UUIDs replace product, variant, slot and rule IDs; all rule/closure product and variant references are rebound. Source object remains untouched. Published status resets to DRAFT, version to0, SEO title to the default and English content is omitted. Images reference existing media-library assets. Inventory, partner net-price mappings, orders and ticket codes live separately and are not copied. UI requires saving existing source/translation edits before duplication and clearly states that the clone still needs saving.
+
+## Suppliers (0.16.0)
+
+Admin-only jingo_suppliers stores contact information/notes and optimistic versions. Products optionally reference supplierId; existing products stay valid without a supplier. Product save and supplier archive acquire the same migration-marker mutex in READ COMMITTED transactions so an archive cannot race a new product association. Archive is blocked while any draft or published product references the supplier. Public catalog projections remove supplierId; POS/CTV product DTOs already project explicit fields. This is current catalog attribution, not historical supplier cost/debt tracking. Supplier data is not translated or exposed as customer-facing content.

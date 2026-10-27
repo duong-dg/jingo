@@ -11,7 +11,7 @@ import type{ProductType}from'../content/content.schema';
 
 const searchText=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase();
 function publicProduct(product:ManagedProduct,types:ProductType[],lang?:string,nodes:Destination[]=[]){
- const{rules,closures,english,version,...published}=lang==='en'?localizeProduct(product):product;const type=types.find(t=>t.id===product.type);const typeEn=type&&translated('TYPE',type);
+ const{supplierId,rules,closures,english,version,...published}=lang==='en'?localizeProduct(product):product;const type=types.find(t=>t.id===product.type);const typeEn=type&&translated('TYPE',type);
  const destination=nodes.find(node=>node.id===product.destinationId);return{...published,destination:destination?(lang==='en'?published.destination||destination.englishName||destination.name:destination.name):published.destination,typeName:lang==='en'?(typeEn?type!.english!.name:'Experience'):type?.name||'Trải nghiệm',typeSlug:lang==='en'&&!typeEn?undefined:type?.slug,bookingKind:type?.bookingKind||'TICKET',languages:translated('PRODUCT',product)?['vi','en']:['vi']};
 }
 

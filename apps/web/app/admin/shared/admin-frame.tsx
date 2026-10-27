@@ -4,7 +4,7 @@ import Link from'next/link';
 import{adminApi}from'./admin-api';
 const menuGroups=[
  {label:'Bán hàng',items:[['pos','/admin/ban-tai-quay','Bán vé tại quầy'],['pos-users','/admin/nhan-vien-quay','Nhân viên & phân quyền'],['reports','/admin/bao-cao','Báo cáo doanh thu']]},
- {label:'Sản phẩm',items:[['products','/admin','Sản phẩm & giá'],['inventory','/admin/ton-ve','Tồn vé & giới hạn'],['types','/admin/loai-san-pham','Loại sản phẩm'],['destinations','/admin/diem-den','Điểm đến']]},
+ {label:'Sản phẩm',items:[['products','/admin','Sản phẩm & giá'],['inventory','/admin/ton-ve','Tồn vé & giới hạn'],['suppliers','/admin/nha-cung-cap','Nhà cung cấp'],['types','/admin/loai-san-pham','Loại sản phẩm'],['destinations','/admin/diem-den','Điểm đến']]},
  {label:'Cộng tác viên',items:[['partners','/admin/ctv','CTV & công nợ'],['groups','/admin/nhom-gia','Nhóm giá CTV']]},
  {label:'Blog',items:[['posts','/admin/bai-viet','Bài viết'],['categories','/admin/bai-viet?section=categories','Chuyên mục']]},
  {label:'Cài đặt',items:[['smtp','/admin/smtp','Email & SMTP'],['translations','/admin/ban-dich','Ngôn ngữ & bản dịch']]}

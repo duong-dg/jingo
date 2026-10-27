@@ -30,7 +30,9 @@ export class CatalogService {
     await this.media.validateIds([...(product.cover?[product.cover.id]:[]),...product.gallery.map(image=>image.id),...contentImageIds(product.detailHtml),...contentImageIds(product.english?.detailHtml||'') ]);
     const client = await this.db.pool.connect();
     try {
-      await client.query('BEGIN');
+      await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+      await client.query("SELECT id FROM jingo_migrations WHERE id='016_supplier_catalog_lock' FOR UPDATE");
+      if(product.supplierId){const supplier=await client.query('SELECT data FROM jingo_suppliers WHERE id=$1',[product.supplierId]);if(!supplier.rowCount||supplier.rows[0].data.status!=='ACTIVE')throw new BadRequestException('Chọn nhà cung cấp đang hoạt động.');}
       await client.query("SELECT id FROM jingo_migrations WHERE id='009_destination_lock' FOR UPDATE");
       if(product.destinationId){const destinations=await client.query('SELECT id,data FROM jingo_destinations');const map=new Map(destinations.rows.map(row=>[row.id,row.data]));let node=map.get(product.destinationId);const seen=new Set<string>();if(!node)throw new BadRequestException('Điểm đến không tồn tại.');product.destination=node.name;while(node){if(node.status!=='ACTIVE'||seen.has(node.id))throw new BadRequestException('Chọn điểm đến đang hoạt động.');seen.add(node.id);if(!node.parentId)break;node=map.get(node.parentId);if(!node)throw new BadRequestException('Điểm đến thiếu cấp cha.');}}
 

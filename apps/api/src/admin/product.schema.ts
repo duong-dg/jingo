@@ -13,7 +13,7 @@ const rule = z.object({ id, productId: id, variantId: id, customerType: z.enum([
   weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(), priority: z.number().int().min(0).max(10000), amount: money }).strict();
 const closure = z.object({ productId: id, variantId: id.optional(), startDate: date, endDate: date, reason: text.max(200).optional() }).strict();
 export const productSchema = z.object({
-  id, slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160),
+  id, supplierId:z.uuid().optional(),slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160),
   name: text.min(1).max(200), destination: text.min(1).max(150), destinationId:z.uuid().optional(), type: id, description: text,
   cover:imageRef.nullable().default(null),gallery:z.array(imageRef).max(20).default([]),detailHtml:z.string().max(200000).default(''),
   status: z.enum(['DRAFT', 'PUBLISHED']), demo: z.boolean().default(false), version: z.number().int().min(0),

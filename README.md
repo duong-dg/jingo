@@ -273,3 +273,9 @@ CSV UTF-8 có BOM để hiển thị tiếng Việt trong Excel, cột ngày t�
 Mở sản phẩm đã lưu → Nhân bản sản phẩm. Nút tạm khóa khi nội dung hoặc bản dịch còn thay đổi chưa lưu. Bản sao chỉ nằm trong trình soạn cho tới khi bấm Lưu thay đổi, luôn có trạng thái DRAFT, tên/slug mới và ID mới cho sản phẩm, gói, suất giờ, lịch giá. Nội dung, ảnh, giá cơ bản, điều kiện khách và các khoảng lịch/khóa ngày được giữ; các tham chiếu lịch trỏ về đúng gói mới.
 
 Bản dịch không được sao chép; tồn vé và bảng giá CTV là dữ liệu riêng theo ID nên cần cấp lại. Nhãn vé mẫu giữ theo sản phẩm gốc. Kiểm tra tên, URL, giá, lịch và tồn trước khi xuất bản. Không sao chép đơn, mã vé hay doanh thu.
+
+### v0.16.0 — nhà cung cấp
+
+Sản phẩm → Nhà cung cấp: tạo hồ sơ, người liên hệ, điện thoại, email, website và ghi chú nội bộ. Chọn nhà cung cấp trong Thông tin sản phẩm; sản phẩm cũ không bắt buộc gắn. Danh sách hiển thị số sản phẩm liên kết, hỗ trợ tìm kiếm và lọc/lưu trữ/khôi phục. Nhà cung cấp còn sản phẩm (kể cả nháp) phải chuyển hoặc bỏ liên kết trước khi lưu trữ.
+
+Thông tin chỉ dành cho admin; chưa kết nối API, giá vốn hoặc công nợ nhà cung cấp. Xem [tiến độ và phần còn thiếu](docs/ROADMAP.md) để theo dõi phạm vi đầy đủ.
