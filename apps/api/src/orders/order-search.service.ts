@@ -16,7 +16,7 @@ const querySchema=z.object({
 @Injectable()
 export class OrderSearchService{
  constructor(private readonly db:DatabaseService){}
- async search(raw:unknown){
+ private filters(raw:unknown){
   const parsed=querySchema.safeParse(raw);if(!parsed.success)throw new BadRequestException('Bộ lọc đơn hàng không hợp lệ.');
   const input=parsed.data;if(input.from&&input.to&&input.from>input.to)throw new BadRequestException('Ngày kết thúc phải từ ngày bắt đầu trở đi.');
   const params:unknown[]=[],conditions=[input.archived==='true'?'a.order_id IS NOT NULL':'a.order_id IS NULL'];
@@ -35,6 +35,10 @@ export class OrderSearchService{
    if(input.to)conditions.push('o.created_at<'+param(new Date(new Date(input.to+'T00:00:00+07:00').getTime()+86400000)));
   }
   const source=' FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id LEFT JOIN jingo_pos_orders pos ON pos.order_id=o.id LEFT JOIN jingo_partner_orders partner ON partner.order_id=o.id WHERE '+conditions.join(' AND ');
+  return{input,params,source};
+ }
+ async search(raw:unknown){
+  const{input,params,source}=this.filters(raw);
   const client=await this.db.pool.connect();
   try{
    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
@@ -46,4 +50,11 @@ export class OrderSearchService{
    await client.query('COMMIT');return{data:result.rows,page,pageSize:input.pageSize,pages,total:summary.total,summary};
   }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
  }
+ async exportRows(raw:unknown){
+  const{input,params,source}=this.filters(raw);
+  const result=await this.db.pool.query("SELECT o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.created_at,CASE WHEN pos.order_id IS NOT NULL THEN 'POS' WHEN partner.order_id IS NOT NULL THEN 'CTV' ELSE 'WEB' END AS channel"+source+' ORDER BY o.created_at DESC,o.id DESC LIMIT 10001',params);
+  if(result.rows.length>10000)throw new BadRequestException('Có hơn 10.000 đơn phù hợp. Thu hẹp khoảng ngày hoặc bộ lọc rồi xuất lại.');
+  return{data:result.rows,archived:input.archived==='true'};
+ }
+
 }

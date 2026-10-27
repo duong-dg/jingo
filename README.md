@@ -261,3 +261,9 @@ Trang Chuyên mục chia thành khung tạo mới và danh sách có tìm kiếm
 Admin → Đơn hàng → chọn đơn có khung Email của đơn hàng, tối đa 100 thư của riêng đơn đó. Xem loại thông báo, số lần thử, thời gian và trạng thái; tự cập nhật mỗi 15 giây khi còn thư chờ và trang đang hiển thị. SMTP đã nhận thư không có nghĩa thư chắc chắn vào hộp thư đến.
 
 Thư FAILED có nút Thử gửi lại nếu SMTP đang bật và đơn hỗ trợ email. Thao tác đưa vào hàng đợi, không gửi ngay trong request. Không gửi lại thư đã SENT hoặc đang PENDING/SENDING. Retry ghi audit trong cùng transaction và chỉ tác động thư thuộc đúng đơn. Đơn CTV tiếp tục nhận vé trong tài khoản, không gửi trực tiếp cho khách của CTV. Việc bật SMTP sau này không tự tạo bù email cho sự kiện cũ.
+
+### v0.14.0 — xuất danh sách đơn CSV
+
+Đơn hàng → áp dụng bộ lọc → Xuất CSV. File gồm toàn bộ kết quả theo bộ lọc đã áp dụng và trạng thái danh sách/thùng rác, không phụ thuộc trang hoặc số đơn mỗi trang. Chỉnh bộ lọc cần bấm Tìm đơn hàng trước khi xuất. Tối đa 10.000 đơn/lần; vượt giới hạn phải thu hẹp bộ lọc, không tự cắt bớt kết quả.
+
+CSV UTF-8 có BOM để hiển thị tiếng Việt trong Excel, cột ngày tạo theo giờ Việt Nam, thông tin khách/sản phẩm/gói/ngày/suất, số người lớn/trẻ em/người cao tuổi, giá trị đơn và trạng thái/kênh. Số điện thoại thêm dấu nháy đầu để giữ dạng văn bản; nội dung có thể được Excel diễn giải là công thức được vô hiệu hóa. Không xuất mã vé, khóa truy cập hoặc ghi chú nội bộ. Giá trị đơn không phải số tiền thực thu theo ngày nhận.

@@ -1,0 +1,12 @@
+type ExportRow={code:string;created_at:Date|string;contact:{name:string;phone:string;email?:string};snapshot:{productName:string;variantName:string;date:string;total:number;timeSlot?:{start:string;end?:string};lines:{customerType:string;quantity:number}[]};booking_status:string;payment_status:string;channel:string};
+const vietnamTimestamp=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+const bookings:Record<string,string>={REQUESTED:'Chờ xác nhận',CONFIRMED:'Đã đặt vé',CANCELLED:'Đã hủy'};
+const payments:Record<string,string>={UNPAID:'Chưa thu tiền',PAID:'Đã thu tiền',CREDIT:'Công nợ CTV'};
+const channels:Record<string,string>={WEB:'Website',POS:'Tại quầy',CTV:'Cộng tác viên'};
+// Quote every cell, and neutralize spreadsheet formulas even after leading whitespace.
+export function csvCell(value:unknown){let text=String(value??'').replace(/\0/g,'');if(/^[\s\uFEFF]*[=+@-]/u.test(text)||/^[\t\r\n]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
+export function ordersCsv(rows:ExportRow[],archived=false){
+ const header=['Mã đơn','Ngày tạo (GMT+7)','Khách hàng','Điện thoại','Email','Sản phẩm','Gói vé','Ngày sử dụng','Suất giờ','Người lớn','Trẻ em','Người cao tuổi','Tổng khách','Giá trị đơn (VND)','Trạng thái đơn','Thanh toán','Kênh bán','Lưu trữ'];
+ const lines=rows.map(row=>{const quantities=(type:string)=>row.snapshot.lines.filter(line=>line.customerType===type).reduce((sum,line)=>sum+line.quantity,0);return[row.code,vietnamTimestamp.format(new Date(row.created_at)),row.contact.name,row.contact.phone?"'"+row.contact.phone:'',row.contact.email||'',row.snapshot.productName,row.snapshot.variantName,row.snapshot.date,row.snapshot.timeSlot?row.snapshot.timeSlot.start+(row.snapshot.timeSlot.end?' – '+row.snapshot.timeSlot.end:''):'',quantities('ADULT'),quantities('CHILD'),quantities('SENIOR'),row.snapshot.lines.reduce((sum,line)=>sum+line.quantity,0),row.snapshot.total,bookings[row.booking_status]||row.booking_status,payments[row.payment_status]||row.payment_status,channels[row.channel]||row.channel,archived?'Có':'Không'];});
+ return '\uFEFF'+[header,...lines].map(row=>row.map(csvCell).join(',')).join('\r\n')+'\r\n';
+}

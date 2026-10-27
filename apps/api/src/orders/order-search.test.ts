@@ -9,6 +9,7 @@ import {newDb,DataType} from 'pg-mem';
 import {Test} from '@nestjs/testing';
 import {AppModule} from '../app.module';
 import {OrderSearchService} from './order-search.service';
+import {DatabaseService} from '../database/database.module';
 
 test('admin searches all orders with stable pages, literal text, channel/status/date filters and global filtered totals',async()=>{
  const media=await mkdtemp(join(tmpdir(),'jingo-search-'));process.env.MEDIA_DIR=media;process.env.ADMIN_EMAIL='search@example.test';process.env.ADMIN_PASSWORD='search-fixture-password';process.env.PUBLIC_BASE_URL='http://localhost:3000';
@@ -41,7 +42,19 @@ test('admin searches all orders with stable pages, literal text, channel/status/
   assert.equal((await service.search({archived:'true',booking:'CANCELLED'})).total,1);
   assert.equal((await service.search({page:999})).page,9);
   for(const query of [{page:0},{pageSize:101},{payment:'INVALID'},{from:'2026-02-30'},{from:'2026-10-27',to:'2026-10-01'},{q:['x']}])await assert.rejects(service.search(query));
+  assert.equal((await service.exportRows({page:9,pageSize:1})).data.length,206,'export ignores current page size');
+  assert.equal((await service.exportRows({archived:'true',booking:'CANCELLED'})).data.length,1);
+  assert.equal((await service.exportRows({channel:'POS',payment:'PAID'})).data.length,1);
+  assert.equal((await fetch(base+'/admin/orders/export')).status,401);
   const login=await fetch(base+'/admin/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:'http://localhost:3000','X-Jingo-Admin':'1'},body:JSON.stringify({email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD})});assert.equal(login.status,201);
   const response=await fetch(base+'/admin/orders?channel=POS&payment=PAID',{headers:{Cookie:login.headers.get('set-cookie')!.split(';')[0]}});assert.equal(response.status,200);assert.equal((await response.json()).total,1);assert.equal(response.headers.get('cache-control'),'no-store');
+  const exported=await fetch(base+'/admin/orders/export?channel=POS&payment=PAID',{headers:{Cookie:login.headers.get('set-cookie')!.split(';')[0]}});assert.equal(exported.status,200);assert.match(exported.headers.get('content-type')!,/text\/csv/);assert.equal(exported.headers.get('cache-control'),'no-store');assert.equal(exported.headers.get('x-jingo-export-count'),'1');assert.match(exported.headers.get('content-disposition')!,/attachment/);const bytes=Buffer.from(await exported.arrayBuffer());assert.deepEqual([...bytes.subarray(0,3)],[239,187,191]);assert.ok(bytes.toString('utf8').includes('SEARCH0001'));assert.ok(!bytes.toString('utf8').includes('SEARCH0000'));
+  const empty=await fetch(base+'/admin/orders/export?q=not-found-anywhere',{headers:{Cookie:login.headers.get('set-cookie')!.split(';')[0]}});assert.equal(empty.status,200);assert.equal(empty.headers.get('x-jingo-export-count'),'0');
+
  }finally{await app.close();await rm(media,{recursive:true,force:true});}
 });
+
+ test('CSV export rejects more than 10000 matching orders without truncation',async()=>{
+  const service=new OrderSearchService({pool:{query:async()=>({rows:Array.from({length:10001},()=>({}))})}} as unknown as DatabaseService);
+  await assert.rejects(service.exportRows({}),/10.000/);
+ });

@@ -126,3 +126,7 @@ Existing DELIVER accepts up to150 tickets. Under the order row lock, it now pref
 ## Order email status (0.13.0)
 
 Admin-only GET /admin/orders/:orderId/emails returns no-store, a scoped latest100 queue projection and enabled/eligible/reason metadata. It excludes mail keys, SMTP config secrets, message bodies and customer-access tokens. POST /admin/orders/:orderId/emails/:id/retry uses AdminGuard/CSRF and verifies ownership before changing state. Both scoped and existing global retries lock the job, require FAILED + enabled SMTP + customer-mail eligibility, reset to PENDING and audit atomically. An immediate duplicate retry cannot reset an active job. Order financial version and ticket/inventory state are untouched. SMTP SENT means transport acceptance, not inbox delivery. Tests enqueue only; no real email is sent by the order-mail fixture.
+
+## Admin order CSV (0.14.0)
+
+Admin-only GET /admin/orders/export shares validated filters/SQL predicates with the paginated list but ignores page/pageSize. One SELECT provides a consistent result snapshot and fetches at most10001 rows; above10000 returns an error before emitting a CSV attachment. No silent truncation or repeated paginated reads. The frontend uses the applied filter snapshot and downloads a no-store UTF-8 BOM CSV. Columns explicitly project order/contact/snapshot fields, excluding ticket codes, customer-access keys and internal notes. Cells are quoted/escaped and spreadsheet formula prefixes neutralized; phone numbers are text. Booking value is distinct from receipt-based revenue.

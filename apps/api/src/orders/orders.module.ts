@@ -1,3 +1,4 @@
+import{ordersCsv}from'./orders-csv';
 import{OrderSearchService}from'./order-search.service';
 import{InventoryModule}from'../inventory/inventory.module';
 import{MailModule}from'../mail/mail.module';
@@ -26,6 +27,7 @@ class OrdersController {
 class AdminOrdersController {
   constructor(private readonly orders: OrdersService, private readonly auth: AuthService,private readonly search:OrderSearchService) {}
   @Get() async list(@Req() req: Request, @Res({ passthrough:true }) res: Response,@Query()query:Record<string,unknown>) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.search.search(query); }
+  @Get('export')async export(@Req()req:Request,@Query()query:Record<string,unknown>,@Res()res:Response){await this.auth.requireAdmin(req);const result=await this.search.exportRows(query);res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="jingo-orders.csv"');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Jingo-Export-Count',String(result.data.length));res.send(ordersCsv(result.data,result.archived));}
   @Get(':id') async get(@Param('id') id: string, @Req() req: Request, @Res({ passthrough:true }) res: Response) { await this.auth.requireAdmin(req); res.setHeader('Cache-Control','no-store'); return this.orders.get(id); }
   @Post(':id/actions') async action(@Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req); return this.orders.act(id,parse(actionInput,body),admin.id); }
 }
