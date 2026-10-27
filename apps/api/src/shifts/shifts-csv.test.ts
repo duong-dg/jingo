@@ -1,0 +1,8 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {shiftCsv} from './shifts-csv';
+test('shift CSV has Vietnam timestamps, one receipt per row, numeric amount and safe text cells',()=>{
+ const csv=shiftCsv({id:'shift-test',counterName:'=HYPERLINK("bad")\nQuầy A',openedAt:'2026-01-01T17:00:00Z',closedAt:'2026-01-02T01:00:00Z',receipts:[{id:'payment-test',code:'JGTEST',amount:390000,reference:'  @formula',method:'BANK',admin_id:'pos-user:test',created_at:'2026-01-01T18:30:00Z'}]});
+ assert.equal(csv.charCodeAt(0),0xfeff);assert.match(csv,/Mã khoản thu/);assert.match(csv,/2026-01-02 00:00:00/);assert.match(csv,/2026-01-02 08:00:00/);assert.match(csv,/2026-01-02 01:30:00/);assert.match(csv,/"390000"/);assert.match(csv,/"'  @formula"/);assert.match(csv,/"'=HYPERLINK\(""bad""\)\nQuầy A"/);assert.equal((csv.match(/payment-test/g)||[]).length,1);assert.equal((csv.match(/JGTEST/g)||[]).length,1);assert.match(csv,/Đã chốt/);assert.match(csv,/Chuyển khoản/);assert.doesNotMatch(csv,/Tiền đầu ca|Tiền mặt phải bàn giao|Email|Điện thoại/);
+});
+test('open and empty shifts export clear state and header-only file without invented money',()=>{
+ const empty={id:'empty',counterName:'Quầy',openedAt:'2026-01-01T00:00:00Z',closedAt:null,receipts:[]};const csv=shiftCsv(empty);assert.equal(csv.split('\r\n').filter(Boolean).length,1);assert.doesNotMatch(csv,/"0"/);const open=shiftCsv({...empty,receipts:[{id:'payment',code:'JGOPEN',amount:0,reference:'CASH:test',method:'CASH',admin_id:'staff',created_at:'2026-01-01T00:00:00Z'}]});assert.match(open,/Đang mở/);assert.match(open,/Tiền mặt/);assert.match(open,/"0"/);
+});

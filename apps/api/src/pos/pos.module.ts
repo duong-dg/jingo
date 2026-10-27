@@ -1,3 +1,4 @@
+import{sendShiftCsv}from'../shifts/shifts-csv';
 import{ShiftsModule,ShiftsService}from'../shifts/shifts.module';
 import{InventoryModule,InventoryService}from'../inventory/inventory.module';
 import{BadRequestException,ConflictException,Body,Controller,ForbiddenException,Get,Injectable,Module,NotFoundException,Param,Post,Query,Req,Res,UseGuards}from'@nestjs/common';import type{Request,Response}from'express';import{DatabaseService}from'../database/database.module';import{AuthModule,AdminGuard}from'../admin/auth.module';import{CatalogModule}from'../catalog/catalog.module';import{CatalogService}from'../catalog/catalog.service';import{OrdersModule}from'../orders/orders.module';import{OrdersService}from'../orders/orders.service';import{actionInput}from'../orders/orders.schema';import{OperationsModule,OperationsService}from'../operations/operations.module';import{partnerSelection}from'../partners/partners.schema';import{calculateQuote}from'../pricing/pricing';import{PosAuthService}from'./pos-auth.service';import{PosUsersService}from'./pos-users.service';import{PosActor,posLoginSchema}from'./pos.schema';
@@ -19,6 +20,8 @@ import{BadRequestException,ConflictException,Body,Controller,ForbiddenException,
  constructor(private readonly auth:PosAuthService,private readonly pos:PosService,private readonly operations:OperationsService,private readonly shifts:ShiftsService){}
  private actor(req:Request){if(!['GET','HEAD'].includes(req.method))this.auth.checkMutation(req);return this.auth.require(req);}
  @Get('shifts')async shiftsList(@Query('counterId')counterId:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.shifts.list(await this.actor(req),counterId);}
+ @Get('shifts/:id/print')async shiftPrint(@Param('id')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.shifts.print(await this.actor(req),id);}
+ @Get('shifts/:id/export')async shiftExport(@Param('id')id:string,@Req()req:Request,@Res()res:Response){sendShiftCsv(res,await this.shifts.export(await this.actor(req),id));}
  @Get('shifts/:id')async shiftDetail(@Param('id')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.shifts.detail(await this.actor(req),id);}
  @Post('shifts')async shiftOpen(@Body()body:unknown,@Req()req:Request){return this.shifts.open(await this.actor(req),body);}
  @Post('shifts/:id/close')async shiftClose(@Param('id')id:string,@Body()body:unknown,@Req()req:Request){return this.shifts.close(await this.actor(req),id,body);}

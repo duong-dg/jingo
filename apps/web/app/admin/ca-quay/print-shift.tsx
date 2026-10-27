@@ -1,0 +1,20 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {adminApi} from '../shared/admin-api';
+import {posApi} from '../../../lib/pos-api';
+import type {ShiftReport} from './shift-report';
+const money=(n:number)=>n.toLocaleString('vi-VN')+'đ',time=(s:string)=>new Date(s).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'});
+export function PrintShift({id,pos=false}:{id:string;pos?:boolean}){
+ const[report,setReport]=useState<ShiftReport|null>(null),[error,setError]=useState(''),[includeReceipts,setIncludeReceipts]=useState(false);
+ useEffect(()=>{let active=true;setReport(null);setError('');(pos?posApi:adminApi)('shifts/'+encodeURIComponent(id)+'/print').then(data=>{if(active)setReport(data);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[id,pos]);
+ return <main id="main" className="print-page shift-print-page"><div className="print-controls"><button className="button" disabled={!report} onClick={()=>window.print()}>In biên bản / lưu PDF</button><a className="outline-button" href={pos?'/quay/ca':'/admin/ca-quay'}>← Ca quầy & bàn giao</a><label className="checkbox-label"><input type="checkbox" checked={includeReceipts} disabled={!report?.receipts.length} onChange={e=>setIncludeReceipts(e.target.checked)}/>Kèm chi tiết khoản thu</label></div>
+ {error&&<p className="admin-error" role="alert">{error}</p>}
+ {report&&report.closedAt?<><article className="print-sheet shift-print-sheet"><header><strong className="logo">jin<span>go</span>↗</strong><p>{report.counterName}</p><h1>BIÊN BẢN BÀN GIAO CA QUẦY</h1><p className="shift-report-id">Mã ca: {report.id} · v{report.version}</p></header>
+  <div className="shift-report-meta"><p><strong>Người mở ca:</strong> {report.openedName}</p><p><strong>Mở ca:</strong> {time(report.openedAt)}</p><p><strong>Chốt ca:</strong> {time(report.closedAt)}</p><p><strong>Số khoản thu:</strong> {report.summary.receiptCount} · Thời gian GMT+7</p></div>
+  <table><tbody><tr><th>Tiền mặt đầu ca</th><td>{money(report.openingCash)}</td></tr><tr><th>Tiền mặt đã thu trong ca</th><td>{money(report.summary.cash)}</td></tr><tr><th>Chuyển khoản đã thu trong ca</th><td>{money(report.summary.bank)}</td></tr><tr className="shift-print-total"><th>Tiền mặt phải bàn giao</th><td>{money(report.summary.expectedCash)}</td></tr><tr className="shift-print-total"><th>Tiền mặt thực đếm / bàn giao</th><td>{money(report.summary.countedCash??0)}</td></tr><tr className="shift-print-variance"><th>Chênh lệch {report.summary.difference===0?'(khớp)':(report.summary.difference??0)<0?'(thiếu)':'(thừa)'}</th><td>{money(report.summary.difference??0)}</td></tr></tbody></table>
+  <p className="shift-print-explanation">Phải bàn giao = tiền mặt đầu ca + tiền mặt đã thu. Chuyển khoản được đối soát riêng, không cộng vào tiền mặt bàn giao.</p>
+  {report.openingNote&&<section className="shift-report-notes"><h2>Ghi chú nhận ca</h2><p>{report.openingNote}</p></section>}<section className="shift-report-notes"><h2>Ghi chú bàn giao / chênh lệch</h2><p>{report.closeNote||'—'}</p></section>
+  <div className="shift-report-signatures"><div><strong>Người giao</strong><small>(Ký, ghi rõ họ tên)</small></div><div><strong>Người nhận</strong><small>(Ký, ghi rõ họ tên)</small></div><div><strong>Người kiểm tra</strong><small>(Ký, ghi rõ họ tên)</small></div></div><p className="shift-report-footnote">Biên bản nội bộ · Đơn vị tiền: VND · Chữ ký hoàn thiện khi bàn giao.</p>
+ </article>{includeReceipts&&<article className="print-sheet shift-print-sheet shift-print-annex"><header><h1>CHI TIẾT KHOẢN THU TRONG CA</h1><p>{report.counterName} · {report.id}</p></header><table><thead><tr><th>Đơn / thời gian thu</th><th>Phương thức / mã giao dịch</th><th>Số tiền</th></tr></thead><tbody>{report.receipts.map(r=><tr key={r.id}><td><strong>{r.code}</strong><br/>{time(r.created_at)}</td><td>{r.method==='CASH'?'Tiền mặt':'Chuyển khoản'}<br/><span className="shift-receipt-reference">{r.reference}</span></td><td>{money(r.amount)}</td></tr>)}</tbody></table></article>}</>:!error&&<p>Đang kiểm tra quyền và tải biên bản ca đã chốt…</p>}
+ </main>;
+}

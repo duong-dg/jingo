@@ -180,3 +180,9 @@ GET admin/posts/:id/preview và revisions dùng AdminGuard; preview chỉ trả 
 ## Phạm vi voucher (0.23)
 
 JSON voucher thêm scope ALL/PRODUCTS/VARIANTS và targets [{productId,variantId?}], mặc định ALL/[] cho dữ liệu cũ. Save validate shape/dedup/reference; không có migration đổi dữ liệu đã ghi. Hàm voucherApplies dùng đúng cặp product/variant; scope riêng thiếu selection/targets hoặc scope lạ fail closed. Pricing và Orders.create truyền productId/variantId đã kiểm catalog; discount kiểm lại scope khi giữ khóa voucher tại tạo đơn. Snapshot đơn chỉ ghi code/amount/subtotal như trước, không lưu hoặc công khai targets. Thay scope không sửa đơn/usage đã ghi; request idempotence đã commit vẫn ưu tiên trả đơn cũ. Không thêm khóa catalog ở voucher save để tránh đảo thứ tự product → voucher của Orders.create. Catalog thay đổi sau cấu hình có thể khiến target lỗi thời; không fallback sang ALL.
+
+## Tài liệu ca quầy (0.24)
+
+GET admin/pos shifts/:id/print dùng detail đọc REPEATABLE READ với quyền ca/quầy, từ chối closedAt rỗng. Trang in chỉ có vỏ HTML trước khi tải dữ liệu private; không server-fetch bằng cookie/token URL, noindex. Bản chính lấy summary đã chốt; danh sách receipts là phụ lục tùy chọn, không tính lại summary. CSS named page shift-handover A4 để không đổi khổ in phiếu vé.
+
+GET admin/pos shifts/:id/export dùng cùng quyền, CSV private/no-store + nosniff, Content-Disposition filename theo mã ca, X-Jingo-Export-Count. shiftCsv dùng csvCell đã có để escape/neutralize formula; chỉ receipt amount là giá trị tiền cần cộng, không lặp các tổng ca. Giới hạn 10k receipts, empty file header-only. Không tạo file thường trực/server public, không lưu tác vụ xuất vào financial ledger, không tự gửi email.

@@ -1,5 +1,14 @@
 # JinGo
 
+## In bàn giao & xuất khoản thu ca (0.24)
+
+- Ca quầy → ca đã chốt → In biên bản bàn giao. Có tiền đầu ca, CASH/BANK tách riêng, tiền mặt phải bàn giao/thực đếm, chênh lệch, ghi chú và chỗ ký người giao/nhận/kiểm tra. Chọn In biên bản / lưu PDF bằng chức năng in trình duyệt; A4, có tùy chọn phụ lục khoản thu, không tự mở hộp thoại in.
+- Trang in admin `/admin/ca-quay/in/:id`, POS `/quay/ca/in/:id`, chỉ tải số liệu sau xác thực. API từ chối biên bản ca đang mở; dùng snapshot đã chốt, không tạo bản chốt mới hoặc sửa số tiền. Chỗ ký để ký khi bàn giao, chưa có xác nhận người nhận hay chữ ký điện tử trong hệ thống.
+- Xuất khoản thu CSV ở ca đang mở hoặc đã chốt: mỗi payment một dòng gồm mã ca/quầy/trạng thái/mốc ca/mã đơn/thời gian thu/phương thức/số tiền/mã giao dịch/mã người ghi thu. Không đưa tổng ca lặp vào từng dòng, không lấy tiền trước ca/ngoài ca, không chứa liên hệ hoặc mã vé khách. Ca không có thu xuất file chỉ có tiêu đề.
+- CSV UTF-8 BOM, thời gian GMT+7, escape dấu phẩy/xuống dòng và vô hiệu công thức Excel trong ô text. Tối đa 10.000 khoản thu mỗi ca; vượt ngưỡng báo lỗi, không âm thầm cắt file. File có thông tin đối soát nội bộ, lưu và chia sẻ theo quyền vận hành của bạn.
+- Quyền SHIFT và quầy được gán áp dụng cho cả in/CSV; không cần quyền PRINT mã vé. Nhân viên cũ không tự được thêm quyền. Bản in không công khai, không nằm trong sitemap; tải lại/đăng nhập vẫn kiểm quyền ở API. Không đổi cách thu tiền/chốt ca/công nợ.
+
+
 ## Voucher theo sản phẩm / gói vé (0.23)
 
 - Admin → Mã giảm giá & voucher: chọn ALL (mọi sản phẩm), PRODUCTS (mọi gói của các sản phẩm được chọn), VARIANTS (đúng cặp sản phẩm + gói). Có tìm kiếm, danh sách đã chọn và bỏ từng mục, tối đa 200 mục. PRODUCTS bao gồm cả gói thêm sau; VARIANTS không tự áp dụng gói mới.
