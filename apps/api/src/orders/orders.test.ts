@@ -25,6 +25,9 @@ test('immediate booking → collect → partial/full delivery; optional instruct
     assert.equal((await(await call('/orders',input)).json()).code,result.code,'retry should return same order');
     assert.equal((await call('/orders',{...input,contact:{...input.contact,name:'Another'}})).status,409);
     const lookup={code:result.code,accessKey:input.accessKey};
+    assert.equal((await call('/orders/lookup',{code:result.code})).status,400);
+    assert.equal((await call('/orders/lookup',{code:result.code,email:'wrong@example.test'})).status,404);
+    const emailLookup=await call('/orders/lookup',{code:result.code,email:'GUEST@example.test'});assert.equal(emailLookup.status,201);const emailResult=await emailLookup.json();assert.equal(emailResult.code,result.code);assert.equal(emailResult.contact,undefined);assert.equal(emailResult.accessKey,undefined);
     assert.equal((await call('/orders/lookup',{...lookup,accessKey:'a'.repeat(64)})).status,404);
     let guest=await(await call('/orders/lookup',lookup)).json();assert.equal(guest.contact,undefined);assert.equal(guest.bookingStatus,'CONFIRMED');assert.equal(guest.paymentStatus,'UNPAID');assert.equal(guest.tickets.length,0);
     assert.equal((await call('/admin/orders')).status,401);

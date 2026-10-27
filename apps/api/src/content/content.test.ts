@@ -9,6 +9,7 @@ test('media validation, custom product types, blog scheduling and HTML isolation
   try{
     let res=await call('/admin/login',{email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD});cookie=res.headers.get('set-cookie')!.split(';')[0];
     assert.equal((await call('/admin/media')).status,401);assert.equal((await call('/admin/posts')).status,401);assert.equal((await call('/admin/product-types')).status,401);
+    assert.equal((await call('/admin/posts/categories')).status,401);assert.equal((await call('/admin/posts/categories',{name:'Ẩm thực'},true)).status,201);assert.equal((await call('/admin/posts/categories',{name:'Ẩm thực'},true)).status,201);assert.equal((await call('/admin/posts/categories',{name:'  '},true)).status,400);assert.equal((await(await call('/admin/posts/categories',undefined,true)).json()).data.filter((name:string)=>name==='Ẩm thực').length,1);
     const png=await sharp({create:{width:40,height:30,channels:3,background:'#72925a'}}).png().toBuffer();assert.equal((await upload(png,false)).status,401);
     assert.equal((await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),true,'bad.png')).status,400);
     res=await upload(png);assert.equal(res.status,201);const image=(await res.json()).data;assert.equal(image.width,40);assert.equal(image.alt,'Ảnh thử nghiệm');

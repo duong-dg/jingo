@@ -8,7 +8,7 @@ export const orderInput = z.object({
   contact: z.object({ name: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9 ()-]{8,25}$/).refine(value=>{const length=value.replace(/\D/g,'').length;return length>=8&&length<=15;},'Số điện thoại cần 8–15 chữ số'), email: z.email().max(200), note: z.string().trim().max(1000).default('') }).strict(),
   locale:z.enum(['vi','en']).optional(),accepted: z.literal(true)
 }).strict();
-export const lookupInput = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
+export const lookupInput = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),email:z.email().max(200).optional() }).strict().refine(value=>!!value.accessKey||!!value.email,'Nhập email đã đặt vé.');
 const base = { requestId: z.uuid(), version: z.number().int().min(1), note: z.string().trim().min(1).max(1000) };
 export const actionInput = z.discriminatedUnion('action', [
   z.object({...base,action:z.literal('ARCHIVE')}).strict(),

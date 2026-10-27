@@ -75,8 +75,9 @@ export class OrdersService {
     const archived=await client.query('SELECT reason,created_at FROM jingo_order_archives WHERE order_id=$1',[row.id]);
     return { ...response,archived:!!archived.rowCount,archiveReason:archived.rows[0]?.reason||'', contact: row.contact, payments: payments.rows, history: history.rows,...(partner?{partner:{id:partner.id,name:partner.name,creditEnabled:partner.creditEnabled}}:{}) };
   }
-  async lookup(code: string, accessKey: string) {
-    const result = await this.db.pool.query('SELECT * FROM jingo_orders WHERE code=$1 AND access_hash=$2', [code, hash(accessKey)]);
+  async lookup(code: string, accessKey?: string, email?: string) {
+    const result = accessKey?await this.db.pool.query('SELECT * FROM jingo_orders WHERE code=$1 AND access_hash=$2', [code, hash(accessKey)]):await this.db.pool.query('SELECT * FROM jingo_orders WHERE code=$1',[code]);
+    if(!accessKey&&(!email||result.rows[0]?.contact?.email?.trim().toLowerCase()!==email.trim().toLowerCase()))throw new NotFoundException('Không tìm thấy đơn hàng.');
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn hoặc khóa tra cứu không đúng.');
     if((await this.db.pool.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)throw new NotFoundException('Đơn CTV chỉ tra cứu trong tài khoản CTV.');
     return this.detail(result.rows[0], false);

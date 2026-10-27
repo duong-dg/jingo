@@ -29,6 +29,6 @@ function parse<T>(schema:z.ZodType<T>,body:unknown):T{const result=schema.safePa
 }
 @Controller('deliveries')class DeliveryController{
   constructor(private readonly orders:OrdersService){}
-  @Post('lookup')async lookup(@Body()body:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');const input=parse(lookupInput,body);return this.orders.deliveryLookup(input.code,input.accessKey);}
+  @Post('lookup')async lookup(@Body()body:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');const input=parse(z.object({code:z.string().regex(/^JG[A-F0-9]{10}$/),accessKey:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),body);return this.orders.deliveryLookup(input.code,input.accessKey);}
 }
 @Module({imports:[AuthModule,CatalogModule,TypesModule,OrdersModule],providers:[PartnersService,PartnerAuthService],controllers:[AdminPartnersController,AdminGroupsController,PartnerController,DeliveryController]})export class PartnersModule{}

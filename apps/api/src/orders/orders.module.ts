@@ -18,7 +18,7 @@ class OrdersController {
     if(value.count>100||this.requests.size>10000)throw new HttpException('Quá nhiều yêu cầu. Vui lòng thử lại sau một phút.',429);
   }
   @Post() create(@Body() body: unknown, @Req() req:Request, @Res({ passthrough: true }) res: Response) { this.throttle(req);res.setHeader('Cache-Control','no-store'); return this.orders.create(parse(orderInput, body)); }
-  @Post('lookup') lookup(@Body() body: unknown, @Req() req:Request, @Res({ passthrough: true }) res: Response) { this.throttle(req);res.setHeader('Cache-Control','no-store'); const input = parse(lookupInput,body); return this.orders.lookup(input.code,input.accessKey); }
+  @Post('lookup') lookup(@Body() body: unknown, @Req() req:Request, @Res({ passthrough: true }) res: Response) { this.throttle(req);res.setHeader('Cache-Control','no-store'); const input = parse(lookupInput,body); return this.orders.lookup(input.code,input.accessKey,input.email); }
 }
 @Controller('admin/orders')
 class AdminOrdersController {

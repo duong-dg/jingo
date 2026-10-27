@@ -192,3 +192,9 @@ Image nền hiện chứa cả ba workspace và công cụ build để đơn gi�
 Volume Docker không phải backup. Trước khi có dữ liệu thật cần lập lịch pg_dump, backup file vé riêng tư, lưu ngoài server và thử restore. Không chạy `docker compose down -v` trên môi trường có dữ liệu cần giữ.
 
 Xem [kiến trúc và tiến độ](docs/ARCHITECTURE.md).
+
+### v0.8.1 — chỉnh thao tác quản trị
+- Bảng giá CTV: chọn nhiều gói bằng checkbox, mỗi gói có dòng giá riêng; lưu toàn bộ và báo số gói/mức giá.
+- Bài viết mới tự tạo slug từ tiêu đề cho tới khi sửa tay; bài cũ giữ URL. Tạo chuyên mục ngay trong trình soạn bài, lưu dùng chung trong PostgreSQL.
+- Thông báo lưu đặt ngay sau nút lưu ở các trình sửa sản phẩm, bài viết, loại sản phẩm, giá và tài khoản CTV.
+- Menu thu gọn trên điện thoại; tra cứu bằng mã booking + email đã đặt, link có khóa cũ vẫn hoạt động. CTV tiếp tục tra đơn trong tài khoản; link chia sẻ vé giữ khóa riêng.

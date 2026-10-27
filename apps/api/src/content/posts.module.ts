@@ -13,6 +13,8 @@ export class PostsService{
   private unpack(row:{data:Post;version:number;updated_at:Date}){return{...row.data,version:row.version,updatedAt:new Date(row.updated_at).toISOString()};}
   private visible(post:Post){return post.status==='PUBLISHED'&&(!post.publishedAt||new Date(post.publishedAt).getTime()<=Date.now());}
   async list(admin=false){const result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts ORDER BY updated_at DESC');return result.rows.map(row=>this.unpack(row)).filter(post=>admin||this.visible(post));}
+  async categories(){const saved=await this.db.pool.query('SELECT name FROM jingo_post_categories ORDER BY name');const posts=await this.list(true);return [...new Set(['Cẩm nang',...saved.rows.map(row=>row.name as string),...posts.map(post=>post.category)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));}
+  async addCategory(body:unknown){const name=typeof body==='object'&&body!==null&&'name'in body&&typeof body.name==='string'?body.name.trim():'';if(!name||name.length>100)throw new BadRequestException('Tên chuyên mục cần 1–100 ký tự.');await this.db.pool.query('INSERT INTO jingo_post_categories(name)VALUES($1) ON CONFLICT(name) DO NOTHING',[name]);return this.categories();}
   async find(slug:string,admin=false){let result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE slug=$1',[slug]);if(!result.rowCount)result=await this.db.pool.query('SELECT p.data,p.version,p.updated_at FROM jingo_slug_aliases a JOIN jingo_posts p ON p.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['POST',slug]);const post=result.rowCount?this.unpack(result.rows[0]):undefined;if(!post||!admin&&!this.visible(post))throw new NotFoundException('Bài viết chưa xuất bản hoặc không tồn tại.');return post;}
   async save(body:unknown,adminId:string){
     const parsed=postSchema.safeParse(body);if(!parsed.success)throw new BadRequestException(parsed.error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('\n'));
@@ -41,6 +43,8 @@ function publicPost(post:Post&{updatedAt:string},lang?:string){const{english,ver
 @Controller('admin/posts')@UseGuards(AdminGuard)class AdminPostsController{
   constructor(private readonly posts:PostsService){}
   @Get()async list(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return{data:await this.posts.list(true)};}
+  @Get('categories')async categories(){return{data:await this.posts.categories()};}
+  @HttpPost('categories')async addCategory(@Body()body:unknown){return{data:await this.posts.addCategory(body)};}
   @HttpPost()async save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.save(body,req.admin.id)};}
 }
 @Module({imports:[AuthModule,MediaModule],providers:[PostsService],exports:[PostsService],controllers:[PublicPostsController,AdminPostsController]})export class PostsModule{}
