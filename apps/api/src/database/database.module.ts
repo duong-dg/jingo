@@ -27,6 +27,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         booking_status text NOT NULL DEFAULT 'REQUESTED', payment_status text NOT NULL DEFAULT 'UNPAID', instructions text NOT NULL DEFAULT '',
         version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_gateway_attempts(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,config_version integer NOT NULL,config jsonb NOT NULL,status text NOT NULL DEFAULT 'PENDING',created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL);
+      CREATE INDEX IF NOT EXISTS jingo_gateway_attempt_order ON jingo_gateway_attempts(order_id,provider);
+      CREATE TABLE IF NOT EXISTS jingo_gateway_events(id text PRIMARY KEY,attempt_id text REFERENCES jingo_gateway_attempts(id),order_id text REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,status text NOT NULL,reason text NOT NULL,fingerprint text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_supply_lots(id text PRIMARY KEY,request_hash text NOT NULL,supplier_id text NOT NULL REFERENCES jingo_suppliers(id),product_id text NOT NULL REFERENCES jingo_products(id),variant_id text NOT NULL,customer_type text NOT NULL,unit_cost bigint NOT NULL,total_quantity integer NOT NULL,valid_from text NOT NULL,valid_to text NOT NULL,priority integer NOT NULL DEFAULT 100,enabled boolean NOT NULL DEFAULT true,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1,created_at timestamptz NOT NULL DEFAULT now());
       ALTER TABLE jingo_supply_lots ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
       ALTER TABLE jingo_supply_lots ADD COLUMN IF NOT EXISTS unlimited boolean NOT NULL DEFAULT false;

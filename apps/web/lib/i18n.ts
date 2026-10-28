@@ -2,6 +2,12 @@ export type Locale='vi'|'en';
 export const localizedPath=(path:string,locale:Locale)=>locale==='en'?`/en${path==='/'?'':path}`:path;
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
+ 'Không tạo được thanh toán.':'Unable to create a payment request.',
+ 'Chỉ thanh toán đơn web bán lẻ đã xác nhận, chưa thu tiền và còn hiệu lực.':'Only active, confirmed and unpaid online retail bookings can be paid here.',
+ 'Nhập khóa hoặc email tra cứu.':'Enter your booking access key or email.',
+ 'Cổng thanh toán chưa bật.':'This payment provider is not enabled.',
+ 'Cổng đang ở môi trường khác.':'This payment provider is unavailable in the current environment.',
+ 'Thông tin thanh toán không hợp lệ.':'Invalid payment information.',
  'Mã giảm giá không áp dụng cho sản phẩm hoặc gói vé đang chọn.':'This voucher does not apply to the selected experience or ticket package.',
  'Mã giảm giá không áp dụng cho ngày sử dụng vé đã chọn.':'This voucher does not apply to the selected visit date.',
  'Mã giảm giá không hợp lệ.':'Invalid voucher code.',

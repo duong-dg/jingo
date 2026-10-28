@@ -95,7 +95,7 @@ export class OrdersService {
     if(!accessKey&&(!email||result.rows[0]?.contact?.email?.trim().toLowerCase()!==email.trim().toLowerCase()))throw new NotFoundException('Không tìm thấy đơn hàng.');
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn hoặc khóa tra cứu không đúng.');
     if((await this.db.pool.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)throw new NotFoundException('Đơn CTV chỉ tra cứu trong tài khoản CTV.');
-    const response=await this.detail(result.rows[0],false);if(!accessKey&&(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)return{...response,tickets:[],ticketAccess:'EMAIL_LINK' as const};return response;
+    const response=await this.detail(result.rows[0],false);if(!accessKey&&(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)return{...response,tickets:[],ticketAccess:'EMAIL_LINK' as const};return{...response,onlinePaymentEligible:!(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount};
   }
   async list(archived=false) {
     const result = await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.version,o.created_at FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id WHERE '+(archived?'a.order_id IS NOT NULL':'a.order_id IS NULL')+' ORDER BY o.created_at DESC LIMIT 200');
