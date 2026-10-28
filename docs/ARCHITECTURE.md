@@ -186,3 +186,9 @@ JSON voucher thêm scope ALL/PRODUCTS/VARIANTS và targets [{productId,variantId
 GET admin/pos shifts/:id/print dùng detail đọc REPEATABLE READ với quyền ca/quầy, từ chối closedAt rỗng. Trang in chỉ có vỏ HTML trước khi tải dữ liệu private; không server-fetch bằng cookie/token URL, noindex. Bản chính lấy summary đã chốt; danh sách receipts là phụ lục tùy chọn, không tính lại summary. CSS named page shift-handover A4 để không đổi khổ in phiếu vé.
 
 GET admin/pos shifts/:id/export dùng cùng quyền, CSV private/no-store + nosniff, Content-Disposition filename theo mã ca, X-Jingo-Export-Count. shiftCsv dùng csvCell đã có để escape/neutralize formula; chỉ receipt amount là giá trị tiền cần cộng, không lặp các tổng ca. Giới hạn 10k receipts, empty file header-only. Không tạo file thường trực/server public, không lưu tác vụ xuất vào financial ledger, không tự gửi email.
+
+## Sổ NCC theo kỳ (0.25)
+
+SupplierStatementsService đọc supplier + SUM trước kỳ + lots/payments trong kỳ ở REPEATABLE READ. Dùng [begin VN, dayAfterEnd VN), tính BigInt và chặn kết quả ngoài safe integer; SUM PostgreSQL numeric dạng chuỗi được parse nguyên. Index supplier_id/created_at trên cả hai bảng. Không lọc enabled/trạng thái NCC/đã phân bổ vì nghĩa vụ mua lô đã ghi là bất biến. Merge theo timestamp ms, tie PURCHASE trước PAYMENT rồi id, chạy số dư trước khi cắt trang. API validate UUID/from/to/page, tối đa 367 ngày/10k phát sinh; query LIMIT 10001 mỗi nguồn để phát hiện vượt, không trả báo cáo thiếu dòng.
+
+GET admin/supply/statements/:id trả tổng và 50 dòng/trang, export trả toàn bộ cùng bộ lọc nhưng snapshot đọc mới. AdminGuard/private no-store, CSV nosniff/attachment/count. CSV có OPENING/CLOSING với cột tăng/giảm trống, từng movement duy nhất và cột running balance, dùng csvCell để escape/neutralize. Read-only, không ghi ledger/audit thu tiền và không gửi email. Không phải báo cáo lợi nhuận hay tồn khả dụng.

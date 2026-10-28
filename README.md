@@ -1,5 +1,14 @@
 # JinGo
 
+## Đối soát nhà cung cấp theo ngày (0.25)
+
+- Sản phẩm → Đối soát nhà cung cấp (`/admin/doi-soat-ncc`), có liên kết từ Nguồn vé & giá vốn. Chọn NCC (kể cả lưu trữ) và khoảng ngày để xem phải trả đầu kỳ, nhập vé, tiền đã trả và phải trả cuối kỳ. Dùng ngày ghi nhận trong hệ thống tại Việt Nam; không theo ngày sử dụng vé, không theo ngày thực chuyển ngân hàng nếu nhập sổ muộn.
+- Đầu kỳ = mọi giá trị lô nhập trước 00:00 ngày bắt đầu − tiền đã ghi trả trước thời điểm đó. Trong kỳ tính từ đầu ngày đầu tới hết ngày cuối GMT+7. Cuối kỳ = đầu kỳ + nhập − đã trả. Số dư chạy từng dòng theo thời điểm, cùng thời điểm nhập trước rồi trả, sau đó mã bản ghi; disabled/lô hết hạn, vé đã bán và NCC lưu trữ không xóa công nợ.
+- Chi tiết 50 dòng/trang, tổng toàn kỳ; CSV toàn kỳ gồm dòng đầu kỳ, phát sinh, cuối kỳ. Cột tăng phải trả/đã trả chỉ có số ở các dòng phát sinh; dòng đầu/cuối kỳ không lặp tổng tiền, cột số dư không cộng. Có BOM tiếng Việt, GMT+7, escape ô text và chặn công thức Excel.
+- Tối đa 367 ngày, 10.000 dòng phát sinh mỗi kỳ; vượt giới hạn báo chọn khoảng ngắn hơn, không âm thầm cắt. Bộ lọc chưa áp dụng không đổi bảng/CSV đang xem. CSV lấy dữ liệu lại lúc tải, không cố định theo báo cáo đã mở trước đó.
+- Chỉ admin xem/xuất, no-store; không tạo giao dịch, tự chuyển tiền hay gửi đối soát ra ngoài. Sổ chưa có trả trước, điều chỉnh chứng từ, lùi ngày ghi sổ hoặc quy trình xác nhận số dư với NCC. Vé đã nhập vẫn không trả NCC theo nghiệp vụ đã chốt.
+
+
 ## In bàn giao & xuất khoản thu ca (0.24)
 
 - Ca quầy → ca đã chốt → In biên bản bàn giao. Có tiền đầu ca, CASH/BANK tách riêng, tiền mặt phải bàn giao/thực đếm, chênh lệch, ghi chú và chỗ ký người giao/nhận/kiểm tra. Chọn In biên bản / lưu PDF bằng chức năng in trình duyệt; A4, có tùy chọn phụ lục khoản thu, không tự mở hộp thoại in.
