@@ -10,7 +10,7 @@ type Row={id:string;kind:'PRODUCT'|'POST'|'TYPE';name:string;slug:string;version
 const statuses={MISSING:'Chưa dịch',DRAFT:'Bản nháp',NEEDS_REVIEW:'Cần cập nhật',PUBLISHED:'Đã xuất bản'};
 const kinds={PRODUCT:'Vé / tour',POST:'Bài viết',TYPE:'Loại sản phẩm'};
 const fields:Record<string,string>={name:'Tên',title:'Tiêu đề',destination:'Điểm đến',description:'Mô tả',excerpt:'Giới thiệu',category:'Chuyên mục',seoTitle:'SEO title',seoDescription:'SEO description'};
-const groupLabels:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR:'Người cao tuổi'};
+const groupLabels:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương'};
 function blank(row:Row):Content{return Object.fromEntries(Object.entries(row.source).map(([key,value])=>[key,key==='variants'?(value as Variant[]).map(v=>({id:v.id,name:'',conditions:Object.fromEntries(Object.keys(v.conditions).map(g=>[g,'']))})):'' ]));}
 function merge(row:Row):Content{const empty=blank(row);const en=row.english||{};return{...empty,...Object.fromEntries(Object.keys(empty).filter(k=>k!=='variants').map(k=>[k,en[k as keyof Content]??''])),...(row.source.variants?{variants:row.source.variants.map(v=>({id:v.id,name:en.variants?.find(t=>t.id===v.id)?.name||'',conditions:Object.fromEntries(Object.keys(v.conditions).map(g=>[g,en.variants?.find(t=>t.id===v.id)?.conditions?.[g]||'']))}))}:{})};}
 export function TranslationsEditor({entity,onSaved,onDirtyChange}:{entity?:{id:string;kind:Row['kind']};onSaved?:(data:any)=>void;onDirtyChange?:(dirty:boolean)=>void}={}){

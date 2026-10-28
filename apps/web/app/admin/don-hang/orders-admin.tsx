@@ -12,7 +12,7 @@ import Link from 'next/link';
 import{DatePicker}from'../../components/date-picker';
 import{AdminSidebar}from'../shared/admin-frame';
 const money=(value:number)=>value.toLocaleString('vi-VN')+'đ';
-const guestLabels:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR:'Người cao tuổi'};
+const guestLabels:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương'};
 const statusNames:Record<string,string>={REQUESTED:'Chờ xác nhận',CONFIRMED:'Đã đặt vé',CANCELLED:'Đã hủy',PAID:'Đã thu tiền',CREDIT:'Đã ghi công nợ',UNPAID:'Chưa thu tiền',PENDING:'Chưa giao vé',PARTIAL:'Giao một phần',DELIVERED:'Đã giao đủ'};
 type Snapshot={discount?:{code:string;amount:number;subtotal:number};timeSlot?:{start:string;end?:string};productName:string;variantName:string;date:string;total:number;lines:{customerType:string;quantity:number;unitPrice:number;subtotal:number}[]};
 type Row={channel:string;id:string;code:string;snapshot:Snapshot;contact:{name:string;phone:string;email?:string;note?:string};booking_status:string;payment_status:string;created_at:string};

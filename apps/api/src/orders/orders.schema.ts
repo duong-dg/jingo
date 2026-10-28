@@ -3,7 +3,7 @@ const quantity = z.number().int().min(0).max(50);
 export const orderInput = z.object({
   requestId: z.uuid(), accessKey: z.string().regex(/^[a-f0-9]{64}$/),
   productId: z.string().min(1).max(80), variantId: z.string().min(1).max(80), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  voucherCode:z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{2,39}$/).optional(),slotId:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(),quantities: z.object({ ADULT: quantity.optional(), CHILD: quantity.optional(), SENIOR: quantity.optional() }).strict(),
+  voucherCode:z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{2,39}$/).optional(),slotId:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(),quantities: z.object({ ADULT: quantity.optional(), CHILD: quantity.optional(), SENIOR: quantity.optional(), LOCAL_ADULT: quantity.optional(), LOCAL_CHILD: quantity.optional(), LOCAL_SENIOR: quantity.optional() }).strict(),
   expectedTotal: z.number().int().min(0).max(15_000_000_000),
   contact: z.object({ name: z.string().trim().min(2).max(100), phone: z.string().trim().regex(/^\+?[0-9 ()-]{8,25}$/).refine(value=>{const length=value.replace(/\D/g,'').length;return length>=8&&length<=15;},'Số điện thoại cần 8–15 chữ số'), email: z.email().max(200), note: z.string().trim().max(1000).default('') }).strict(),
   locale:z.enum(['vi','en']).optional(),accepted: z.literal(true)

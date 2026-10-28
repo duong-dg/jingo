@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {adminApi} from '../shared/admin-api';
 const labels={EXPIRED:'Đã hết hạn',EXPIRING:'Sắp hết hạn',EMPTY:'Hết vé',LOW:'Sắp hết vé'};
-const guests:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR:'Người cao tuổi'};
+const guests:Record<string,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương'};
 type Alerts={today:string;threshold:number;days:number;counts:Record<keyof typeof labels,number>;lotTotal:number;lots:{id:string;alert:keyof typeof labels;unlimited:boolean;remaining:number|null;valid_to:string;customer_type:string;data:{productName:string;variantName:string;supplierName:string}}[];pending:{total:number;page:number;pageSize:number;data:{id:string;code:string;productName:string;variantName:string;date:string;paymentStatus:string;missingQuantity:number;missing:{customerType:string;quantity:number}[]}[]}};
 export function SupplyAlerts({revision}:{revision:number}){
  const[threshold,setThreshold]=useState(5),[days,setDays]=useState(7),[applied,setApplied]=useState({threshold:5,days:7,page:1}),[data,setData]=useState<Alerts|null>(null),[busy,setBusy]=useState(true),[error,setError]=useState(''),[reload,setReload]=useState(0);const seq=useRef(0);

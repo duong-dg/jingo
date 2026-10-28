@@ -6,10 +6,10 @@ import {imageRef} from '../content/content.schema';
 
 const date = z.string().refine((value) => { try { validateDate(value); return true; } catch { return false; } }, 'Ngày không hợp lệ');
 const money = z.number().int().min(0).max(100_000_000);
-const prices = z.object({ ADULT: money.optional(), CHILD: money.optional(), SENIOR: money.optional() }).strict();
+const prices = z.object({ ADULT: money.optional(), CHILD: money.optional(), SENIOR: money.optional(), LOCAL_ADULT: money.optional(), LOCAL_CHILD: money.optional(), LOCAL_SENIOR: money.optional() }).strict();
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/);
 const text = z.string().trim().max(10000);
-const rule = z.object({ id, productId: id, variantId: id, customerType: z.enum(['ADULT', 'CHILD', 'SENIOR']), startDate: date, endDate: date,
+const rule = z.object({ id, productId: id, variantId: id, customerType: z.enum(['ADULT', 'CHILD', 'SENIOR', 'LOCAL_ADULT', 'LOCAL_CHILD', 'LOCAL_SENIOR']), startDate: date, endDate: date,
   weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(), priority: z.number().int().min(0).max(10000), amount: money }).strict();
 const closure = z.object({ productId: id, variantId: id.optional(), startDate: date, endDate: date, reason: text.max(200).optional() }).strict();
 export const productSchema = z.object({
@@ -18,10 +18,10 @@ export const productSchema = z.object({
   cover:imageRef.nullable().default(null),gallery:z.array(imageRef).max(20).default([]),detailHtml:z.string().max(200000).default(''),
   status: z.enum(['DRAFT', 'PUBLISHED']), demo: z.boolean().default(false), version: z.number().int().min(0),
   variants: z.array(z.object({ id, name: text.min(1).max(100), prices,timeSlots:z.array(slotSchema).max(30).default([]),
-    conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional() }).strict().optional()
+    conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional(), LOCAL_ADULT: text.max(300).optional(), LOCAL_CHILD: text.max(300).optional(), LOCAL_SENIOR: text.max(300).optional() }).strict().optional()
   }).strict()).min(1).max(30),
   rules: z.array(rule).max(1000).default([]), closures: z.array(closure).max(500).default([]),
-  english: z.object({ name: text.max(200), description: text, seoTitle: text.max(200), seoDescription: text.max(500), destination:text.max(150).default(''),detailHtml:z.string().max(200000).default(''),variants:z.array(z.object({id,name:text.max(100),conditions:z.object({ADULT:text.max(300).optional(),CHILD:text.max(300).optional(),SENIOR:text.max(300).optional()}).strict().optional()}).strict()).max(30).default([]),...translationState }).strict().optional(),
+  english: z.object({ name: text.max(200), description: text, seoTitle: text.max(200), seoDescription: text.max(500), destination:text.max(150).default(''),detailHtml:z.string().max(200000).default(''),variants:z.array(z.object({id,name:text.max(100),conditions:z.object({ADULT:text.max(300).optional(),CHILD:text.max(300).optional(),SENIOR:text.max(300).optional(), LOCAL_ADULT: text.max(300).optional(), LOCAL_CHILD: text.max(300).optional(), LOCAL_SENIOR: text.max(300).optional()}).strict().optional()}).strict()).max(30).default([]),...translationState }).strict().optional(),
   seoTitle: text.max(200).default(''), seoDescription: text.max(500).default('')
 }).strict().superRefine((product, ctx) => {
   const fail = (message: string) => ctx.addIssue({ code: 'custom', message });

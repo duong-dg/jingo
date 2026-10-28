@@ -3,7 +3,7 @@ import {z} from 'zod';
 export const translationState={status:z.enum(['DRAFT','PUBLISHED','NEEDS_REVIEW']).default('DRAFT'),sourceHash:z.string().regex(/^[a-f0-9]{64}$/).optional()};
 export type TranslationKind='PRODUCT'|'POST'|'TYPE';
 export function translationSource(kind:TranslationKind,item:any){
-  if(kind==='PRODUCT')return{name:item.name,destination:item.destination,description:item.description,detailHtml:item.detailHtml||'',seoTitle:item.seoTitle||'',seoDescription:item.seoDescription||'',variants:item.variants.map((v:any)=>({id:v.id,name:v.name,conditions:Object.fromEntries(['ADULT','CHILD','SENIOR'].filter(g=>v.prices[g]!==undefined).map(g=>[g,v.conditions?.[g]||'']))}))};
+  if(kind==='PRODUCT')return{name:item.name,destination:item.destination,description:item.description,detailHtml:item.detailHtml||'',seoTitle:item.seoTitle||'',seoDescription:item.seoDescription||'',variants:item.variants.map((v:any)=>({id:v.id,name:v.name,conditions:Object.fromEntries(['ADULT', 'CHILD', 'SENIOR', 'LOCAL_ADULT', 'LOCAL_CHILD', 'LOCAL_SENIOR'].filter(g=>v.prices[g]!==undefined).map(g=>[g,v.conditions?.[g]||'']))}))};
   if(kind==='POST')return{title:item.title,excerpt:item.excerpt,contentHtml:item.contentHtml,category:item.category,seoTitle:item.seoTitle||'',seoDescription:item.seoDescription||''};
   return{name:item.name,description:item.description||''};
 }

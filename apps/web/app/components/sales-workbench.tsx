@@ -9,7 +9,7 @@ import { SalesCheckout } from './sales-checkout';
 import { salesQuote, useSalesBasket } from './sales-basket';
 import type { InventoryAvailability } from '../../lib/inventory';
 import './sales-workbench.css';
-const labels: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi' }, money = (n: number) => n.toLocaleString('vi-VN') + ' ₫';
+const labels: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương' }, money = (n: number) => n.toLocaleString('vi-VN') + ' ₫';
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 function Stepper({ label, quantity, disabled = false, addDisabled = false, change }: { label: string; quantity: number; disabled?: boolean; addDisabled?: boolean; change: (n: number) => void }) {
   return <div className="sales-stepper"><button type="button" aria-label={'Giảm ' + label} disabled={disabled || !quantity} onClick={() => change(quantity - 1)}>−</button><input aria-label={'Số ' + label} type="number" inputMode="numeric" min={0} max={50} value={quantity} disabled={disabled} onChange={e => change(Math.min(50, Math.max(0, Math.trunc(Number(e.target.value) || 0))))}/><button type="button" aria-label={'Tăng ' + label} disabled={disabled || addDisabled || quantity >= 50} onClick={() => change(quantity + 1)}>+</button></div>;

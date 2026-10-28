@@ -22,7 +22,7 @@ type Quote = {discount?:{code:string;amount:number;subtotal:number};inventory?:I
     }[];
     demo: boolean;
 };
-const labels: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi' };
+const labels: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương' };
 const money = (value: number) => value.toLocaleString('vi-VN') + 'đ';
 function keys() { const bytes = crypto.getRandomValues(new Uint8Array(32)); return { requestId: crypto.randomUUID(), accessKey: Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('') }; }
 export function Checkout({ selection }: {

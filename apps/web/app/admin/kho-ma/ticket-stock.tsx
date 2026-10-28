@@ -7,7 +7,7 @@ type Lot = { id: string; customer_type: string; enabled: boolean; archived: bool
 type Row = { id: string; code: string; status: string; version: number; reason: string; order_id: string | null; order_code: string | null };
 type Result = { data: Row[]; total: number; page: number; pageSize: number; counts: Record<string, number> };
 const statuses: Record<string, string> = { AVAILABLE: 'Sẵn để giao', BLOCKED: 'Đang khóa', ISSUED: 'Đã giao' };
-const guests: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi' };
+const guests: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương' };
 export function TicketStock() {
   const [lots, setLots] = useState<Lot[]>([]), [lotId, setLotId] = useState(''), [status, setStatus] = useState(''), [page, setPage] = useState(1), [result, setResult] = useState<Result | null>(null), [text, setText] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [reload, setReload] = useState(0), [editing, setEditing] = useState<Row | null>(null), [reason, setReason] = useState(''), [manageError, setManageError] = useState(''), [manageNotice, setManageNotice] = useState('');
   const pending = useRef<{ fingerprint: string; requestId: string } | null>(null); useUnsavedChanges(!!text.trim());

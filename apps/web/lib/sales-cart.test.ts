@@ -24,3 +24,11 @@ test('staff quantity edits enforce per-group and whole-cart limits before persis
   const many = Array.from({ length: 20 }, (_, n) => ({ ...eco, id: String(n), productId: String(n), quantities: { ADULT: 1 } }));
   assert.throws(() => setSaleQuantity(many, eco, 'ADULT', 1), /20/);
 });
+
+test('visitor and local groups coexist in one package and remain independent when editing either panel',()=>{
+ let lines=setSaleQuantity([],eco,'ADULT',1,{ADULT:600000});
+ lines=setSaleQuantity(lines,eco,'LOCAL_ADULT',2,{ADULT:600000,LOCAL_ADULT:350000});
+ lines=setSaleQuantity(lines,eco,'LOCAL_CHILD',1,{ADULT:600000,LOCAL_ADULT:350000,LOCAL_CHILD:0});
+ assert.equal(lines.length,1);assert.equal(lines[0].expectedTotal,1300000);assert.equal(lines[0].quantities.ADULT,1);assert.equal(lines[0].quantities.LOCAL_ADULT,2);
+ lines=setSaleQuantity(lines,eco,'LOCAL_ADULT',1,{ADULT:600000,LOCAL_ADULT:350000,LOCAL_CHILD:0});assert.equal(lines[0].quantities.ADULT,1);assert.equal(lines[0].expectedTotal,950000);
+});

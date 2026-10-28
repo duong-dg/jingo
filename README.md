@@ -1,5 +1,13 @@
 # JinGo
 
+## Gói vé sổ xuống, thanh tiền mobile và giá địa phương (0.40)
+
+- Website: các gói dạng sổ xuống, mặc định mở gói có tên ECO (hoặc gói đầu nếu không có ECO), có thể mở/chọn nhiều gói. Nút −/+ cập nhật trực tiếp giỏ chung; không thêm lại số đã chọn khi bấm thanh toán. Điện thoại hiện thanh Tổng cộng/Đặt ngay khi phần chọn vé vào màn hình và ẩn khi cuộn ra khỏi phần này; tiền tạm tính cập nhật ngay, kiểm giá lại trước khi cho thanh toán.
+- Admin → Sản phẩm → Hạng/gói & giá: mỗi gói bật riêng Người lớn/Trẻ em/Người cao tuổi và Người lớn/Trẻ em/Người cao tuổi · Địa phương; nhập giá và điều kiện cư trú/giấy tờ áp dụng ở từng dòng. Bỏ chọn nếu không áp dụng; 0đ vẫn là miễn phí. Có thể chỉ bật vài nhóm theo từng nơi.
+- Giá địa phương dùng các mã `LOCAL_ADULT`, `LOCAL_CHILD`, `LOCAL_SENIOR` độc lập với giá du khách, vẫn thuộc cùng gói. Có lịch theo ngày/mùa/thứ riêng, giá CTV riêng, nguồn và giá vốn riêng. Không có giá địa phương thì từ chối mua loại đó, không tự lấy giá người lớn thường thay thế. Không tự xác minh cư trú hay thu giấy tờ qua website.
+- Web, giỏ, thanh toán, POS, CTV, đơn hàng, bản in và phần dịch hiển thị đúng nhãn địa phương. Tồn chung theo gói/ngày/suất tính cả du khách và địa phương. CSV đơn giữ cấu trúc cũ, các cột tuổi cộng cả hai nhóm; chi tiết đơn vẫn tách từng loại và tiền. Đơn/giá cũ giữ nguyên, không cần chuyển dữ liệu hay sửa số tiền đã đặt.
+- 58 kiểm thử qua, gồm lịch giá địa phương độc lập, giá miễn phí, giới hạn 150 khách, CTV trực tiếp/công nợ, POS, tồn chung, nguồn/giá vốn đúng nhóm và thanh toán giỏ nhiều gói. Kiểm tra thực tế giao diện điện thoại bằng dữ liệu nội bộ; không giao dịch merchant hay gửi email thật.
+
 ## Quầy 3 cột và CTV bán nhanh trên điện thoại (0.39)
 
 - Quầy: cột trái chọn quầy ở trên, tìm và chọn vé/tour; cột giữa mặc định ngày hiện tại tại Việt Nam, ô Eco/High/VIP/combo, suất giờ nếu có, điều kiện nhóm khách và nút −/+; cột phải vé đã chọn, số khách, tiền từng gói, tổng và thanh toán.

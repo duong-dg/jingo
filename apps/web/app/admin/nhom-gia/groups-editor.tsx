@@ -3,12 +3,12 @@ import {useEffect,useState} from 'react';
 import {adminApi} from '../shared/admin-api';
 import {useUnsavedChanges} from '../shared/admin-frame';
 import {DatePicker} from '../../components/date-picker';
-type Customer='ADULT'|'CHILD'|'SENIOR';
+type Customer='ADULT' | 'CHILD' | 'SENIOR' | 'LOCAL_ADULT' | 'LOCAL_CHILD' | 'LOCAL_SENIOR';
 type Rule={id:string;productId:string;variantId:string;customerType:Customer;startDate:string;endDate:string;priority:number;amount:number;slotId?:string};
 type Group={id:string;name:string;status:'ACTIVE'|'ARCHIVED';pricingMode?:'DIRECT'|'DISCOUNT';discountType:'AMOUNT'|'PERCENT';discountValue:number;version:number;rules:Rule[]};
 type Product={id:string;name:string;variants:{id:string;name:string;prices:Partial<Record<Customer,number>>}[]};
 type Card={id:string;productId:string;variantId:string;startDate:string;endDate:string;priority:number;dated:boolean;amounts:Partial<Record<Customer,string>>;ruleIds:Partial<Record<Customer,string>>;slotId?:string};
-const labels:Record<Customer,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR:'Người cao tuổi'},start='2000-01-01',end='2099-12-31';
+const labels:Record<Customer,string>={ADULT:'Người lớn',CHILD:'Trẻ em',SENIOR: 'Người cao tuổi', LOCAL_ADULT: 'Người lớn · Địa phương', LOCAL_CHILD: 'Trẻ em · Địa phương', LOCAL_SENIOR: 'Người cao tuổi · Địa phương'},start='2000-01-01',end='2099-12-31';
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function cardsFrom(rules:Rule[]){const cards=new Map<string,Card>();for(const rule of rules){const key=[rule.productId,rule.variantId,rule.startDate,rule.endDate,rule.priority,rule.slotId||''].join(':');let card=cards.get(key);if(!card){card={id:crypto.randomUUID(),productId:rule.productId,variantId:rule.variantId,startDate:rule.startDate,endDate:rule.endDate,priority:rule.priority,dated:rule.startDate!==start||rule.endDate!==end||rule.priority!==0,amounts:{},ruleIds:{},...(rule.slotId?{slotId:rule.slotId}:{})};cards.set(key,card);}card.amounts[rule.customerType]=String(rule.amount);card.ruleIds[rule.customerType]=rule.id;}return [...cards.values()];}
 export function GroupsEditor(){

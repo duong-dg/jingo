@@ -12,6 +12,9 @@ class QuantitiesDto {
   @IsOptional() @IsInt() @Min(0) @Max(50) ADULT?: number;
   @IsOptional() @IsInt() @Min(0) @Max(50) CHILD?: number;
   @IsOptional() @IsInt() @Min(0) @Max(50) SENIOR?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(50) LOCAL_ADULT?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(50) LOCAL_CHILD?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(50) LOCAL_SENIOR?: number;
 }
 class QuoteDto {@IsOptional() @IsString() @MaxLength(40) voucherCode?:string;@IsOptional() @IsString() slotId?:string;
   @IsString() productId!: string;

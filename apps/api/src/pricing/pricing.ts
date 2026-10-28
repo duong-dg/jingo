@@ -38,7 +38,7 @@ export function calculateQuote(
   const entries = Object.entries(quantities).filter(([, quantity]) => quantity !== undefined) as [CustomerType, number][];
   if (!entries.length || entries.every(([, quantity]) => quantity === 0)) throw new Error('Chọn ít nhất một khách.');
   const lines = entries.map(([customerType, quantity]) => {
-    if (!['ADULT', 'CHILD', 'SENIOR'].includes(customerType)) throw new Error('Nhóm khách không hợp lệ.');
+    if (!['ADULT', 'CHILD', 'SENIOR', 'LOCAL_ADULT', 'LOCAL_CHILD', 'LOCAL_SENIOR'].includes(customerType)) throw new Error('Nhóm khách không hợp lệ.');
     if (!Number.isInteger(quantity) || quantity < 0 || quantity > 50) throw new Error('Số khách phải từ 0 đến 50.');
     if (quantity === 0) return null;
     if (variant.prices[customerType] === undefined) throw new Error('Gói không áp dụng cho nhóm khách này.');
@@ -51,6 +51,7 @@ export function calculateQuote(
     if (!Number.isSafeInteger(unitPrice) || unitPrice < 0) throw new Error('Giá không hợp lệ.');
     return { customerType, quantity, unitPrice, subtotal: quantity * unitPrice, ruleId: candidates[0]?.id ?? 'base' };
   }).filter((line) => line !== null);
+  if (lines.reduce((sum,line)=>sum+line.quantity,0)>150) throw new Error('Mỗi đơn tối đa 150 khách.');
   const total = lines.reduce((sum, line) => sum + line.subtotal, 0);
   if (!Number.isSafeInteger(total)) throw new Error('Tổng tiền vượt giới hạn.');
   return { productId: product.id, productName:product.name, variantId, variantName:variant.name, date,...(timeSlot?{timeSlot}:{}), currency: 'VND', lines, total, demo: product.demo ?? true };

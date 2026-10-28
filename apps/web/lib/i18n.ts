@@ -2,6 +2,9 @@ export type Locale='vi'|'en';
 export const localizedPath=(path:string,locale:Locale)=>locale==='en'?`/en${path==='/'?'':path}`:path;
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
+ 'Người lớn · Địa phương':'Local adult',
+ 'Trẻ em · Địa phương':'Local child',
+ 'Người cao tuổi · Địa phương':'Local senior',
  'Không tạo được thanh toán.':'Unable to create a payment request.',
  'Chỉ thanh toán đơn web bán lẻ đã xác nhận, chưa thu tiền và còn hiệu lực.':'Only active, confirmed and unpaid online retail bookings can be paid here.',
  'Nhập khóa hoặc email tra cứu.':'Enter your booking access key or email.',
