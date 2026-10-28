@@ -72,6 +72,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), code text NOT NULL, code_hash text NOT NULL UNIQUE,
         kind text NOT NULL, covers integer NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_ticket_files(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),ticket_id text NOT NULL REFERENCES jingo_order_tickets(id),name text NOT NULL,mime text NOT NULL,bytes integer NOT NULL,hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,revoke_reason text NOT NULL DEFAULT '');
+      CREATE INDEX IF NOT EXISTS jingo_ticket_files_order ON jingo_ticket_files(order_id);
       CREATE TABLE IF NOT EXISTS jingo_order_actions (
         id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), request_hash text NOT NULL,
         admin_id text NOT NULL, action text NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()

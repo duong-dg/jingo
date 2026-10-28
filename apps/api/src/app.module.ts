@@ -1,3 +1,4 @@
+import{TicketFilesModule}from'./orders/ticket-files.module';
 import{PaymentsModule}from'./payments/payments.module';
 import{VouchersModule}from'./vouchers/vouchers.module';
 import{SuppliersModule}from'./suppliers/suppliers.module';
@@ -15,8 +16,8 @@ import{PartnersModule}from'./partners/partners.module';
 
 @Controller('health')
 class HealthController {
-  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.33.0' }; }
+  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.34.0' }; }
 }
 
-@Module({ imports: [PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })
+@Module({ imports: [TicketFilesModule,PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })
 export class AppModule {}

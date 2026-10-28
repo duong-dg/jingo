@@ -415,3 +415,13 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 ### 0.33 — tra cứu đối soát thanh toán
 
 Trong Cài đặt → Thanh toán VNPay & SePay → Đối soát thanh toán, lọc kết quả/cổng/môi trường, tìm chính xác mã đơn JG hoặc mã nhật ký đầy đủ (ví dụ SEPAY:LIVE:123). Mỗi trang 25 thông báo; tra cứu cả lịch sử thay vì chỉ 100 thông báo mới nhất. Kết quả hiển thị tên tiếng Việt, số tiền thông báo và lý do cần đối soát; số tiền TEST/REVIEW/FAILED không được cộng thành doanh thu. Mở đơn để xử lý theo sổ thu thủ công sau khi đối chiếu ngân hàng. Chưa có hoàn tiền tự động hoặc tự chuyển REVIEW thành PAID.
+
+### 0.34 — file vé riêng tư cho đơn web / tại quầy
+
+Admin → Đơn hàng → mở đơn đã thanh toán → giao mã vé → File vé riêng tư. Chọn mã vé rồi gắn PDF/JPG/PNG/WebP tối đa 10 MB. Mỗi đơn tối đa 50 file tính cả file đã thu hồi. Gắn file không tăng số khách đã giao. Nếu SMTP đang bật, hệ thống xếp hàng email giao vé mới dẫn về trang tra cứu; file không được đính trực tiếp vào email.
+
+Khách web tải bằng mã đơn + email/khóa tra cứu; đơn quầy cần khóa trong link email. File không có URL công khai: các yêu cầu tải gửi thông tin xác thực qua POST và phản hồi attachment/private/no-store/nosniff. Đơn hủy/lưu trữ, sai khóa/đơn hoặc file đã thu hồi không tải được. Admin giữ quyền tải bản lịch sử. Thu hồi chỉ chặn lượt tải mới, không vô hiệu vé bên NCC hoặc xóa bản khách đã lưu. File cho CTV chưa hỗ trợ trong giai đoạn này.
+
+Lưu trữ dưới `MEDIA_DIR/.tickets/`, nằm trong volume `media_data` hiện có. Sao lưu và khôi phục cả PostgreSQL + toàn bộ volume media, bao gồm thư mục ẩn và khóa mã hóa; bảo vệ backup như dữ liệu khách hàng. Không cấu hình webserver phục vụ trực tiếp thư mục media. Nếu Nginx đứng trước ứng dụng, cho phép request body ít nhất 12 MB để tải lên file 10 MB kèm multipart.
+
+Ảnh được giải mã/kiểm pixel và mã hóa lại WebP lossless, không resize để giữ QR/barcode. PDF chỉ kiểm chữ ký đầu file, luôn tải attachment; chưa có quét virus/CDR hoặc xác minh mã vé với nhà cung cấp. Admin chỉ nhập file từ nguồn tin cậy. Không có kết nối API NCC hoặc tự phát vé.
