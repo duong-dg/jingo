@@ -1,3 +1,4 @@
+import{ShiftsModule}from'../shifts/shifts.module';import{PartnersModule}from'../partners/partners.module';import{PartnerAuthService}from'../partners/partner-auth.service';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import{permissions}from'../pos/pos.schema';
 import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Module,Post,Query,Req,Res,UseGuards}from'@nestjs/common';import type{Request,Response}from'express';import{AuthModule,AdminGuard}from'../admin/auth.module';import{MailModule}from'../mail/mail.module';import{PaymentSettings}from'./settings';import{PaymentsService}from'./payments.service';
 @Controller('payments')class PublicPaymentsController{
  private requests=new Map<string,{count:number;until:number}>();constructor(private readonly service:PaymentsService){}
@@ -13,6 +14,15 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Module,Post
  @Get()view(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.settings.view();}
  @Post()save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return this.settings.save(body,req.admin.id);}
  @Get('events')events(@Query()query:Record<string,unknown>,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.events(query);}
+ @Post('checkout')checkout(@Body()body:unknown,@Req()req:Request&{admin:{id:string;email:string}},@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'ADMIN',actor:{...req.admin,name:req.admin.email,role:'ADMIN',counterIds:[],permissions:[...permissions]}});}
  @Post('test-checkout')test(@Body()body:unknown){return this.service.checkout(body,'127.0.0.1',true);}
 }
-@Module({imports:[AuthModule,MailModule],controllers:[PublicPaymentsController,AdminPaymentsController],providers:[PaymentSettings,PaymentsService]})export class PaymentsModule{}
+@Controller('partner/payments')class PartnerPaymentsController{
+ constructor(private readonly service:PaymentsService,private readonly auth:PartnerAuthService){}
+ @Post('checkout')async checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.auth.checkMutation(req);res.setHeader('Cache-Control','private, no-store');const account=await this.auth.requirePartner(req);return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'CTV',partnerId:account.id});}
+}
+@Controller('pos/payments')class PosPaymentsController{
+ constructor(private readonly service:PaymentsService,private readonly auth:PosAuthService){}
+ @Post('checkout')async checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.auth.checkMutation(req);res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'POS',actor:await this.auth.require(req)});}
+}
+@Module({imports:[AuthModule,MailModule,ShiftsModule,PartnersModule,PosModule],controllers:[PublicPaymentsController,AdminPaymentsController,PartnerPaymentsController,PosPaymentsController],providers:[PaymentSettings,PaymentsService]})export class PaymentsModule{}

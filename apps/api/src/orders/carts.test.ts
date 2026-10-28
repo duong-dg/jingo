@@ -124,5 +124,32 @@ test('multi-package basket across web, POS and CTV: one checkout, atomic validat
     for(const child of localView.items)assert.equal((await call('/admin/supply/orders/'+child.id+'/allocate',{requestId:randomUUID(),version:1,mode:'AUTO',picks:[]},admin)).status,201);
     const localCosts=await Promise.all(localView.items.map(async(i:any)=>(await (await call('/admin/supply/orders/'+i.id,undefined,admin)).json()).cost));assert.equal(localCosts.reduce((n:number,c:number)=>n+c,0),1630000);
     assert.equal((await call('/admin/carts/'+localCart.code+'/actions',{requestId:randomUUID(),action:'PAY',expectedTotal:2150000,method:'BANK',reference:'LOCAL-COMBINED'},admin)).status,201);
+    // Authenticated online payments use each channel's own scope and settle once, without creating credit.
+    const onlinePosInput={...make(['eco','high']),counterId:'main'},onlinePos=(await (await call('/pos/carts',onlinePosInput,posAdmin)).json()).code;
+    const request={code:onlinePos,provider:'SEPAY'};
+    assert.equal((await call('/pos/payments/checkout',request)).status,401);
+    assert.equal((await call('/pos/payments/checkout',request,seller)).status,403,'SELL alone cannot initiate collection');
+    assert.equal((await call('/pos/payments/checkout',request,posAdmin,{'X-Jingo-POS':'0'})).status,403);
+    assert.equal((await call('/pos/payments/checkout',request,posAdmin,{Origin:'https://evil.example'})).status,403);
+    assert.equal((await call('/payments/checkout',{...request,email:onlinePosInput.contact.email})).status,404,'public email cannot initiate a POS payment');
+    assert.equal((await call('/partner/payments/checkout',request,partner)).status,404,'CTV cannot pay another channel cart');
+    const onlineShift=randomUUID();assert.equal((await call('/admin/shifts',{requestId:onlineShift,counterId:'main',openingCash:0,note:'Gateway shift'},admin)).status,201);
+    r=await call('/pos/payments/checkout',request,posAdmin);assert.equal(r.status,201);const posIntent=await r.json();assert.equal(posIntent.amount,700000);assert.ok(posIntent.qrUrl);assert.equal((await (await call('/pos/payments/checkout',request,posAdmin)).json()).id,posIntent.id);
+    const posHook={id:800001,gateway:'MBBank',accountNumber:'0123456789',content:posIntent.id,transferType:'in',transferAmount:700000};
+    assert.equal((await call('/payments/sepay/webhook',{...posHook,id:800000,transferAmount:1},'',{Authorization:'Apikey '+config.sepayKey})).status,200);
+    assert.equal((await (await call('/pos/carts/'+onlinePos,undefined,posAdmin)).json()).payable,700000,'wrong amount does not mark POS paid');
+    for(let i=0;i<2;i++)assert.equal((await call('/payments/sepay/webhook',posHook,'',{Authorization:'Apikey '+config.sepayKey})).status,200);
+    const paidPos=await (await call('/pos/carts/'+onlinePos,undefined,posAdmin)).json();assert.equal(paidPos.settled,true);assert.equal(paidPos.payable,0);
+    assert.equal((await pool.query('SELECT payment_id FROM jingo_pos_shift_receipts WHERE shift_id=$1',[onlineShift])).rowCount,2,'automatic POS payment attaches each child to the receiving shift once');
+    assert.equal((await call('/pos/payments/checkout',request,posAdmin)).status,409);
+    const onlinePartnerInput=make(['eco','high']);for(const item of onlinePartnerInput.items)item.expectedTotal=Math.floor(item.expectedTotal*.9);
+    const onlineCtv=(await (await call('/partner/carts',onlinePartnerInput,partner)).json()).code;
+    assert.equal((await call('/partner/payments/checkout',{code:onlineCtv,provider:'VNPAY'},localPartner)).status,404,'other partner cannot pay or inspect this cart');
+    assert.equal((await call('/payments/checkout',{code:onlineCtv,provider:'VNPAY',accessKey:onlinePartnerInput.accessKey})).status,404,'CTV key never opens public gateway');
+    const ledgerBefore=(await pool.query('SELECT id FROM jingo_partner_ledger')).rowCount;
+    r=await call('/partner/payments/checkout',{code:onlineCtv,provider:'VNPAY'},partner);assert.equal(r.status,201);const partnerIntent=await r.json();assert.equal(partnerIntent.amount,630000);
+    const partnerFields={vnp_TxnRef:partnerIntent.id,vnp_TmnCode:'CARTSITE',vnp_Amount:'63000000',vnp_ResponseCode:'00',vnp_TransactionStatus:'00',vnp_TransactionNo:'800002'};
+    const partnerQuery=new URLSearchParams({...partnerFields,vnp_SecureHash:vnpSign(partnerFields,config.vnpaySecret)});assert.equal((await (await call('/payments/vnpay/ipn?'+partnerQuery)).json()).RspCode,'00');assert.equal((await (await call('/payments/vnpay/ipn?'+partnerQuery)).json()).RspCode,'02');
+    assert.equal((await (await call('/partner/carts/'+onlineCtv,undefined,partner)).json()).settled,true);assert.equal((await pool.query('SELECT id FROM jingo_partner_ledger')).rowCount,ledgerBefore,'pay online charges no partner credit or wallet');
   } finally { await app.close(); await rm(media, { recursive: true, force: true }); }
 });
