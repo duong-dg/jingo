@@ -12,7 +12,7 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Module,Post
  constructor(private readonly settings:PaymentSettings,private readonly service:PaymentsService){}
  @Get()view(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.settings.view();}
  @Post()save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return this.settings.save(body,req.admin.id);}
- @Get('events')events(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.events();}
+ @Get('events')events(@Query()query:Record<string,unknown>,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.events(query);}
  @Post('test-checkout')test(@Body()body:unknown){return this.service.checkout(body,'127.0.0.1',true);}
 }
 @Module({imports:[AuthModule,MailModule],controllers:[PublicPaymentsController,AdminPaymentsController],providers:[PaymentSettings,PaymentsService]})export class PaymentsModule{}
