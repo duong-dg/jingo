@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-export type CartLine = { id: string; productId: string; variantId: string; productName: string; variantName: string; date: string; slotId?: string; quantities: Record<string, number>; expectedTotal: number; voucherCode?: string };
+export type CartLine = { id: string; productId: string; variantId: string; productName: string; variantName: string; date: string; slotId?: string; quantities: Record<string, number>; expectedTotal: number; voucherCode?: string; coverId?: string; slotLabel?: string };
 const memory = new Map<string, CartLine[]>();
 function storage(scope: string) { return scope === 'WEB' ? localStorage : sessionStorage; }
 export function readCart(scope: string): CartLine[] {
@@ -19,3 +19,5 @@ export function addTicket(scope: string, line: Omit<CartLine, 'id'>) {
 export function useTicketCart(scope: string) { const [items, setItems] = useState<CartLine[]>([]); useEffect(() => { const load = () => setItems(readCart(scope)); load(); window.addEventListener('jingo-basket', load); window.addEventListener('storage', load); return () => { window.removeEventListener('jingo-basket', load); window.removeEventListener('storage', load); }; }, [scope]); return items; }
 export function rememberCart(scope: string, code: string) { try { sessionStorage.setItem('jingo-basket-result:' + scope, code); } catch {} }
 export function cartKeys() { return { requestId: crypto.randomUUID(), accessKey: Array.from(crypto.getRandomValues(new Uint8Array(32)), n => n.toString(16).padStart(2, '0')).join('') }; }
+
+export function openTicketCart() { window.dispatchEvent(new Event("jingo-open-cart")); }

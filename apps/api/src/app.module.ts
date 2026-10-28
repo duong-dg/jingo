@@ -17,7 +17,7 @@ import{PartnersModule}from'./partners/partners.module';
 
 @Controller('health')
 class HealthController {
-  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.37.0' }; }
+  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.38.0' }; }
 }
 
 @Module({ imports: [CartsModule,TicketFilesModule,PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })

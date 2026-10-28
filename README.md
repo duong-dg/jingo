@@ -1,5 +1,12 @@
 # JinGo
 
+## Giỏ trượt và thanh toán trên web (0.38)
+
+- Hai nút Thêm vào giỏ / Thanh toán cùng hàng ở trang vé. Thêm vé hoặc bấm giỏ trên menu mở bảng trượt bên phải; điện thoại mở toàn màn hình. Có sửa số người, đổi ngày, mã giảm giá từng gói, xóa gói và tổng tự cập nhật. Giá được lấy lại sau khi sửa; lỗi giá/lịch/voucher chặn tiếp tục để người mua sửa.
+- `/gio-hang` là trang thanh toán: tiến trình đặt vé, thẻ trải nghiệm, thông tin khách hàng bên trái và chi tiết đơn/tổng/nút tiếp tục bên phải; điện thoại xếp một cột. Bỏ tiêu đề Giỏ vé của bạn trên luồng web. Họ + tên ghép thành tên liên hệ của đơn, email bắt buộc; vẫn xác nhận đặt đơn trước rồi chọn cổng thanh toán ở bước tiếp theo.
+- Đồng hồ 30 phút là thời gian hoàn tất thông tin, lưu mốc trong phiên khi tải lại. Hết giờ giữ các gói và thông tin đang điền, yêu cầu cập nhật giá để tiếp tục; không giữ chỗ/giá 30 phút, không tự hủy đơn đã tạo. Tồn và giá cuối cùng vẫn kiểm ở API trong transaction.
+- Kiểm tra giao diện desktop/390px, giỏ nhiều hạng, sửa số lượng/tổng, đổi ngày, đóng bằng Escape và đặt giỏ thành công bằng dữ liệu nội bộ; typecheck và production build. POS/CTV giữ luồng giỏ hiện có.
+
 ## Giỏ nhiều gói vé cho web, quầy và CTV (0.37)
 
 - Khách chọn Eco, High, VIP, combo hoặc nhiều sản phẩm/ngày/suất rồi thêm vào giỏ; sửa số khách, bỏ gói và kiểm tra lại giá trước khi xác nhận. Web có `/gio-hang` và `/en/gio-hang`, nút giỏ trên menu; quầy có giỏ theo tài khoản/quầy, CTV có tab Giỏ vé theo tài khoản. Thêm vé chưa giữ tồn.

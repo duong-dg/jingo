@@ -255,3 +255,10 @@ jingo_partner_shares gains revoked_at. OrdersService creates/revokes shares with
 Group collection locks parent then sorted children, validates aggregate amount and partner credit, then reuses transactional order actions. A root bank reference guards replay; only child payment rows enter receipts/revenue/shift totals. Gateway attempts snapshot the exact target children and amounts, and callbacks settle all targets atomically or REVIEW the entire transfer. Cart membership prevents child online checkout. Public cart lookup checks private key/email; POS email-only lookup omits ticket codes and private keys. SMTP uses an encrypted parent key and one group confirmation/payment job. Existing child delivery emails link to the basket. CTV baskets cannot be publicly looked up.
 
 Tests cover multiple products/packages, aggregate day/slot limits, stale prices, retries, channel isolation, POS permissions, credit totals/limits, group bank/cash receipts and VNPay/SePay exact settlement and changed-child review. PostgreSQL concurrency and real merchant sandbox acceptance remain deployment checks.
+
+
+## Public cart drawer and checkout (0.38)
+
+The public basket remains a browser draft until confirmed. A native modal dialog provides focus trapping, Escape/backdrop close and focus restoration; its scroll body is independent of the fixed total/footer. WEB quotes refresh after debounced selection changes with abort/stale-response guards, and the same editor is used by the drawer and checkout. Checkout posts an explicit selection/contact payload so display-only cover/time labels never enter the strict cart API. Pending request keys survive network retries. Successful checkout removes submitted unchanged lines only, preserving concurrent edits/additions in other tabs.
+
+The 30-minute clock is a client information-entry window persisted in session storage. Expiry blocks submission until refresh and keeps the draft/contact fields. It neither reserves inventory nor expires confirmed orders or gateway attempts; server pricing, inventory and payment rules remain authoritative. POS/CTV retain their existing basket component.
