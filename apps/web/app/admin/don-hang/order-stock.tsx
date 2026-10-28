@@ -1,0 +1,19 @@
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { adminApi } from '../shared/admin-api';
+type Group = { lotId: string; supplierName: string; customerType: string; capacity: number; codes: { id: string; code: string }[] };
+export function OrderStock({ orderId, version, remaining, disabled, onChanged }: { orderId: string; version: number; remaining: number; disabled: boolean; onChanged: () => Promise<void> }) {
+  const [groups, setGroups] = useState<Group[]>([]), [selected, setSelected] = useState<string[]>([]), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState('');
+  const pending = useRef<{ fingerprint: string; requestId: string } | null>(null);
+  useEffect(() => { let active = true; setSelected([]); setLoading(true); adminApi('ticket-stock/orders/' + orderId).then(r => { if (active) setGroups(r.data); }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [orderId, version]);
+  const labels: Record<string, string> = { ADULT: 'Người lớn', CHILD: 'Trẻ em', SENIOR: 'Người cao tuổi' };
+  return <section className="order-stock-panel"><h3>Giao mã từ kho</h3><p className="admin-hint">Mỗi mã trong kho áp dụng cho một khách. Phân bổ nguồn vé ở phần giá vốn trước; tại đây chỉ hiện mã của nguồn đã phân bổ đúng gói/ngày. <Link href="/admin/kho-ma">Mở kho mã ↗</Link></p>{loading ? <p>Đang kiểm tra kho…</p> : remaining <= 0 ? <p>Đơn đã giao đủ mã vé.</p> : <form onSubmit={async e => { e.preventDefault(); setBusy(true); setError(''); setNotice(''); try {
+    const tickets = groups.flatMap(g => g.codes).filter(c => selected.includes(c.id)).map(c => ({ code: c.code, kind: 'SUPPLIER_CODE', covers: 1, note: '' }));
+    if (!tickets.length || tickets.length > remaining) throw new Error('Chọn số mã phù hợp phần khách chưa giao.');
+    const body = { version, action: 'DELIVER', tickets, note: 'Giao mã vé từ kho nhà cung cấp' }, fingerprint = JSON.stringify(body);
+    if (pending.current?.fingerprint !== fingerprint) pending.current = { fingerprint, requestId: crypto.randomUUID() };
+    await adminApi('orders/' + orderId + '/actions', { ...body, requestId: pending.current.requestId }); pending.current = null;
+    await onChanged(); setSelected([]); setNotice('Đã giao mã từ kho và cập nhật lịch sử đơn.');
+  } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}><fieldset disabled={busy || disabled}><p>Còn {remaining} khách chưa giao · Đã chọn {selected.length} mã</p>{groups.map(g => <div className="order-stock-group" key={g.lotId}><strong>{g.supplierName} · {labels[g.customerType]}</strong><small>Phần nguồn còn có thể cấp: {g.capacity} mã</small>{g.codes.length ? g.codes.map(c => { const checked = selected.includes(c.id), inGroup = g.codes.filter(item => selected.includes(item.id)).length; return <label className="stock-code-choice" key={c.id}><input type="checkbox" checked={checked} disabled={!checked && (selected.length >= remaining || inGroup >= g.capacity)} onChange={() => setSelected(old => checked ? old.filter(id => id !== c.id) : [...old, c.id])}/><span>{c.code}</span></label>; }) : <p className="admin-hint">Nguồn này chưa có mã sẵn trong kho.</p>}</div>)}{!groups.length && <p className="admin-hint">Chưa có nguồn phù hợp được phân bổ. Chọn nguồn trước rồi tải lại đơn để lấy mã từ kho.</p>}<button className="button" disabled={!selected.length || selected.length > remaining || busy || disabled}>Giao {selected.length || ''} mã đã chọn</button></fieldset></form>}{error && <p className="admin-error" role="alert">{error}</p>}{notice && <p className="admin-success" role="status">{notice}</p>}</section>;
+}

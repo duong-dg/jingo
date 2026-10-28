@@ -425,3 +425,11 @@ Khách web tải bằng mã đơn + email/khóa tra cứu; đơn quầy cần kh
 Lưu trữ dưới `MEDIA_DIR/.tickets/`, nằm trong volume `media_data` hiện có. Sao lưu và khôi phục cả PostgreSQL + toàn bộ volume media, bao gồm thư mục ẩn và khóa mã hóa; bảo vệ backup như dữ liệu khách hàng. Không cấu hình webserver phục vụ trực tiếp thư mục media. Nếu Nginx đứng trước ứng dụng, cho phép request body ít nhất 12 MB để tải lên file 10 MB kèm multipart.
 
 Ảnh được giải mã/kiểm pixel và mã hóa lại WebP lossless, không resize để giữ QR/barcode. PDF chỉ kiểm chữ ký đầu file, luôn tải attachment; chưa có quét virus/CDR hoặc xác minh mã vé với nhà cung cấp. Admin chỉ nhập file từ nguồn tin cậy. Không có kết nối API NCC hoặc tự phát vé.
+
+### 0.35 — kho mã nhà cung cấp
+
+Admin → Sản phẩm → Kho mã vé. Chọn nguồn đã tạo ở Nguồn vé & giá vốn, dán mỗi dòng một mã (1–500 mã/lần, mỗi mã tối đa 2.000 ký tự). Chỉ dùng kho cho mã NCC áp dụng cho một khách; mã nhóm/voucher tour vẫn giao thủ công ngoài kho. Chặn trùng trong lô, giữa các nguồn và với mã từng giao thủ công. Nếu có mã lỗi/trùng, cả lần nhập không lưu. Nhập mã không tăng hạn mức tồn bán, số lượng nguồn hoặc công nợ NCC.
+
+Trong đơn đã PAID/CREDIT, phân bổ nguồn ở phần Nguồn vé & giá vốn, sau đó chọn ở Giao mã từ kho. Chỉ hiện mã của nguồn đã phân bổ đúng sản phẩm/gói/ngày. Số mã được chọn không vượt số khách chưa giao hoặc phần nguồn của đơn. Mã được cấp theo luồng DELIVER hiện có (email, lịch sử, CTV/POS tiếp tục dùng các kiểm quyền sẵn có). Vốn/công nợ đã phân bổ không ghi lại khi cấp mã. Mã đã cấp giữ liên kết với đơn và không đưa lại kho. Nhập tay mã có trong kho cũng bị kiểm tra trạng thái/nguồn như chọn từ kho.
+
+Mã chưa bán có thể khóa/mở khóa với lý do; không có xóa cứng, di chuyển nguồn hoặc hoàn mã đã giao. Khi đổi giá nguồn lấy theo đơn tạo nguồn kế tiếp, mã không tự chuyển sang nguồn mới; mã nguồn cũ chỉ cấp cho phần nguồn cũ đã phân bổ hợp lệ. Kiểm tra mã còn sẵn trước khi lưu trữ/thay nguồn. Mã kho chỉ quản trị được xem; không có URL công khai/CSV mã. Nhật ký kho phân trang 50 dòng, lọc trạng thái, mở đơn đã nhận mã. Đây là kho nội bộ, chưa xác minh hiệu lực/check-in hay kết nối API NCC.

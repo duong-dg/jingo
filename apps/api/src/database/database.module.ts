@@ -72,6 +72,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         id text PRIMARY KEY, order_id text NOT NULL REFERENCES jingo_orders(id), code text NOT NULL, code_hash text NOT NULL UNIQUE,
         kind text NOT NULL, covers integer NOT NULL, note text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_ticket_stock(id text PRIMARY KEY,lot_id text NOT NULL REFERENCES jingo_supply_lots(id),code text NOT NULL,code_hash text NOT NULL UNIQUE,status text NOT NULL DEFAULT 'AVAILABLE',version integer NOT NULL DEFAULT 1,reason text NOT NULL DEFAULT '',order_id text REFERENCES jingo_orders(id),ticket_id text REFERENCES jingo_order_tickets(id),created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_ticket_stock_lot_status ON jingo_ticket_stock(lot_id,status);
+      CREATE TABLE IF NOT EXISTS jingo_stock_imports(id text PRIMARY KEY,lot_id text NOT NULL REFERENCES jingo_supply_lots(id),request_hash text NOT NULL,quantity integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_ticket_files(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),ticket_id text NOT NULL REFERENCES jingo_order_tickets(id),name text NOT NULL,mime text NOT NULL,bytes integer NOT NULL,hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,revoke_reason text NOT NULL DEFAULT '');
       CREATE INDEX IF NOT EXISTS jingo_ticket_files_order ON jingo_ticket_files(order_id);
       CREATE TABLE IF NOT EXISTS jingo_order_actions (
@@ -126,6 +129,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         await client.query('COMMIT');
       } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
     }
+    await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('035_ticket_stock_lock') ON CONFLICT(id) DO NOTHING");
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('016_supplier_catalog_lock') ON CONFLICT(id) DO NOTHING");
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('009_destination_lock') ON CONFLICT(id) DO NOTHING");
     await this.pool.query('INSERT INTO jingo_counters(id,data)VALUES($1,$2) ON CONFLICT(id) DO NOTHING',['main',JSON.stringify({id:'main',name:'Quầy chính',status:'ACTIVE',version:1})]);

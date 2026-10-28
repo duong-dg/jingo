@@ -1,3 +1,4 @@
+import{TicketStockService}from'./ticket-stock.module';
 import{ShiftsService}from'../shifts/shifts.module';
 import{SupplyService}from'../supply/supply.module';
 import{VouchersService}from'../vouchers/vouchers.module';
@@ -20,7 +21,7 @@ export interface OrderSnapshot {discount?:{code:string;amount:number;subtotal:nu
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
-  constructor(private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService,private readonly shifts:ShiftsService) {}
+  constructor(private readonly stock:TicketStockService,private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService,private readonly shifts:ShiftsService) {}
   private async checkPosStaff(client:Pick<PoolClient,'query'>,staffId:string,counterId:string,permission:string){const result=await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[staffId]);const user=result.rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.counterIds.includes(counterId)||!user.permissions.includes(permission))throw new ForbiddenException('Quyền hoặc quầy được gán đã thay đổi. Đăng nhập lại để tiếp tục.');}
   async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string}) {
     if(input.voucherCode&&(partnerId||pos))throw new BadRequestException('Mã giảm giá chỉ dùng cho đơn web bán lẻ.');
@@ -168,9 +169,10 @@ export class OrdersService {
         if(new Set(hashes).size!==hashes.length)throw new BadRequestException('Danh sách có mã vé trùng. Kiểm tra lại trước khi giao.');
         const used=await client.query('SELECT id FROM jingo_order_tickets WHERE code_hash IN ('+hashes.map((_,index)=>'$'+(index+1)).join(',')+')',hashes);
         if(used.rowCount)throw new ConflictException('Có mã vé đã được giao. Kiểm tra lại danh sách trước khi lưu.');
+        await this.stock.prepare(client,row,action.tickets);
         await this.supply.forDelivery(client,row,adminId);
-        for (const ticket of action.tickets) await client.query('INSERT INTO jingo_order_tickets(id,order_id,code,code_hash,kind,covers,note) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [randomUUID(), id, ticket.code, hash(ticket.code), ticket.kind, ticket.covers, ticket.note]);
+        for (const ticket of action.tickets) {const ticketId=randomUUID();await client.query('INSERT INTO jingo_order_tickets(id,order_id,code,code_hash,kind,covers,note) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [ticketId, id, ticket.code, hash(ticket.code), ticket.kind, ticket.covers, ticket.note]);await this.stock.use(client,row,ticket,ticketId);}
       }
       await client.query('UPDATE jingo_orders SET version=version+1 WHERE id=$1', [id]);
       await client.query('INSERT INTO jingo_order_actions(id,order_id,request_hash,admin_id,action,note) VALUES ($1,$2,$3,$4,$5,$6)', [action.requestId,id,requestHash,adminId,action.action,action.note]);
