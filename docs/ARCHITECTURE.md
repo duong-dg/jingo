@@ -209,3 +209,6 @@ Công nợ = giá trị toàn bộ lô finite + tổng purchase unlimited − ti
 
 ### Quản lý vòng đời nguồn (0.30)
 Cột archived mặc định false, mọi thao tác DELETE/RESTORE chỉ đổi archived và tắt enabled, tăng version; không DELETE bản ghi/tiền mua. Endpoint manage khóa catalog, product, source theo thứ tự với configure. EDIT cho phép hạn, note, priority; finite không thay giá. On-demand đổi giá khi đã có bất kỳ allocation (kể cả released) sẽ tạo source ID mới, cất nguồn cũ và giữ snapshot giá cũ; nguồn mới kế thừa enabled. Nguồn chưa dùng sửa giá tại chỗ. Restore không tự bật. Không sửa định danh NCC/sản phẩm/gói/nhóm hoặc kiểu nhập qua form này.
+
+### Lịch sử lấy vé từng nguồn (0.31)
+SourceHistoryService đọc jingo_supply_purchases theo lot_id trong REPEATABLE READ; totals COUNT/SUM riêng, chi tiết phân trang ORDER BY created_at DESC,id DESC. Chỉ unlimited, bao gồm nguồn archived và purchase của đơn hủy; LEFT JOIN archives để báo trạng thái hiện tại. DTO không lộ contact, ticket hay request_hash. CSV cùng scope/snapshot toàn bộ (tối đa 10k) thay vì chỉ trang đang xem, text được csvCell chống formula. Index lot_id,created_at bổ sung cho tra lịch sử. Không suy diễn số còn nợ của từng nguồn từ khoản trả NCC chung.

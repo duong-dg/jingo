@@ -31,6 +31,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       ALTER TABLE jingo_supply_lots ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
       ALTER TABLE jingo_supply_lots ADD COLUMN IF NOT EXISTS unlimited boolean NOT NULL DEFAULT false;
       CREATE TABLE IF NOT EXISTS jingo_supply_purchases(id text PRIMARY KEY,lot_id text NOT NULL REFERENCES jingo_supply_lots(id),supplier_id text NOT NULL REFERENCES jingo_suppliers(id),order_id text NOT NULL REFERENCES jingo_orders(id),customer_type text NOT NULL,quantity integer NOT NULL CHECK(quantity>0),unit_cost bigint NOT NULL,data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_supply_purchases_lot_date ON jingo_supply_purchases(lot_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_supply_purchases_supplier_date ON jingo_supply_purchases(supplier_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_supply_lots_supplier_date ON jingo_supply_lots(supplier_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_supply_lots_product ON jingo_supply_lots(product_id);

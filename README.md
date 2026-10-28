@@ -393,3 +393,9 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 - Nguồn vé có Sửa nguồn, Xóa nguồn và thùng rác để khôi phục. Xóa tắt nguồn, ẩn khỏi danh sách mặc định; không xóa công nợ, giá vốn đơn hoặc sổ mua. Khôi phục về trạng thái tắt.
 - Sửa hạn dùng, ghi chú, ưu tiên. Giá mua nguồn lấy theo đơn chưa dùng sửa trực tiếp; đã từng phân bổ thì tạo bản giá mới và cất bản cũ vào thùng rác. Đơn cũ giữ giá vốn cũ.
 - Lô nhập sẵn đã ghi công nợ giữ nguyên giá mua/số lượng, không điều chỉnh giá trị mua lịch sử qua nút sửa. Có kiểm tra version chống ghi đè giữa hai cửa sổ và quyền admin.
+
+## 0.31 — Lịch sử lấy vé từng nguồn
+
+- Nguồn lấy theo đơn có nút Lịch sử lấy vé theo nguồn, hoạt động cả trong thùng rác. Hiện từng lần chốt lấy thêm: ngày ghi nhận, mã đơn, số lượng, giá mua, thành tiền và dấu đơn hủy/thùng rác.
+- Tổng số vé/giá trị mua toàn lịch sử, phân trang 25 dòng, CSV toàn nguồn tối đa 10.000 dòng; vượt ngưỡng dùng đối soát NCC theo kỳ, không cắt dữ liệu. Tổng giá trị mua chưa trừ tiền trả NCC.
+- API chỉ admin, no-store, không trả liên hệ khách/mã vé/hash; thao tác chỉ đọc và không ghi thêm công nợ.
