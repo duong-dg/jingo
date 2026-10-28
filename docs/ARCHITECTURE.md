@@ -198,3 +198,6 @@ GET admin/supply/statements/:id trả tổng và 50 dòng/trang, export trả to
 
 ### Thu/chi ca quầy (0.27)
 Bảng `jingo_pos_cash_movements` lưu IN/OUT dương, người ghi, tham chiếu/lý do và hash request. Ghi thu/chi khóa quầy rồi ca theo cùng thứ tự với chốt ca, kiểm tra lại quyền SHIFT/phạm vi trong DB và chủ ca. Mỗi request ID duy nhất toàn hệ thống; retry cùng payload/actor/ca không ghi trùng kể cả sau chốt. Tăng version ca khi ghi để ngăn chốt trên tổng thu/chi cũ. Chốt tính tổng cashIn/cashOut và giữ snapshot; ca cũ thiếu trường mới hiển thị 0. Khoản thu bán vé/giá vốn/công nợ/hoàn tiền không bị thay đổi. Tối đa 10.000 chứng từ tiền mặt một ca; không cắt dữ liệu xuất. Concurrency vẫn cần kiểm tra trên PostgreSQL thật.
+
+### So sánh phiên bản bài viết (0.28)
+GET admin/posts/:id/compare nhận from/to nguyên dương và lang vi/en; tra snapshot theo cả post_id/version. Nếu trùng phiên bản hiện tại, dùng bản đã lưu hiện hành để hỗ trợ bài cũ chưa có revision baseline. Response chỉ chứa các trường so sánh được chọn, không lộ toàn bộ snapshot hay người lưu; HTML được cleanContent lại. UI render hai cột và đếm thay đổi theo trường; có mã HTML dạng text để đối chiếu định dạng/liên kết, không có thuật toán diff từng từ. Không mutate/lưu/khôi phục khi đọc. Request UI có sequence guard tránh kết quả cũ đè lựa chọn mới.

@@ -1,0 +1,8 @@
+import{test}from'node:test';import assert from'node:assert/strict';import{postSchema}from'./content.schema';import{comparePosts}from'./post-comparison';
+test('post comparison detects saved fields and formatting, sanitizes legacy HTML and handles missing English',()=>{
+ const base=postSchema.parse({id:'11111111-1111-4111-8111-111111111111',slug:'compare',title:'Old title',excerpt:'Old excerpt',contentHtml:'<p>Old content</p>',cover:null,category:'Guide',author:'JinGo',status:'DRAFT',publishedAt:null,seoTitle:'Old SEO',seoDescription:'',relatedProductIds:[],version:0});
+ const next={...base,title:'New title',contentHtml:'<p><strong>Old content</strong></p>',seoTitle:'New SEO',english:{title:'English title',excerpt:'',contentHtml:'<p>English text</p>',seoTitle:'',seoDescription:'',category:'Guide',status:'DRAFT' as const}};
+ const diff=comparePosts(base,next,'vi');assert.deepEqual(diff.fields.filter(f=>f.changed).map(f=>f.key),['title','content','seoTitle']);assert.equal(diff.changedCount,3);assert.equal(comparePosts(base,base,'vi').changedCount,0);
+ const english=comparePosts(base,next,'en');assert.equal(english.fields.find(f=>f.key==='title')!.before,'');assert.equal(english.fields.find(f=>f.key==='title')!.after,'English title');assert.equal(english.fields.find(f=>f.key==='translationStatus')!.before,'MISSING');
+ const unsafe=comparePosts({...base,contentHtml:'<script>alert(1)</script><p onclick="bad()">Safe</p><img src="https://external.example/a">'},base,'vi');assert.doesNotMatch(unsafe.fields.find(f=>f.key==='content')!.before,/script|onclick|external.example/);assert.match(unsafe.fields.find(f=>f.key==='content')!.before,/Safe/);assert.equal(base.title,'Old title');
+});

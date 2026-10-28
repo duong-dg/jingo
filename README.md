@@ -374,3 +374,9 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 - Admin/POS → Ca quầy: người mở ca hoặc quản trị ghi bổ sung/rút tiền mặt kèm mã chứng từ, lý do và người giao nhận. Quyền SHIFT và phạm vi quầy được kiểm tra lại khi ghi.
 - Phải bàn giao = đầu ca + thu bán vé bằng tiền mặt + bổ sung − rút/chi. Không cho rút quá số dư theo sổ, không tạo doanh thu hay hoàn tiền đơn.
 - Chứng từ không sửa/xóa; ghi khoản đối ứng để sửa sai trong ca đang mở. Ca chốt giữ snapshot, chi tiết và có CSV thu/chi riêng; biên bản in hiển thị cả các khoản này. Không thực hiện chuyển tiền ngân hàng.
+
+## 0.28 — So sánh phiên bản bài viết
+
+- Trong lịch sử bài viết, chọn “So sánh với bản hiện tại”, hoặc chọn hai phiên bản/ngôn ngữ. Hiện các mục thay đổi trước/sau, bật xem cả mục không đổi.
+- Đối chiếu tiêu đề, mô tả, nội dung/định dạng, SEO, chuyên mục, slug, ảnh và các thông tin chung. Có thể mở mã nội dung để kiểm tra URL/định dạng. Đây là so sánh theo mục, không đánh dấu từng từ.
+- Chỉ so sánh bản đã lưu, không thay đổi xuất bản hay tạo phiên bản mới. Nội dung lịch sử được làm sạch lại trước khi hiển thị; API chỉ admin và không lưu cache.
