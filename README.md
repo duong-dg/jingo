@@ -387,3 +387,9 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 - Phân bổ thủ công hoặc giao vé tự động ghi giá vốn và công nợ đúng số vé lấy thêm; chọn nguồn vẫn theo ưu tiên/giá mua/FIFO, có thể phối hợp với lô nhập sẵn. Quy tắc tồn bán web/POS/CTV giữ riêng ở Tồn vé.
 - Sổ mua vé theo đơn lưu bất biến theo từng lần chốt, có mã đơn, đơn giá và thời điểm; cập nhật công nợ, đối soát đầu/cuối kỳ và CSV. Hủy/lưu trữ đơn không xóa tiền vé đã xác nhận lấy vì NCC không nhận trả.
 - Lô cũ giữ nguyên cách tính, không đổi kiểu/số lượng/giá mua trực tiếp để tránh làm sai công nợ đã ghi. Muốn đổi giá: tắt nguồn cũ, tạo nguồn mới. Nguồn theo đơn không báo sắp hết/hết số lượng, vẫn cảnh báo hạn dùng.
+
+## 0.30 — Sửa/xóa nguồn vé
+
+- Nguồn vé có Sửa nguồn, Xóa nguồn và thùng rác để khôi phục. Xóa tắt nguồn, ẩn khỏi danh sách mặc định; không xóa công nợ, giá vốn đơn hoặc sổ mua. Khôi phục về trạng thái tắt.
+- Sửa hạn dùng, ghi chú, ưu tiên. Giá mua nguồn lấy theo đơn chưa dùng sửa trực tiếp; đã từng phân bổ thì tạo bản giá mới và cất bản cũ vào thùng rác. Đơn cũ giữ giá vốn cũ.
+- Lô nhập sẵn đã ghi công nợ giữ nguyên giá mua/số lượng, không điều chỉnh giá trị mua lịch sử qua nút sửa. Có kiểm tra version chống ghi đè giữa hai cửa sổ và quyền admin.
