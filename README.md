@@ -1,5 +1,14 @@
 # JinGo
 
+## Quầy 3 cột và CTV bán nhanh trên điện thoại (0.39)
+
+- Quầy: cột trái chọn quầy ở trên, tìm và chọn vé/tour; cột giữa mặc định ngày hiện tại tại Việt Nam, ô Eco/High/VIP/combo, suất giờ nếu có, điều kiện nhóm khách và nút −/+; cột phải vé đã chọn, số khách, tiền từng gói, tổng và thanh toán.
+- Số lượng là một dữ liệu chung trong giỏ. Chọn lại Eco đã có 3 người lớn hiện đúng 3, sửa ở giữa hoặc trong giỏ đều đồng bộ, không cộng thêm một bản sao. Giảm hết số khách thì bỏ dòng. Nhiều sản phẩm/gói/ngày/suất vẫn đi chung một giỏ; tách nháp theo tài khoản và quầy.
+- Thanh toán mở biểu mẫu tên, điện thoại, email và ghi chú; chọn đặt vé thu sau hoặc CASH/BANK theo quyền COLLECT. Chuyển khoản cần mã giao dịch, xác nhận thu/ghi nợ cần xác nhận số tiền. Chốt tạo giỏ rồi ghi thu; nếu bước ghi thu thất bại, giữ mã đơn đã tạo để kiểm tra/xử lý, không âm thầm tạo đơn khác. Đóng biểu mẫu để sửa vé giữ liên hệ/ghi chú trong màn hình hiện tại.
+- CTV dùng cùng trình chọn theo bảng giá riêng; điện thoại có Chọn vé/Đã chọn, thanh tổng và chốt đơn cố định đáy, liên hệ điền sẵn tài khoản, có ghi công nợ khi được cấp. Đơn và sổ công nợ vẫn truy cập từ menu; nhận/chia sẻ vé theo cơ chế CTV hiện có.
+- Tự lấy lại giá khi sửa số lượng và trước khi mở chốt đơn; kiểm tra cuối cùng vẫn ở server. API danh sách bán quầy/CTV bổ sung mô tả/ảnh công khai để xem thông tin vé, không thêm giá vốn hay dữ liệu nhà cung cấp.
+- `npm test` chạy 54 kiểm thử API và dữ liệu giỏ giao diện; typecheck/build. Đã thử quầy thu tiền mặt nhiều gói, CTV ghi công nợ trên 390px, sửa số hai chiều và quay lại sửa vé vẫn giữ ghi chú bằng dữ liệu nội bộ. Chưa có tự xuất mã nhà cung cấp hoặc phát hành vé chỉ vì đã thu tiền.
+
 ## Giỏ trượt và thanh toán trên web (0.38)
 
 - Hai nút Thêm vào giỏ / Thanh toán cùng hàng ở trang vé. Thêm vé hoặc bấm giỏ trên menu mở bảng trượt bên phải; điện thoại mở toàn màn hình. Có sửa số người, đổi ngày, mã giảm giá từng gói, xóa gói và tổng tự cập nhật. Giá được lấy lại sau khi sửa; lỗi giá/lịch/voucher chặn tiếp tục để người mua sửa.

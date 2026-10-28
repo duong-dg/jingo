@@ -10,7 +10,7 @@
     "dev:worker": "npm run dev -w @jingo/worker",
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test -w @jingo/api"
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": { "typescript": "^5.9.0", "@types/node": "^22.0.0" },
   "overrides": {

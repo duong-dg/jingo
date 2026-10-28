@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "tsx --test lib/sales-cart.test.ts"
   },
   "dependencies": {
     "@tiptap/extension-image": "^3.32.0",
