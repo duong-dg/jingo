@@ -28,6 +28,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
       );
       CREATE TABLE IF NOT EXISTS jingo_supply_lots(id text PRIMARY KEY,request_hash text NOT NULL,supplier_id text NOT NULL REFERENCES jingo_suppliers(id),product_id text NOT NULL REFERENCES jingo_products(id),variant_id text NOT NULL,customer_type text NOT NULL,unit_cost bigint NOT NULL,total_quantity integer NOT NULL,valid_from text NOT NULL,valid_to text NOT NULL,priority integer NOT NULL DEFAULT 100,enabled boolean NOT NULL DEFAULT true,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1,created_at timestamptz NOT NULL DEFAULT now());
+      ALTER TABLE jingo_supply_lots ADD COLUMN IF NOT EXISTS unlimited boolean NOT NULL DEFAULT false;
+      CREATE TABLE IF NOT EXISTS jingo_supply_purchases(id text PRIMARY KEY,lot_id text NOT NULL REFERENCES jingo_supply_lots(id),supplier_id text NOT NULL REFERENCES jingo_suppliers(id),order_id text NOT NULL REFERENCES jingo_orders(id),customer_type text NOT NULL,quantity integer NOT NULL CHECK(quantity>0),unit_cost bigint NOT NULL,data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_supply_purchases_supplier_date ON jingo_supply_purchases(supplier_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_supply_lots_supplier_date ON jingo_supply_lots(supplier_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_supply_lots_product ON jingo_supply_lots(product_id);
       CREATE TABLE IF NOT EXISTS jingo_supply_allocations(order_id text NOT NULL REFERENCES jingo_orders(id),lot_id text NOT NULL REFERENCES jingo_supply_lots(id),quantity integer NOT NULL,unit_cost bigint NOT NULL,released boolean NOT NULL DEFAULT false,PRIMARY KEY(order_id,lot_id));

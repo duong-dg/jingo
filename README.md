@@ -380,3 +380,10 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 - Trong lịch sử bài viết, chọn “So sánh với bản hiện tại”, hoặc chọn hai phiên bản/ngôn ngữ. Hiện các mục thay đổi trước/sau, bật xem cả mục không đổi.
 - Đối chiếu tiêu đề, mô tả, nội dung/định dạng, SEO, chuyên mục, slug, ảnh và các thông tin chung. Có thể mở mã nội dung để kiểm tra URL/định dạng. Đây là so sánh theo mục, không đánh dấu từng từ.
 - Chỉ so sánh bản đã lưu, không thay đổi xuất bản hay tạo phiên bản mới. Nội dung lịch sử được làm sạch lại trước khi hiển thị; API chỉ admin và không lưu cache.
+
+## 0.29 — Nguồn vé lấy theo đơn, không nhập trước số lượng
+
+- Nguồn vé & giá vốn: tích “Không nhập trước số lượng — lấy vé theo từng đơn”, chỉ nhập giá mua, NCC, gói/nhóm khách và ngày hiệu lực. Không tạo tồn giả hay công nợ khi lưu nguồn.
+- Phân bổ thủ công hoặc giao vé tự động ghi giá vốn và công nợ đúng số vé lấy thêm; chọn nguồn vẫn theo ưu tiên/giá mua/FIFO, có thể phối hợp với lô nhập sẵn. Quy tắc tồn bán web/POS/CTV giữ riêng ở Tồn vé.
+- Sổ mua vé theo đơn lưu bất biến theo từng lần chốt, có mã đơn, đơn giá và thời điểm; cập nhật công nợ, đối soát đầu/cuối kỳ và CSV. Hủy/lưu trữ đơn không xóa tiền vé đã xác nhận lấy vì NCC không nhận trả.
+- Lô cũ giữ nguyên cách tính, không đổi kiểu/số lượng/giá mua trực tiếp để tránh làm sai công nợ đã ghi. Muốn đổi giá: tắt nguồn cũ, tạo nguồn mới. Nguồn theo đơn không báo sắp hết/hết số lượng, vẫn cảnh báo hạn dùng.
