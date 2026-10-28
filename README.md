@@ -1,5 +1,14 @@
 # JinGo
 
+## Giỏ nhiều gói vé cho web, quầy và CTV (0.37)
+
+- Khách chọn Eco, High, VIP, combo hoặc nhiều sản phẩm/ngày/suất rồi thêm vào giỏ; sửa số khách, bỏ gói và kiểm tra lại giá trước khi xác nhận. Web có `/gio-hang` và `/en/gio-hang`, nút giỏ trên menu; quầy có giỏ theo tài khoản/quầy, CTV có tab Giỏ vé theo tài khoản. Thêm vé chưa giữ tồn.
+- Một thông tin liên hệ và một mã giỏ `JC…`; từng dòng tạo phần đơn `JG…` để giữ nguyên giao mã/file vé, nguồn, giá vốn và hoàn hủy theo gói. Admin tìm bằng mã JC ra các phần đơn; từ chi tiết đơn có thể mở giỏ. Báo cáo số đơn hiện đếm phần đơn JG, không phải số giỏ khách mua.
+- Tạo cả giỏ trong một transaction; kiểm lại giá, lịch, voucher và tồn của toàn giỏ, gồm các suất dùng chung hạn mức ngày. Tối đa 20 dòng và 150 khách; cùng sản phẩm/gói/ngày/suất được gộp số lượng. Giá CTV dùng bảng riêng; voucher web tính theo từng dòng và vẫn trừ lượt tương ứng, chưa có voucher chung toàn giỏ.
+- Quầy xác nhận thu CASH/BANK cả giỏ, CTV xác nhận ghi công nợ cả giỏ trong hạn mức. VNPay/SePay web dùng một yêu cầu theo tổng còn thiếu; callback hợp lệ ghi các khoản thu theo từng phần, tránh cộng trùng doanh thu. Nếu một phần thay đổi sau khi mở yêu cầu thanh toán, callback chuyển REVIEW để đối soát cả giao dịch. Đơn lẻ cũ giữ nguyên.
+- Web/POS nhận một email xác nhận giỏ và một email thu tiền chung khi SMTP hoạt động; các email giao vé sau đó dẫn về giỏ. Mã/link riêng không trả cho nhân viên quầy; tra cứu quầy bằng email chỉ xem thông tin, nhận vé qua link riêng trong email. Giỏ CTV chỉ chủ tài khoản/admin truy cập, chia sẻ khách vẫn qua từng phần đơn theo quyền cũ.
+- Kiểm thử: 52 test qua, typecheck và build qua; kiểm tra giao diện thêm/đặt nhiều gói ở web/quầy/CTV bằng dữ liệu nội bộ. Callback giả lập, chưa gọi merchant thật; pg-mem không thay thế kiểm thử mua đồng thời trên PostgreSQL thật.
+
 ## Đối soát nhà cung cấp theo ngày (0.25)
 
 - Sản phẩm → Đối soát nhà cung cấp (`/admin/doi-soat-ncc`), có liên kết từ Nguồn vé & giá vốn. Chọn NCC (kể cả lưu trữ) và khoảng ngày để xem phải trả đầu kỳ, nhập vé, tiền đã trả và phải trả cuối kỳ. Dùng ngày ghi nhận trong hệ thống tại Việt Nam; không theo ngày sử dụng vé, không theo ngày thực chuyển ngân hàng nếu nhập sổ muộn.

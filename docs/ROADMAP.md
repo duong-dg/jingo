@@ -30,3 +30,8 @@
 - Bộ kiểm thử pg-mem không thay thế thử concurrency, backup/restore và kết nối dịch vụ thật trên máy triển khai.
 
 Danh sách này mô tả phần còn phải làm; không phải xác nhận các hạng mục chưa đánh dấu đã hoạt động.
+
+
+## Đã bổ sung giỏ vé (0.37)
+
+Web, POS và CTV có giỏ nhiều gói/sản phẩm/ngày/suất, xác nhận liên hệ chung và thanh toán/ghi nợ theo tổng. Giữ phần đơn riêng cho giao vé, nguồn, vốn và xử lý từng gói. Còn voucher chung giỏ, chỉnh nội dung giỏ đã đặt và số liệu số giỏ riêng; báo cáo hiện đếm đơn thành phần.

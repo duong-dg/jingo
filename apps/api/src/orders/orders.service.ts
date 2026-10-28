@@ -23,23 +23,23 @@ interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact:
 export class OrdersService {
   constructor(private readonly stock:TicketStockService,private readonly db: DatabaseService,private readonly mail:MailService,private readonly inventory:InventoryService,private readonly vouchers:VouchersService,private readonly supply:SupplyService,private readonly shifts:ShiftsService) {}
   private async checkPosStaff(client:Pick<PoolClient,'query'>,staffId:string,counterId:string,permission:string){const result=await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[staffId]);const user=result.rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.counterIds.includes(counterId)||!user.permissions.includes(permission))throw new ForbiddenException('Quyền hoặc quầy được gán đã thay đổi. Đăng nhập lại để tiếp tục.');}
-  async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string}) {
+  async create(input: OrderInput,partnerId?:string,pos?:{counterId:string;adminId:string;staffId?:string},tx?:{client:PoolClient;silent?:boolean}) {
     if(input.voucherCode&&(partnerId||pos))throw new BadRequestException('Mã giảm giá chỉ dùng cho đơn web bán lẻ.');
     const requestHash = hash(JSON.stringify(pos?{pos,input}:partnerId?{partnerId,input}:input));
-    const client = await this.db.pool.connect();
+    const client = tx?.client || await this.db.pool.connect();
     try {
-      await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+      if(!tx)await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
       if(pos?.staffId)await this.checkPosStaff(client,pos.staffId,pos.counterId,'SELL');
       const prior = await client.query('SELECT id,code,request_hash FROM jingo_orders WHERE request_id=$1', [input.requestId]);
       if (prior.rowCount) {
         if (prior.rows[0].request_hash !== requestHash) throw new ConflictException('Yêu cầu này đã được dùng với nội dung khác.');
-        await client.query('COMMIT'); return { code: prior.rows[0].code, accessKey: input.accessKey };
+        if(!tx)await client.query('COMMIT'); return { code: prior.rows[0].code, accessKey: input.accessKey };
       }
       if(pos){const counter=await client.query('SELECT data FROM jingo_counters WHERE id=$1 FOR SHARE',[pos.counterId]);if(!counter.rowCount||counter.rows[0].data.status!=='ACTIVE')throw new BadRequestException('Chọn quầy đang hoạt động.');}
       let group:PriceGroup|undefined;
       if(partnerId){const owner=await client.query('SELECT data FROM jingo_partners WHERE id=$1 FOR UPDATE',[partnerId]);const account=owner.rows[0]?.data as PartnerAccount|undefined;if(!account||account.status!=='ACTIVE')throw new ForbiddenException('CTV không được tạo đơn mới.');const price=await client.query('SELECT data,version FROM jingo_price_groups WHERE id=$1 FOR SHARE',[account.groupId]);if(!price.rowCount)throw new BadRequestException('Không tìm thấy bảng giá CTV.');group={...price.rows[0].data,version:price.rows[0].version};}
       const result = await client.query('SELECT data FROM jingo_products WHERE id=$1 FOR UPDATE', [input.productId]);
-      const lockedPrior=await client.query('SELECT code,request_hash FROM jingo_orders WHERE request_id=$1',[input.requestId]);if(lockedPrior.rowCount){if(lockedPrior.rows[0].request_hash!==requestHash)throw new ConflictException('Yêu cầu này đã được dùng với nội dung khác.');await client.query('COMMIT');return{code:lockedPrior.rows[0].code,accessKey:input.accessKey};}
+      const lockedPrior=await client.query('SELECT code,request_hash FROM jingo_orders WHERE request_id=$1',[input.requestId]);if(lockedPrior.rowCount){if(lockedPrior.rows[0].request_hash!==requestHash)throw new ConflictException('Yêu cầu này đã được dùng với nội dung khác.');if(!tx)await client.query('COMMIT');return{code:lockedPrior.rows[0].code,accessKey:input.accessKey};}
       const product = result.rows[0]?.data as ManagedProduct | undefined;
       if (!product || product.status !== 'PUBLISHED') throw new NotFoundException('Sản phẩm chưa mở bán.');
       if (product.demo) throw new BadRequestException('Sản phẩm minh họa không nhận đơn.');
@@ -63,9 +63,10 @@ export class OrdersService {
       await this.inventory.allocate(client,id,product.id,input.variantId,input.date,quote.timeSlot?.id||'',quantity);
       if(discount)await this.vouchers.allocate(client,id,discount.id);
       if(pos){await client.query('INSERT INTO jingo_pos_orders(order_id,counter_id,admin_id)VALUES($1,$2,$3)',[id,pos.counterId,pos.adminId]);await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),pos.adminId,'pos.order-create',id]);}
-      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,customerAccessKey);await this.mail.enqueue(client,id,'CREATED',1);}
-      await client.query('COMMIT'); return { code, accessKey: input.accessKey };
+      if(partnerId)await client.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)',[id,partnerId]);else{await this.mail.register(client,id,customerAccessKey);if(!tx?.silent)await this.mail.enqueue(client,id,'CREATED',1);}
+      if(!tx)await client.query('COMMIT'); return { code, accessKey: input.accessKey };
     } catch (e) {
+      if(tx)throw e;
       await client.query('ROLLBACK');
       if ((e as { code?: string }).code === '23505') {
         const prior = await this.db.pool.query('SELECT code,request_hash FROM jingo_orders WHERE request_id=$1', [input.requestId]);
@@ -73,13 +74,14 @@ export class OrdersService {
         throw new ConflictException('Yêu cầu bị trùng. Vui lòng thử lại.');
       }
       throw e;
-    } finally { client.release(); }
+    } finally { if(!tx)client.release(); }
   }
   private async detail(row: OrderRow, admin: boolean, client: Pick<PoolClient,'query'> = this.db.pool) {
     const tickets = await client.query('SELECT id,code,kind,covers,note,created_at FROM jingo_order_tickets WHERE order_id=$1 ORDER BY created_at', [row.id]);
     const issued = tickets.rows.reduce((sum: number, ticket: { covers: number }) => sum + ticket.covers, 0);
     const totalGuests = row.snapshot.lines.reduce((sum, line) => sum + line.quantity, 0);
-    const response = { id: row.id, code: row.code, snapshot: row.snapshot, bookingStatus: row.booking_status, paymentStatus: row.payment_status,
+    const cart=(await client.query('SELECT c.code FROM jingo_cart_orders m JOIN jingo_carts c ON c.id=m.cart_id WHERE m.order_id=$1',[row.id])).rows[0];
+    const response = { ...(cart?{cartCode:cart.code}:{}),id: row.id, code: row.code, snapshot: row.snapshot, bookingStatus: row.booking_status, paymentStatus: row.payment_status,
       fulfillmentStatus: issued === 0 ? 'PENDING' : issued >= totalGuests ? 'DELIVERED' : 'PARTIAL', tickets: tickets.rows,
       version: row.version, createdAt: row.created_at, deliveredGuests: issued, totalGuests, instructions: row.instructions };
     if (!admin) return response;
@@ -96,22 +98,22 @@ export class OrdersService {
     if(!accessKey&&(!email||result.rows[0]?.contact?.email?.trim().toLowerCase()!==email.trim().toLowerCase()))throw new NotFoundException('Không tìm thấy đơn hàng.');
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn hoặc khóa tra cứu không đúng.');
     if((await this.db.pool.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)throw new NotFoundException('Đơn CTV chỉ tra cứu trong tài khoản CTV.');
-    const response=await this.detail(result.rows[0],false);if(!accessKey&&(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)return{...response,tickets:[],ticketAccess:'EMAIL_LINK' as const};return{...response,onlinePaymentEligible:!(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount};
+    const response=await this.detail(result.rows[0],false);if(!accessKey&&(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount)return{...response,tickets:[],ticketAccess:'EMAIL_LINK' as const};return{...response,onlinePaymentEligible:!response.cartCode&&!(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[result.rows[0].id])).rowCount};
   }
   async list(archived=false) {
     const result = await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.version,o.created_at FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id WHERE '+(archived?'a.order_id IS NOT NULL':'a.order_id IS NULL')+' ORDER BY o.created_at DESC LIMIT 200');
     return result.rows;
   }
-  async get(id: string) {
-    const result = await this.db.pool.query('SELECT * FROM jingo_orders WHERE id=$1', [id]);
+  async get(id: string,client:Pick<PoolClient,'query'>=this.db.pool) {
+    const result = await client.query('SELECT * FROM jingo_orders WHERE id=$1', [id]);
     if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn.');
-    return this.detail(result.rows[0], true);
+    return this.detail(result.rows[0], true,client);
   }
-  async act(id: string, action: ActionInput, adminId: string,partnerId?:string,staffId?:string) {
-    const client = await this.db.pool.connect();
+  async act(id: string, action: ActionInput, adminId: string,partnerId?:string,staffId?:string,tx?:{client:PoolClient;silent?:boolean}) {
+    const client = tx?.client || await this.db.pool.connect();
     const requestHash = hash(JSON.stringify({ id, action }));
     try {
-      await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+      if(!tx)await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
       const result = await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE', [id]);
       if (!result.rowCount) throw new NotFoundException('Không tìm thấy đơn.');
       const row = result.rows[0] as OrderRow;
@@ -122,7 +124,7 @@ export class OrdersService {
       const prior = await client.query('SELECT request_hash FROM jingo_order_actions WHERE id=$1', [action.requestId]);
       if (prior.rowCount) {
         if (prior.rows[0].request_hash !== requestHash) throw new ConflictException('Mã thao tác đã dùng.');
-        await client.query('COMMIT'); return this.get(id);
+        if(!tx)await client.query('COMMIT'); return this.get(id,tx?client:this.db.pool);
       }
       if (row.version !== action.version) throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi xử lý.');
       const archived=await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[id]);
@@ -177,10 +179,10 @@ export class OrdersService {
       await client.query('UPDATE jingo_orders SET version=version+1 WHERE id=$1', [id]);
       await client.query('INSERT INTO jingo_order_actions(id,order_id,request_hash,admin_id,action,note) VALUES ($1,$2,$3,$4,$5,$6)', [action.requestId,id,requestHash,adminId,action.action,action.note]);
       await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id) VALUES ($1,$2,$3,$4)', [randomUUID(),adminId,`order.${action.action.toLowerCase()}`,id]);
-      if(!['ARCHIVE','RESTORE'].includes(action.action))await this.mail.enqueue(client,id,action.action,row.version+1);await client.query('COMMIT');
-    } catch(e) { await client.query('ROLLBACK'); if ((e as { code?: string }).code === '23505') throw new ConflictException('Mã vé, mã giao dịch hoặc mã thao tác đã được dùng.'); throw e; }
-    finally { client.release(); }
-    return this.get(id);
+      if(!tx?.silent&&!['ARCHIVE','RESTORE'].includes(action.action))await this.mail.enqueue(client,id,action.action,row.version+1);if(!tx)await client.query('COMMIT');
+    } catch(e) { if(tx)throw e;await client.query('ROLLBACK'); if ((e as { code?: string }).code === '23505') throw new ConflictException('Mã vé, mã giao dịch hoặc mã thao tác đã được dùng.'); throw e; }
+    finally { if(!tx)client.release(); }
+    return this.get(id,tx?client:this.db.pool);
   }
   async partnerList(partnerId:string){return(await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.created_at,o.version FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE p.partner_id=$1 ORDER BY o.created_at DESC LIMIT 200',[partnerId])).rows;}
   async partnerGet(id:string,partnerId:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE o.id=$1 AND p.partner_id=$2',[id,partnerId]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy đơn.');return{...await this.detail(result.rows[0],false),contact:result.rows[0].contact};}

@@ -7,7 +7,7 @@ export function LanguageSwitcher(){
  const pathname=usePathname(),locale=useLocale(),path=pathname.replace(/^\/en(?=\/|$)/,'')||'/';
  const[available,setAvailable]=useState<{path:string;languages:string[]}|null>(null);
  const detail=/^\/(ve|cam-nang|loai)\/([^/]+)$/.exec(path);
- const supported=['/','/cam-nang','/dat-ve','/tra-cuu'].includes(path)||!!detail;
+ const supported=['/','/cam-nang','/dat-ve','/tra-cuu','/gio-hang'].includes(path)||!!detail;
  useEffect(()=>{if(!detail){setAvailable(null);return;}const controller=new AbortController();setAvailable(null);const section={ve:'products','cam-nang':'posts',loai:'product-types'}[detail[1]];
  fetch(`/api/v1/${section}/${detail[2]}?lang=vi`,{signal:controller.signal,cache:'no-store'}).then(async response=>{if(!response.ok)throw new Error();return response.json();}).then(result=>setAvailable({path,languages:result.data.languages||['vi']})).catch(()=>{if(!controller.signal.aborted)setAvailable({path,languages:['vi']});});return()=>controller.abort();
  },[path]);

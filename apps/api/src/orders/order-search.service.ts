@@ -21,7 +21,7 @@ export class OrderSearchService{
   const input=parsed.data;if(input.from&&input.to&&input.from>input.to)throw new BadRequestException('Ngày kết thúc phải từ ngày bắt đầu trở đi.');
   const params:unknown[]=[],conditions=[input.archived==='true'?'a.order_id IS NOT NULL':'a.order_id IS NULL'];
   const param=(value:unknown)=>{params.push(value);return '$'+params.length;};
-  if(input.q){const value=param(input.q);conditions.push(`(strpos(lower(o.code),lower(${value}))>0 OR strpos(lower(o.contact->>'name'),lower(${value}))>0 OR strpos(lower(o.contact->>'phone'),lower(${value}))>0 OR strpos(lower(o.contact->>'email'),lower(${value}))>0)`);}
+  if(input.q){const value=param(input.q);conditions.push(`(strpos(lower(o.code),lower(${value}))>0 OR strpos(lower(cart.code),lower(${value}))>0 OR strpos(lower(o.contact->>'name'),lower(${value}))>0 OR strpos(lower(o.contact->>'phone'),lower(${value}))>0 OR strpos(lower(o.contact->>'email'),lower(${value}))>0)`);}
   if(input.booking!=='ALL')conditions.push('o.booking_status='+param(input.booking));
   if(input.payment!=='ALL')conditions.push('o.payment_status='+param(input.payment));
   if(input.channel==='POS')conditions.push('pos.order_id IS NOT NULL');
@@ -34,7 +34,7 @@ export class OrderSearchService{
    if(input.from)conditions.push('o.created_at>='+param(new Date(input.from+'T00:00:00+07:00')));
    if(input.to)conditions.push('o.created_at<'+param(new Date(new Date(input.to+'T00:00:00+07:00').getTime()+86400000)));
   }
-  const source=' FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id LEFT JOIN jingo_pos_orders pos ON pos.order_id=o.id LEFT JOIN jingo_partner_orders partner ON partner.order_id=o.id WHERE '+conditions.join(' AND ');
+  const source=' FROM jingo_orders o LEFT JOIN jingo_order_archives a ON a.order_id=o.id LEFT JOIN jingo_pos_orders pos ON pos.order_id=o.id LEFT JOIN jingo_partner_orders partner ON partner.order_id=o.id LEFT JOIN jingo_cart_orders cm ON cm.order_id=o.id LEFT JOIN jingo_carts cart ON cart.id=cm.cart_id WHERE '+conditions.join(' AND ');
   return{input,params,source};
  }
  async search(raw:unknown){

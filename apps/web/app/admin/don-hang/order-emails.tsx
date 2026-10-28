@@ -2,7 +2,7 @@
 import{useCallback,useEffect,useRef,useState}from'react';import Link from'next/link';import{adminApi}from'../shared/admin-api';
 type Job={id:string;event:string;status:string;attempts:number;created_at:string;sent_at:string|null;next_at:string;last_error:string};
 type Status={enabled:boolean;eligible:boolean;reason:'PARTNER'|'NO_ACCESS_KEY'|null;data:Job[]};
-const events:Record<string,string>={CREATED:'Xác nhận đặt vé',CONFIRM:'Tiếp nhận đơn',INSTRUCTIONS:'Hướng dẫn cho khách',PAY:'Xác nhận thanh toán',DELIVER:'Thông báo giao vé',CANCEL:'Thông báo hủy đơn'};
+const events:Record<string,string>={CART_CREATED:'Xác nhận giỏ đặt vé',CART_PAY:'Xác nhận thanh toán giỏ',CREATED:'Xác nhận đặt vé',CONFIRM:'Tiếp nhận đơn',INSTRUCTIONS:'Hướng dẫn cho khách',PAY:'Xác nhận thanh toán',DELIVER:'Thông báo giao vé',CANCEL:'Thông báo hủy đơn'};
 const states:Record<string,string>={PENDING:'Chờ gửi',SENDING:'Đang gửi',SENT:'SMTP đã nhận thư',FAILED:'Gửi thất bại'};
 const time=(value:string)=>new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'});
 export function OrderEmails({orderId,version,disabled}:{orderId:string;version:number;disabled:boolean}){

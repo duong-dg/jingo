@@ -27,6 +27,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         booking_status text NOT NULL DEFAULT 'REQUESTED', payment_status text NOT NULL DEFAULT 'UNPAID', instructions text NOT NULL DEFAULT '',
         version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS jingo_carts(id text PRIMARY KEY,code text NOT NULL UNIQUE,request_id text NOT NULL UNIQUE,request_hash text NOT NULL,channel text NOT NULL,partner_id text,counter_id text,access_hash text NOT NULL,secret text NOT NULL,total bigint NOT NULL,version integer NOT NULL DEFAULT 1,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_cart_orders(cart_id text NOT NULL REFERENCES jingo_carts(id),order_id text PRIMARY KEY REFERENCES jingo_orders(id),position integer NOT NULL);
+      CREATE INDEX IF NOT EXISTS jingo_cart_orders_cart ON jingo_cart_orders(cart_id);
+      CREATE TABLE IF NOT EXISTS jingo_cart_actions(id text PRIMARY KEY,cart_id text NOT NULL REFERENCES jingo_carts(id),request_hash text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_gateway_attempts(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,config_version integer NOT NULL,config jsonb NOT NULL,status text NOT NULL DEFAULT 'PENDING',created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_gateway_attempt_order ON jingo_gateway_attempts(order_id,provider);
       CREATE TABLE IF NOT EXISTS jingo_gateway_events(id text PRIMARY KEY,attempt_id text REFERENCES jingo_gateway_attempts(id),order_id text REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,status text NOT NULL,reason text NOT NULL,fingerprint text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
@@ -134,6 +138,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         await client.query('COMMIT');
       } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
     }
+    await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('037_cart_requests') ON CONFLICT(id) DO NOTHING");
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('035_ticket_stock_lock') ON CONFLICT(id) DO NOTHING");
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('016_supplier_catalog_lock') ON CONFLICT(id) DO NOTHING");
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('009_destination_lock') ON CONFLICT(id) DO NOTHING");
