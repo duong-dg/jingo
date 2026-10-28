@@ -362,3 +362,9 @@ Trong chi tiết đơn, chọn nguồn thủ công hoặc tự phân bổ. Ưu t
 Công nợ NCC = giá trị toàn bộ lô nhập − khoản đã trả ghi nhận. Nhập mã chuyển khoản hoặc xác nhận tiền mặt sau khi trả thực tế; không chuyển tiền ngân hàng từ ứng dụng. Có chống ghi trùng/chi vượt công nợ và lịch sử thanh toán. Chưa hỗ trợ trả trước. Vé nhập không trả lại nhà cung cấp theo nghiệp vụ đã chốt.
 
 Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa hủy đã phân bổ đủ nguồn: doanh thu sau giảm − giá vốn. Bao gồm đơn lưu trữ, tách rõ đơn chưa đủ vốn (không tự coi vốn bằng0). Công nợ NCC là toàn bộ thời gian, tách bộ lọc ngày. Không phải dòng tiền, không trừ phí vận hành/thuế và chưa có hoàn tiền. Giá vốn/chứng từ nội bộ không xuất ra web/CTV/POS. Cần kiểm thử mua/phân bổ đồng thời trên PostgreSQL thật trước khi vận hành lớn.
+
+## 0.26 — Voucher theo ngày sử dụng
+
+- Admin → Bán hàng → Mã giảm giá & voucher: khoảng ngày sử dụng tùy chọn, thứ áp dụng; điều kiện kết hợp với phạm vi sản phẩm/gói và thời hạn nhập mã hiện có.
+- Không chọn thứ nghĩa là mọi thứ; khoảng ngày tính bao gồm hai đầu, theo ngày sử dụng vé tại Việt Nam. Để trống một đầu cho phép giới hạn một phía.
+- Quote và đặt đơn đều kiểm tra lại trên máy chủ; voucher cũ không có điều kiện ngày vẫn hoạt động như trước. Đơn đã tạo giữ nguyên số tiền khi cấu hình thay đổi.

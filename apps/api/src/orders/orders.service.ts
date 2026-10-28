@@ -49,7 +49,7 @@ export class OrdersService {
       catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
       if(group)quote=applyNetPricing(quote,group);
       const quantity=quote.lines.reduce((sum,line)=>sum+line.quantity,0);await this.inventory.check(product.id,input.variantId,input.date,quote.timeSlot?.id||'',quantity,client);
-      const discount=input.voucherCode?await this.vouchers.discount(input.voucherCode,quote.total,client,true,{productId:product.id,variantId:input.variantId}):null;const netTotal=quote.total-(discount?.amount||0);
+      const discount=input.voucherCode?await this.vouchers.discount(input.voucherCode,quote.total,client,true,{productId:product.id,variantId:input.variantId,date:input.date}):null;const netTotal=quote.total-(discount?.amount||0);
       if (netTotal !== input.expectedTotal) throw new ConflictException('Giá vừa thay đổi. Vui lòng kiểm tra giá mới trước khi gửi.');
       if(input.locale==='en'&&!translated('PRODUCT',product))throw new ConflictException('English content has changed. Please refresh before booking.');const view=input.locale==='en'?localizeProduct(product):product;const variant = view.variants.find((v:{id:string}) => v.id === input.variantId)!;
       const snapshot: OrderSnapshot = {...(quote.timeSlot?{timeSlot:quote.timeSlot}:{}), productId: product.id,variantId:input.variantId, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
