@@ -76,8 +76,8 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     await pool.query('INSERT INTO jingo_partners(id,email,password_hash,data)VALUES($1,$2,$3,$4)', ['file-partner','file-partner@example.test','unused-fixture',JSON.stringify({id:'file-partner',name:'Fixture partner'})]);
     await pool.query('INSERT INTO jingo_partner_orders(order_id,partner_id)VALUES($1,$2)', [other.id,'file-partner']);
     await pool.query("UPDATE jingo_orders SET booking_status='CONFIRMED' WHERE id=$1", [other.id]);
-    assert.equal((await upload(other.id, otherTicket, (await detail(other.id)).version)).status, 400);
+    assert.equal((await upload(other.id, otherTicket, (await detail(other.id)).version)).status, 201);
     assert.equal((await call('/orders/files', {code:other.code,accessKey:other.accessKey})).status, 404);
-    assert.equal((await readdir(join(media, '.tickets'))).length, 2, 'failed uploads do not create orphan files');
+    assert.equal((await readdir(join(media, '.tickets'))).length, 3, 'failed uploads do not create orphan files');
   } finally { await app.close(); await rm(media, { recursive: true, force: true }); }
 });

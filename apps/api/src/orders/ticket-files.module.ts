@@ -12,6 +12,9 @@ import { MailModule, MailService } from '../mail/mail.module';
 import { OrdersModule } from './orders.module';
 import { OrdersService } from './orders.service';
 import { lookupInput } from './orders.schema';
+import { PartnersModule } from '../partners/partners.module';
+import { PartnerAuthService } from '../partners/partner-auth.service';
+import type { PoolClient } from 'pg';
 
 const fields = 'id,ticket_id,name,mime,bytes,created_at,revoked_at';
 type Upload = { buffer: Buffer; size: number; originalname: string };
@@ -64,6 +67,51 @@ export class TicketFilesService {
     const order = await this.customer(body);
     return this.download(id, order.id, body);
   }
+  private async partnerOrder(orderId: string, partnerId: string, client: Pick<PoolClient, 'query'> = this.db.pool, lock = false) {
+    const order = (await client.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE o.id=$1 AND p.partner_id=$2' + (lock ? ' FOR UPDATE' : ''), [orderId, partnerId])).rows[0];
+    if (!order || order.booking_status !== 'CONFIRMED' || !['PAID', 'CREDIT'].includes(order.payment_status) || (await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1', [orderId])).rowCount) throw new NotFoundException('Không tìm thấy file của đơn CTV.');
+    return order;
+  }
+  async partnerList(orderId: string, partnerId: string) {
+    await this.partnerOrder(orderId, partnerId);
+    return { data: (await this.db.pool.query(`SELECT ${fields},partner_shared,sharing_version FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL ORDER BY created_at,id`, [orderId])).rows };
+  }
+  async partnerDownload(id: string, orderId: string, partnerId: string) {
+    await this.partnerOrder(orderId, partnerId);
+    if (!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL', [id, orderId])).rowCount) throw new NotFoundException();
+    return this.download(id, orderId);
+  }
+  async sharing(orderId: string, id: string, partnerId: string, body: unknown) {
+    const parsed = z.object({ version: z.number().int().positive(), shared: z.boolean() }).strict().safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Kiểm tra quyền chia sẻ file.');
+    const client = await this.db.pool.connect();
+    try {
+      await client.query('BEGIN'); await this.partnerOrder(orderId, partnerId, client, true);
+      const row = (await client.query('SELECT sharing_version FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL FOR UPDATE', [id, orderId])).rows[0];
+      if (!row) throw new NotFoundException();
+      if (row.sharing_version !== parsed.data.version) throw new ConflictException('Quyền tải đã thay đổi. Cập nhật danh sách file.');
+      await client.query('UPDATE jingo_ticket_files SET partner_shared=$2,sharing_version=sharing_version+1 WHERE id=$1', [id, parsed.data.shared]);
+      await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)', [randomUUID(), 'partner:' + partnerId, parsed.data.shared ? 'ticket-file.share' : 'ticket-file.unshare', id]);
+      await client.query('COMMIT'); return { ok: true };
+    } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }
+  }
+  private async sharedOrder(body: unknown) {
+    const input = z.object({ code: z.string().regex(/^JG[A-F0-9]{10}$/), accessKey: z.string().regex(/^[a-f0-9]{64}$/) }).strict().safeParse(body);
+    if (!input.success) throw new BadRequestException('Thông tin nhận vé không hợp lệ.');
+    const order = await this.orders.shareOrder(input.data.code, input.data.accessKey);
+    if (!['PAID', 'CREDIT'].includes(order.payment_status)) throw new NotFoundException();
+    return order;
+  }
+  async sharedList(body: unknown) {
+    const order = await this.sharedOrder(body);
+    const rows = (await this.db.pool.query('SELECT id,ticket_id,mime,bytes,created_at FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL AND partner_shared=true ORDER BY created_at,id', [order.id])).rows;
+    return { data: rows.map((row, i) => ({ ...row, name: `File vé ${i + 1}.${row.mime === 'application/pdf' ? 'pdf' : 'webp'}`, revoked_at: null })) };
+  }
+  async sharedDownload(id: string, body: unknown) {
+    const order = await this.sharedOrder(body);
+    if (!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL AND partner_shared=true', [id, order.id])).rowCount) throw new NotFoundException();
+    return this.download(id, order.id);
+  }
   async upload(orderId: string, body: unknown, file: Upload, actor: string) {
     const input = z.object({ ticketId: z.uuid(), version: z.coerce.number().int().positive() }).strict().safeParse(body);
     if (!input.success || !file?.buffer || file.buffer.length > 10 * 1024 * 1024 || !file.buffer.length) throw new BadRequestException('Chọn mã vé và file PDF/JPG/PNG/WebP tối đa 10 MB.');
@@ -86,8 +134,8 @@ export class TicketFilesService {
       await client.query('BEGIN');
       const order = (await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE', [orderId])).rows[0];
       if (!order) throw new NotFoundException();
-      if (order.booking_status !== 'CONFIRMED' || order.payment_status !== 'PAID' || (await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1', [orderId])).rowCount) throw new ConflictException('Chỉ gắn file cho đơn đã thanh toán, đang hoạt động.');
-      if ((await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1', [orderId])).rowCount) throw new BadRequestException('File vé CTV sẽ được hỗ trợ trong luồng tài khoản CTV riêng.');
+      const partner = (await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1', [orderId])).rowCount;
+      if (order.booking_status !== 'CONFIRMED' || !(order.payment_status === 'PAID' || partner && order.payment_status === 'CREDIT') || (await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1', [orderId])).rowCount) throw new ConflictException('Chỉ gắn file cho đơn đã thanh toán hoặc công nợ CTV, đang hoạt động.');
       if (!(await client.query('SELECT id FROM jingo_order_tickets WHERE id=$1 AND order_id=$2', [input.data.ticketId, orderId])).rowCount) throw new NotFoundException('Mã vé không thuộc đơn.');
       const prior = (await client.query('SELECT id FROM jingo_ticket_files WHERE order_id=$1 AND ticket_id=$2 AND hash=$3 AND revoked_at IS NULL', [orderId, input.data.ticketId, hash])).rows[0];
       if (prior) { await client.query('COMMIT'); return { id: prior.id, duplicate: true }; }
@@ -152,5 +200,20 @@ class CustomerTicketFilesController {
   @Post() @HttpCode(200) list(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.check(req); privateHeaders(res); return this.files.customerList(body); }
   @Post(':id/download') @HttpCode(200) async download(@Param('id') id: string, @Body() body: unknown, @Req() req: Request, @Res() res: Response) { this.check(req); send(res, await this.files.publicDownload(id, body)); }
 }
-@Module({ imports: [AuthModule, OrdersModule, MailModule], controllers: [AdminTicketFilesController, CustomerTicketFilesController], providers: [TicketFilesService] })
+@Controller('partner/orders/:orderId/files')
+class PartnerTicketFilesController {
+  constructor(private readonly files: TicketFilesService, private readonly auth: PartnerAuthService) {}
+  @Get() async list(@Param('orderId') orderId: string, @Req() req: Request, @Res({ passthrough: true }) res: Response) { privateHeaders(res); return this.files.partnerList(orderId, (await this.auth.requirePartner(req)).id); }
+  @Get(':id/download') async download(@Param('orderId') orderId: string, @Param('id') id: string, @Req() req: Request, @Res() res: Response) { send(res, await this.files.partnerDownload(id, orderId, (await this.auth.requirePartner(req)).id)); }
+  @Post(':id/sharing') async sharing(@Param('orderId') orderId: string, @Param('id') id: string, @Body() body: unknown, @Req() req: Request) { this.auth.checkMutation(req); return this.files.sharing(orderId, id, (await this.auth.requirePartner(req)).id, body); }
+}
+@Controller('deliveries/files')
+class SharedTicketFilesController {
+  private requests = new Map<string, { count: number; until: number }>();
+  constructor(private readonly files: TicketFilesService) {}
+  private check(req: Request) { const now = Date.now(); for (const [key, value] of this.requests) if (value.until < now) this.requests.delete(key); const key = req.socket.remoteAddress || 'unknown', value = this.requests.get(key) || { count: 0, until: now + 60000 }; value.count++; this.requests.set(key, value); if (value.count > 100 || this.requests.size > 10000) throw new HttpException('Quá nhiều yêu cầu. Thử lại sau một phút.', 429); }
+  @Post() @HttpCode(200) list(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.check(req); privateHeaders(res); return this.files.sharedList(body); }
+  @Post(':id/download') @HttpCode(200) async download(@Param('id') id: string, @Body() body: unknown, @Req() req: Request, @Res() res: Response) { this.check(req); send(res, await this.files.sharedDownload(id, body)); }
+}
+@Module({ imports: [AuthModule, OrdersModule, MailModule, PartnersModule], controllers: [AdminTicketFilesController, CustomerTicketFilesController, PartnerTicketFilesController, SharedTicketFilesController], providers: [TicketFilesService] })
 export class TicketFilesModule {}

@@ -184,6 +184,32 @@ export class OrdersService {
   }
   async partnerList(partnerId:string){return(await this.db.pool.query('SELECT o.id,o.code,o.snapshot,o.contact,o.booking_status,o.payment_status,o.created_at,o.version FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE p.partner_id=$1 ORDER BY o.created_at DESC LIMIT 200',[partnerId])).rows;}
   async partnerGet(id:string,partnerId:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_orders p ON p.order_id=o.id WHERE o.id=$1 AND p.partner_id=$2',[id,partnerId]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy đơn.');return{...await this.detail(result.rows[0],false),contact:result.rows[0].contact};}
-  async createShare(id:string,partnerId:string,requestId:string,accessKey:string){const order=await this.partnerGet(id,partnerId);const previous=await this.db.pool.query('SELECT order_id,access_hash FROM jingo_partner_shares WHERE id=$1',[requestId]);if(previous.rowCount){if(previous.rows[0].order_id!==id||previous.rows[0].access_hash!==hash(accessKey))throw new ConflictException('Mã yêu cầu đã dùng.');return{code:order.code,accessKey};}try{await this.db.pool.query('INSERT INTO jingo_partner_shares(id,order_id,access_hash)VALUES($1,$2,$3)',[requestId,id,hash(accessKey)]);}catch(e){if((e as{code?:string}).code==='23505')throw new ConflictException('Mã chia sẻ đã dùng.');throw e;}return{code:order.code,accessKey};}
-  async deliveryLookup(code:string,key:string){const result=await this.db.pool.query('SELECT o.* FROM jingo_orders o JOIN jingo_partner_shares s ON s.order_id=o.id WHERE o.code=$1 AND s.access_hash=$2',[code,hash(key)]);if(!result.rowCount)throw new NotFoundException('Không tìm thấy vé.');const row=result.rows[0]as OrderRow;const detail=await this.detail(row,false);return{code:row.code,productName:row.snapshot.productName,variantName:row.snapshot.variantName,date:row.snapshot.date,...(row.snapshot.timeSlot?{timeSlot:row.snapshot.timeSlot}:{}),bookingStatus:row.booking_status,totalGuests:detail.totalGuests,deliveredGuests:detail.deliveredGuests,tickets:detail.tickets};}
+  private async shareOwner(client:Pick<PoolClient,'query'>,id:string,partnerId:string){
+    const row=(await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE',[id])).rows[0];
+    if(!row||!(await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1 AND partner_id=$2',[id,partnerId])).rowCount)throw new NotFoundException('Không tìm thấy đơn CTV.');
+    return row;
+  }
+  async createShare(id:string,partnerId:string,requestId:string,accessKey:string){
+    const client=await this.db.pool.connect();try{await client.query('BEGIN');const order=await this.shareOwner(client,id,partnerId);
+      if(order.booking_status!=='CONFIRMED'||(await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[id])).rowCount)throw new ConflictException('Đơn không còn nhận chia sẻ vé.');
+      const prior=(await client.query('SELECT order_id,access_hash,revoked_at FROM jingo_partner_shares WHERE id=$1',[requestId])).rows[0];
+      if(prior){if(prior.order_id!==id||prior.access_hash!==hash(accessKey)||prior.revoked_at)throw new ConflictException('Yêu cầu đã dùng hoặc link đã thu hồi.');await client.query('COMMIT');return{code:order.code,accessKey};}
+      await client.query('INSERT INTO jingo_partner_shares(id,order_id,access_hash)VALUES($1,$2,$3)',[requestId,id,hash(accessKey)]);
+      await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),'partner:'+partnerId,'partner-share.create',id]);
+      await client.query('COMMIT');return{code:order.code,accessKey};
+    }catch(e){await client.query('ROLLBACK');if((e as{code?:string}).code==='23505')throw new ConflictException('Mã chia sẻ đã dùng.');throw e;}finally{client.release();}
+  }
+  async revokeShares(id:string,partnerId:string,requestId:string){const client=await this.db.pool.connect();try{await client.query('BEGIN');await this.shareOwner(client,id,partnerId);
+    const prior=(await client.query('SELECT order_id FROM jingo_partner_share_actions WHERE id=$1',[requestId])).rows[0];if(prior){if(prior.order_id!==id)throw new ConflictException('Mã yêu cầu đã dùng.');await client.query('COMMIT');return{ok:true};}
+    await client.query('UPDATE jingo_partner_shares SET revoked_at=now() WHERE order_id=$1 AND revoked_at IS NULL',[id]);
+    await client.query('INSERT INTO jingo_partner_share_actions(id,order_id)VALUES($1,$2)',[requestId,id]);
+    await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),'partner:'+partnerId,'partner-share.revoke',id]);await client.query('COMMIT');return{ok:true};
+  }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}}
+  async shareOrder(code:string,key:string){
+    const result=await this.db.pool.query('SELECT o.*,p.data AS partner_data FROM jingo_orders o JOIN jingo_partner_shares s ON s.order_id=o.id JOIN jingo_partner_orders po ON po.order_id=o.id JOIN jingo_partners p ON p.id=po.partner_id WHERE o.code=$1 AND s.access_hash=$2 AND s.revoked_at IS NULL',[code,hash(key)]),row=result.rows[0];
+    if(!row||row.partner_data.status==='DISABLED'||row.booking_status!=='CONFIRMED'||(await this.db.pool.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[row.id])).rowCount)throw new NotFoundException('Không tìm thấy vé hoặc link đã thu hồi.');
+    return row as OrderRow;
+  }
+  async deliveryLookup(code:string,key:string){const row=await this.shareOrder(code,key),detail=await this.detail(row,false);return{code:row.code,productName:row.snapshot.productName,variantName:row.snapshot.variantName,date:row.snapshot.date,...(row.snapshot.timeSlot?{timeSlot:row.snapshot.timeSlot}:{}),bookingStatus:row.booking_status,totalGuests:detail.totalGuests,deliveredGuests:detail.deliveredGuests,tickets:detail.tickets};}
+
 }
