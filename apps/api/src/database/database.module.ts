@@ -55,6 +55,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS jingo_pos_shifts_counter ON jingo_pos_shifts(counter_id,opened_at DESC);
       CREATE TABLE IF NOT EXISTS jingo_pos_open_shifts(counter_id text PRIMARY KEY REFERENCES jingo_counters(id),shift_id text NOT NULL UNIQUE REFERENCES jingo_pos_shifts(id));
       CREATE TABLE IF NOT EXISTS jingo_pos_shift_receipts(payment_id text PRIMARY KEY REFERENCES jingo_order_payments(id),shift_id text NOT NULL REFERENCES jingo_pos_shifts(id));
+      CREATE TABLE IF NOT EXISTS jingo_pos_cash_movements(id text PRIMARY KEY,shift_id text NOT NULL REFERENCES jingo_pos_shifts(id),kind text NOT NULL CHECK(kind IN ('IN','OUT')),amount bigint NOT NULL CHECK(amount>0),reference text NOT NULL,note text NOT NULL,actor_id text NOT NULL,actor_name text NOT NULL,request_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_pos_cash_movements_shift ON jingo_pos_cash_movements(shift_id,created_at);
       CREATE INDEX IF NOT EXISTS jingo_pos_shift_receipts_shift ON jingo_pos_shift_receipts(shift_id);
       CREATE TABLE IF NOT EXISTS jingo_payment_methods(payment_id text PRIMARY KEY REFERENCES jingo_order_payments(id),method text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_order_tickets (

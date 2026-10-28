@@ -368,3 +368,9 @@ Lợi nhuận gộp theo ngày tạo đơn, chỉ cho đơn PAID/CREDIT chưa h�
 - Admin → Bán hàng → Mã giảm giá & voucher: khoảng ngày sử dụng tùy chọn, thứ áp dụng; điều kiện kết hợp với phạm vi sản phẩm/gói và thời hạn nhập mã hiện có.
 - Không chọn thứ nghĩa là mọi thứ; khoảng ngày tính bao gồm hai đầu, theo ngày sử dụng vé tại Việt Nam. Để trống một đầu cho phép giới hạn một phía.
 - Quote và đặt đơn đều kiểm tra lại trên máy chủ; voucher cũ không có điều kiện ngày vẫn hoạt động như trước. Đơn đã tạo giữ nguyên số tiền khi cấu hình thay đổi.
+
+## 0.27 — Thu/chi tiền mặt trong ca
+
+- Admin/POS → Ca quầy: người mở ca hoặc quản trị ghi bổ sung/rút tiền mặt kèm mã chứng từ, lý do và người giao nhận. Quyền SHIFT và phạm vi quầy được kiểm tra lại khi ghi.
+- Phải bàn giao = đầu ca + thu bán vé bằng tiền mặt + bổ sung − rút/chi. Không cho rút quá số dư theo sổ, không tạo doanh thu hay hoàn tiền đơn.
+- Chứng từ không sửa/xóa; ghi khoản đối ứng để sửa sai trong ca đang mở. Ca chốt giữ snapshot, chi tiết và có CSV thu/chi riêng; biên bản in hiển thị cả các khoản này. Không thực hiện chuyển tiền ngân hàng.

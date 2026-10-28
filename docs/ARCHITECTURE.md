@@ -195,3 +195,6 @@ GET admin/supply/statements/:id trả tổng và 50 dòng/trang, export trả to
 
 ### Voucher theo ngày sử dụng (0.26)
 `visitFrom`/`visitTo` là ngày lịch YYYY-MM-DD tùy chọn, bao gồm hai đầu; `visitWeekdays` dùng 0=Chủ nhật, 1–6=thứ Hai–Bảy, rỗng là mọi thứ. Điều kiện ngày sử dụng kết hợp AND với phạm vi sản phẩm/gói và ngày đặt vé. Quote và commit truyền ngày đã kiểm tra giá vào VouchersService; việc cấp lượt vẫn được khóa trong giao dịch lập đơn. Không đổi snapshot/retry đơn đã tạo.
+
+### Thu/chi ca quầy (0.27)
+Bảng `jingo_pos_cash_movements` lưu IN/OUT dương, người ghi, tham chiếu/lý do và hash request. Ghi thu/chi khóa quầy rồi ca theo cùng thứ tự với chốt ca, kiểm tra lại quyền SHIFT/phạm vi trong DB và chủ ca. Mỗi request ID duy nhất toàn hệ thống; retry cùng payload/actor/ca không ghi trùng kể cả sau chốt. Tăng version ca khi ghi để ngăn chốt trên tổng thu/chi cũ. Chốt tính tổng cashIn/cashOut và giữ snapshot; ca cũ thiếu trường mới hiển thị 0. Khoản thu bán vé/giá vốn/công nợ/hoàn tiền không bị thay đổi. Tối đa 10.000 chứng từ tiền mặt một ca; không cắt dữ liệu xuất. Concurrency vẫn cần kiểm tra trên PostgreSQL thật.

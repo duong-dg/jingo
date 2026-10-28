@@ -20,6 +20,8 @@ import{BadRequestException,ConflictException,Body,Controller,ForbiddenException,
  constructor(private readonly auth:PosAuthService,private readonly pos:PosService,private readonly operations:OperationsService,private readonly shifts:ShiftsService){}
  private actor(req:Request){if(!['GET','HEAD'].includes(req.method))this.auth.checkMutation(req);return this.auth.require(req);}
  @Get('shifts')async shiftsList(@Query('counterId')counterId:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.shifts.list(await this.actor(req),counterId);}
+ @Post('shifts/:id/cash')async shiftCash(@Param('id')id:string,@Body()body:unknown,@Req()req:Request){return this.shifts.moveCash(await this.actor(req),id,body);}
+ @Get('shifts/:id/cash/export')async shiftCashExport(@Param('id')id:string,@Req()req:Request,@Res()res:Response){sendShiftCsv(res,await this.shifts.exportCash(await this.actor(req),id),'thu-chi-');}
  @Get('shifts/:id/print')async shiftPrint(@Param('id')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.shifts.print(await this.actor(req),id);}
  @Get('shifts/:id/export')async shiftExport(@Param('id')id:string,@Req()req:Request,@Res()res:Response){sendShiftCsv(res,await this.shifts.export(await this.actor(req),id));}
  @Get('shifts/:id')async shiftDetail(@Param('id')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.shifts.detail(await this.actor(req),id);}
