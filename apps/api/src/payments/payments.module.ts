@@ -9,7 +9,7 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Module,Post
  @Get('vnpay/return')returned(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
  @Post('sepay/card-ipn')@HttpCode(200)cardIpn(@Body()body:unknown,@Req()req:Request){return this.service.sepayCard(body,String(req.headers['x-secret-key']||''));}
  @Get('sepay/card-return')cardReturn(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
- @Post('sepay/webhook')@HttpCode(200)webhook(@Body()body:unknown,@Req()req:Request){return this.service.sepay(body,req.headers.authorization||'');}
+ @Post('sepay/webhook')@HttpCode(200)webhook(@Body()body:unknown,@Req()req:Request){return this.service.sepay(body,req.headers.authorization||'',{raw:(req as Request&{rawBody?:Buffer}).rawBody,timestamp:String(req.headers['x-sepay-timestamp']||''),signature:String(req.headers['x-sepay-signature']||'')});}
 }
 @Controller('admin/payments')@UseGuards(AdminGuard)class AdminPaymentsController{
  constructor(private readonly settings:PaymentSettings,private readonly service:PaymentsService){}

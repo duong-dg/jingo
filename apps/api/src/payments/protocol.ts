@@ -9,3 +9,12 @@ export function vnTime(date:Date){return new Date(date.getTime()+7*3600000).toIS
 export const sepaySignedFields=['order_amount','merchant','currency','operation','order_description','order_invoice_number','customer_id','payment_method','success_url','error_url','cancel_url'] as const;
 export function sepaySign(fields:Record<string,string>,secret:string){return createHmac('sha256',secret).update(sepaySignedFields.filter(k=>fields[k]!==undefined).map(k=>k+'='+fields[k]).join(','),'utf8').digest('base64');}
 export function sepayAmount(value:string){if(!/^[0-9]{1,11}(?:\.0{1,2})?$/.test(value))throw new Error('Invalid VND amount');const amount=Number(value);if(!Number.isSafeInteger(amount)||amount<=0||amount>15000000000)throw new Error('Invalid VND amount');return amount;}
+
+// Verify the exact bytes SePay signed. Never reconstruct a parsed JSON body.
+export function verifySepayWebhook(raw:Buffer|undefined,timestamp:string,signature:string,secret:string,now=Date.now()){
+ if(!raw||!raw.length||raw.length>1024*1024||!/^\d{10}$/.test(timestamp)||!/^sha256=[a-f0-9]{64}$/.test(signature))return false;
+ if(Math.abs(Math.floor(now/1000)-Number(timestamp))>300)return false;
+ const expected='sha256='+createHmac('sha256',secret).update(timestamp+'.').update(raw).digest('hex');
+ return equalSecret(expected,signature);
+}
+export const sepayWebhookCredential=(config:{sepayAuth?:string;sepayHmacEncrypted?:string;sepayEncrypted?:string})=>config.sepayAuth==='HMAC_SHA256'?config.sepayHmacEncrypted:config.sepayEncrypted;

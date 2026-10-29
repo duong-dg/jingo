@@ -43,3 +43,14 @@ Official integration references:
 - https://developer.sepay.vn/vi/cong-thanh-toan/API/don-hang/form-thanh-toan
 - https://developer.sepay.vn/vi/cong-thanh-toan/IPN
 - https://developer.sepay.vn/vi/cong-thanh-toan/sandbox
+
+
+## SePay bank webhook HMAC-SHA256 (2026-10-29)
+
+- Admin → Thanh toán → SePay chuyển khoản → Xác thực webhook: choose HMAC-SHA256 and enter a separate random secret of at least 32 characters. Choose the same method and secret in SePay; use JSON and money-in events with the existing `/api/v1/payments/sepay/webhook` URL. Synchronize the Ubuntu clock with NTP.
+- Existing installations retain API Key authentication until explicitly changed. Exactly one method is accepted; HMAC never falls back to API Key or Bearer. OAuth token issuance is not implemented.
+- The API captures the original request bytes with Nest rawBody support and verifies `X-SePay-Signature: sha256=<hex>` over `<X-SePay-Timestamp>.<raw_body>` using constant-time comparison. Timestamps more than 300 seconds in either direction are rejected before payment processing. JSON is never reserialized for verification.
+- HMAC secrets are encrypted at rest and excluded from admin responses, public options and journals. Blank inputs preserve stored secrets; changing authentication requires supplying a new matching secret. TEST/LIVE separation and configuration race checks apply to HMAC as well.
+- Valid provider retries within the time window are acknowledged, while persistent transaction identity/fingerprints prevent duplicate receipts and conflicting reuse. Expired signatures are rejected; the provider must re-sign retries. Existing exact amount/account/bank/order checks still apply.
+- Verification: raw whitespace/Unicode changes, wrong signatures/keys, missing raw bytes, expired/future timestamps, API Key downgrade rejection, encrypted settings, signed live settlement and duplicate retries are covered by automated tests. Provider dashboard Test mode and a controlled live payment still require real account configuration.
+- Reference: https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc

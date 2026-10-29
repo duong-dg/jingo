@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import type{NestExpressApplication}from'@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule,{rawBody:true});
   app.useBodyParser('json',{limit:'1mb'});
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
