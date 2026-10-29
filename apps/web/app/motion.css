@@ -14,7 +14,7 @@ body[data-public-motion="on"] .hero-art .art-label{animation:jg-arrive 900ms 240
 body[data-public-motion="on"] .jg-reveal{transition:opacity 520ms var(--jg-ease),translate 520ms var(--jg-ease),transform 260ms var(--jg-ease),box-shadow 260ms ease,border-color 260ms ease;transition-delay:var(--jg-delay,0ms)}
 body[data-public-motion="on"] .jg-reveal-pending{opacity:0;translate:0 18px}
 body[data-public-motion="on"] .jg-reveal-pending:focus-within{opacity:1;translate:0 0;transition-delay:0ms}
-body[data-public-motion="on"] :is(.card,.blog-card){transition:transform 260ms var(--jg-ease),box-shadow 260ms ease,border-color 260ms ease}
+body[data-public-motion="on"] :is(.card,.blog-card,.destination-card){transition:transform 260ms var(--jg-ease),box-shadow 260ms ease,border-color 260ms ease}
 body[data-public-motion="on"] :is(.card-cover,.blog-card-cover){transition:transform 650ms var(--jg-ease)}
 body[data-public-motion="on"] .round-arrow{transition:background-color 220ms ease,color 220ms ease,transform 260ms var(--jg-ease)}
 body[data-public-motion="on"] :is(.hero .button,.journal .button){transition:background-color 200ms ease,box-shadow 200ms ease}
@@ -25,14 +25,14 @@ body[data-public-motion="on"] .header .public-desktop-nav a::after{content:'';po
 body[data-public-motion="on"] .date-popover,body[data-public-motion="on"] .public-mobile-menu[open] nav{animation:jg-popover 180ms var(--jg-ease) both}
 body[data-public-motion="on"] :is(.card,.blog-card,.type-chips a,.header a,.hero .button):focus-visible{outline:3px solid #e78b5a;outline-offset:4px}
 @media(hover:hover) and (pointer:fine){
- body[data-public-motion="on"] :is(.card,.blog-card):hover{transform:translateY(-5px);border-color:#b7c8b8;box-shadow:0 14px 30px #193d3412}
+ body[data-public-motion="on"] :is(.card,.blog-card,.destination-card):hover{transform:translateY(-5px);border-color:#b7c8b8;box-shadow:0 14px 30px #193d3412}
  body[data-public-motion="on"] .card:hover .card-cover,body[data-public-motion="on"] .blog-card:hover .blog-card-cover{transform:scale(1.035)}
  body[data-public-motion="on"] .card:hover .round-arrow{background:#193d34;color:#fff;transform:rotate(8deg)}
  body[data-public-motion="on"] :is(.hero .button,.journal .button):hover{box-shadow:0 7px 18px #193d341a}
  body[data-public-motion="on"] :is(.hero .button,.journal .button):hover>span{transform:translate(3px,-2px)}
  body[data-public-motion="on"] .header .public-desktop-nav a:hover::after{transform:scaleX(1)}
 }
-@media(hover:none){body[data-public-motion="on"] :is(.card,.blog-card):hover{transform:none;box-shadow:none}}
+@media(hover:none){body[data-public-motion="on"] :is(.card,.blog-card,.destination-card):hover{transform:none;box-shadow:none}}
 @media(max-width:760px){body[data-public-motion="on"] .jg-reveal{transition-duration:380ms;transition-delay:0ms}body[data-public-motion="on"] .jg-reveal-pending{translate:0 12px}}
 @keyframes jg-arrive{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
 @keyframes jg-art-arrive{from{opacity:.5;translate:0 14px}to{opacity:1;translate:0 0}}

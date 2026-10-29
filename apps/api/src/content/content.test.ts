@@ -14,6 +14,13 @@ test('media validation, custom product types, blog scheduling and HTML isolation
     assert.equal((await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'),true,'bad.png')).status,400);
     res=await upload(png);assert.equal(res.status,201);const image=(await res.json()).data;assert.equal(image.width,40);assert.equal(image.alt,'Ảnh thử nghiệm');
     res=await call('/media/'+image.id);assert.equal(res.status,200);assert.match(res.headers.get('content-type')!,/image\/webp/);assert.equal(Buffer.from(await res.arrayBuffer()).subarray(0,4).toString(),'RIFF');assert.equal((await call('/media/..')).status,404);
+    const destination={id:randomUUID(),slug:'vung-thu-nghiem',name:'Vùng thử nghiệm',englishName:'Test region',parentId:null,status:'ACTIVE',sortOrder:1,description:'Mô tả vùng',cover:{id:image.id,alt:'Ảnh vùng'},version:0};
+    assert.equal((await call('/admin/destinations',destination)).status,401);
+    assert.equal((await call('/admin/destinations',{...destination,cover:{id:randomUUID(),alt:'Missing'}},true)).status,400,'destination cover must reference a real media item');
+    res=await call('/admin/destinations',destination,true);assert.equal(res.status,201);let destinationSaved=(await res.json()).data;assert.equal(destinationSaved.cover.id,image.id);
+    assert.equal((await(await call('/destinations/test-region?lang=en')).json()).data.cover.id,image.id,'Vietnamese and English use the same image');
+    const{cover:oldCover,...oldDestinationClient}=destinationSaved;res=await call('/admin/destinations',{...oldDestinationClient,englishName:'Updated region'},true);assert.equal(res.status,201);destinationSaved=(await res.json()).data;assert.equal(destinationSaved.cover.id,image.id,'older clients omitting cover cannot erase it');
+    res=await call('/admin/destinations',{...destinationSaved,cover:null},true);assert.equal(res.status,201);assert.equal((await res.json()).data.cover,null,'explicit image removal is supported');
     const type={id:randomUUID(),slug:'show-dien',name:'Show diễn',description:'Biểu diễn nghệ thuật',bookingKind:'TICKET',status:'ACTIVE',version:0};res=await call('/admin/product-types',type,true);assert.equal(res.status,201);const savedType=(await res.json()).data;
     assert.equal((await call('/admin/product-types',type,true)).status,409);
     const product=(await(await call('/admin/products',undefined,true)).json()).data[0];product.type=type.id;product.cover={id:image.id,alt:'Ảnh đại diện'};product.gallery=[{id:image.id,alt:'Ảnh thông tin'}];product.detailHtml='<h2>Quyền lợi</h2><script>alert(1)</script><p onclick="bad()">Nội dung rõ ràng</p>';
