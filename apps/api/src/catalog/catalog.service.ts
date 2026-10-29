@@ -1,3 +1,4 @@
+import{z}from'zod';
 import{markTranslation}from'../content/translations';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
@@ -21,6 +22,14 @@ export class CatalogService {
     const product: ManagedProduct | undefined = result.rowCount ? this.unpack(result.rows[0]) : undefined;
     if (!product || (!admin && product.status !== 'PUBLISHED')) throw new NotFoundException('Không tìm thấy sản phẩm.');
     return product;
+  }
+  async archive(id:string,body:unknown,actor:string){
+   const parsed=z.object({version:z.number().int().positive(),archived:z.boolean()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Thao tác lưu trữ không hợp lệ.');const client=await this.db.pool.connect();
+   try{await client.query('BEGIN');const row=(await client.query('SELECT data,version FROM jingo_products WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!row)throw new NotFoundException();if(row.version!==parsed.data.version)throw new ConflictException('Sản phẩm đã thay đổi. Tải lại.');if(parsed.data.archived?row.data.status==='ARCHIVED':row.data.status!=='ARCHIVED')throw new ConflictException('Trạng thái sản phẩm đã thay đổi.');
+    const data={...row.data,status:parsed.data.archived?'ARCHIVED':'DRAFT'};
+    await client.query('UPDATE jingo_products SET data=$1,version=version+1,updated_at=now() WHERE id=$2',[JSON.stringify(data),id]);
+    await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),actor,parsed.data.archived?'product.archive':'product.restore',id]);await client.query('COMMIT');
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}return this.find(id,false,true);
   }
   async save(body: unknown, adminId: string) {
     const parsed = productSchema.safeParse(body);

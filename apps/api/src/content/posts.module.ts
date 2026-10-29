@@ -17,6 +17,38 @@ export class PostsService{
   async list(admin=false){const result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts ORDER BY updated_at DESC');return result.rows.map(row=>this.unpack(row)).filter(post=>admin||this.visible(post));}
   async categories(){const saved=await this.db.pool.query('SELECT name FROM jingo_post_categories ORDER BY name');const posts=await this.list(true);return [...new Set(['Cẩm nang',...saved.rows.map(row=>row.name as string),...posts.map(post=>post.category)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));}
   async addCategory(body:unknown){const name=typeof body==='object'&&body!==null&&'name'in body&&typeof body.name==='string'?body.name.trim():'';if(!name||name.length>100)throw new BadRequestException('Tên chuyên mục cần 1–100 ký tự.');await this.db.pool.query('INSERT INTO jingo_post_categories(name)VALUES($1) ON CONFLICT(name) DO NOTHING',[name]);return this.categories();}
+  async categoryAction(body:unknown,adminId:string){
+   const parsed=z.discriminatedUnion('action',[z.object({action:z.literal('RENAME'),name:z.string().trim().min(1).max(100),newName:z.string().trim().min(1).max(100)}).strict(),z.object({action:z.literal('DELETE'),name:z.string().trim().min(1).max(100)}).strict()]).safeParse(body);
+   if(!parsed.success)throw new BadRequestException('Chọn chuyên mục và thao tác hợp lệ.');const input=parsed.data;
+   if(input.name==='Cẩm nang')throw new BadRequestException('Giữ chuyên mục mặc định Cẩm nang để nhận bài khi xóa chuyên mục khác.');
+   const target=input.action==='RENAME'?input.newName:'Cẩm nang';if(target===input.name)return this.categories();
+   const client=await this.db.pool.connect();try{await client.query('BEGIN');
+    const categories=await client.query('SELECT name FROM jingo_post_categories ORDER BY name FOR UPDATE'),posts=await client.query('SELECT id,data,version,updated_at FROM jingo_posts ORDER BY id FOR UPDATE');
+    if(!categories.rows.some(r=>r.name===input.name)&&!posts.rows.some(r=>r.data.category===input.name))throw new NotFoundException('Chuyên mục không còn tồn tại.');
+    if(input.action==='RENAME'&&[...categories.rows.map(r=>r.name),...posts.rows.map(r=>r.data.category)].some(n=>n!==input.name&&n.toLocaleLowerCase('vi')===target.toLocaleLowerCase('vi')))throw new ConflictException('Tên chuyên mục đã tồn tại.');
+    await client.query('INSERT INTO jingo_post_categories(name)VALUES($1) ON CONFLICT(name) DO NOTHING',[target]);
+    for(const row of posts.rows.filter(r=>r.data.category===input.name)){
+     const data={...row.data,category:target};markTranslation('POST',data);
+     await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(post_id,version) DO NOTHING',[row.id,row.version,JSON.stringify(row.data),'legacy','BASELINE',row.updated_at]);
+     await client.query('UPDATE jingo_posts SET data=$1,version=version+1,updated_at=now() WHERE id=$2',[JSON.stringify(data),row.id]);
+     const changed=(await client.query('SELECT version,updated_at FROM jingo_posts WHERE id=$1',[row.id])).rows[0];
+     await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6)',[row.id,changed.version,JSON.stringify(data),adminId,'CATEGORY_'+input.action,changed.updated_at]);
+    }
+    await client.query('DELETE FROM jingo_post_categories WHERE name=$1',[input.name]);
+    await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),adminId,'post-category.'+input.action.toLowerCase(),input.name]);await client.query('COMMIT');
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}return this.categories();
+  }
+  async trash(id:string,body:unknown,adminId:string){
+   const parsed=z.object({version:z.number().int().positive(),trashed:z.boolean()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Thao tác thùng rác không hợp lệ.');
+   const client=await this.db.pool.connect();try{await client.query('BEGIN');const row=(await client.query('SELECT data,version,updated_at FROM jingo_posts WHERE id=$1 FOR UPDATE',[id])).rows[0];if(!row)throw new NotFoundException('Không tìm thấy bài viết.');if(row.version!==parsed.data.version)throw new ConflictException('Bài viết đã thay đổi. Tải lại trước khi xóa/khôi phục.');
+    if(parsed.data.trashed?row.data.status==='TRASH':row.data.status!=='TRASH')throw new ConflictException('Trạng thái bài viết đã thay đổi.');
+    const data={...row.data,status:parsed.data.trashed?'TRASH':'DRAFT',publishedAt:null},reason=parsed.data.trashed?'TRASH':'UNTRASH';
+    await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(post_id,version) DO NOTHING',[id,row.version,JSON.stringify(row.data),'legacy','BASELINE',row.updated_at]);
+    await client.query('UPDATE jingo_posts SET data=$1,version=version+1,updated_at=now() WHERE id=$2',[JSON.stringify(data),id]);const saved=(await client.query('SELECT version,updated_at FROM jingo_posts WHERE id=$1',[id])).rows[0];
+    await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6)',[id,saved.version,JSON.stringify(data),adminId,reason,saved.updated_at]);
+    await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),adminId,'post.'+reason.toLowerCase(),id]);await client.query('COMMIT');
+   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}return this.byId(id);
+  }
   async find(slug:string,admin=false){let result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE slug=$1',[slug]);if(!result.rowCount)result=await this.db.pool.query('SELECT p.data,p.version,p.updated_at FROM jingo_slug_aliases a JOIN jingo_posts p ON p.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['POST',slug]);const post=result.rowCount?this.unpack(result.rows[0]):undefined;if(!post||!admin&&!this.visible(post))throw new NotFoundException('Bài viết chưa xuất bản hoặc không tồn tại.');return post;}
   async byId(id:string){const row=(await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE id=$1',[id])).rows[0];if(!row)throw new NotFoundException('Không tìm thấy bài viết.');return this.unpack(row);}
   async revisions(id:string){await this.byId(id);return(await this.db.pool.query('SELECT version,data,saved_by,reason,created_at FROM jingo_post_revisions WHERE post_id=$1 ORDER BY version DESC LIMIT 50',[id])).rows.map(r=>({version:r.version,title:r.data.title,status:r.data.status,reason:r.reason,savedBy:r.saved_by,createdAt:r.created_at}));}
@@ -61,6 +93,8 @@ function publicPost(post:Post&{updatedAt:string},lang?:string){const{english,ver
   @Get(':id/compare')async compare(@Param('id')id:string,@Query()query:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');return{data:await this.posts.compare(id,query)};}
   @Get(':id/revisions')async revisions(@Param('id')id:string,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return{data:await this.posts.revisions(id)};}
   @HttpPost(':id/restore')async restore(@Param('id')id:string,@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.restore(id,body,req.admin.id)};}
+  @HttpPost('categories/actions')async categoryAction(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.categoryAction(body,req.admin.id)};}
+  @HttpPost(':id/trash')async trash(@Param('id')id:string,@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.trash(id,body,req.admin.id)};}
   @HttpPost('categories')async addCategory(@Body()body:unknown){return{data:await this.posts.addCategory(body)};}
   @HttpPost()async save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return{data:await this.posts.save(body,req.admin.id)};}
 }

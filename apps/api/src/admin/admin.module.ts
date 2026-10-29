@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Module, Post, Req, Res, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Module, Post, Req, Res, Param, BadRequestException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -19,6 +19,7 @@ class AdminController {
   @Get('products') async products(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.auth.requireAdmin(req); res.setHeader('Cache-Control', 'no-store'); return { data: await this.catalog.list(true) };
   }
+  @Post('products/:id/archive') async archive(@Param('id')id:string,@Body()body:unknown,@Req()req:Request){this.auth.checkMutation(req);const admin=await this.auth.requireAdmin(req);return{data:await this.catalog.archive(id,body,admin.id)};}
   @Post('products') async save(@Body() body: unknown, @Req() req: Request) {
     this.auth.checkMutation(req); const admin = await this.auth.requireAdmin(req);
     return { data: await this.catalog.save(body, admin.id) };

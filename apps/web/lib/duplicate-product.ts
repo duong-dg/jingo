@@ -1,4 +1,4 @@
-type CopySource={id:string;name:string;slug:string;status:'DRAFT'|'PUBLISHED';version:number;seoTitle:string;english?:unknown;variants:{id:string;timeSlots?:{id:string}[]}[];rules:{id:string;productId:string;variantId:string}[];closures:{productId:string;variantId?:string}[]};
+type CopySource={id:string;name:string;slug:string;status:'DRAFT'|'PUBLISHED'|'ARCHIVED';version:number;seoTitle:string;english?:unknown;variants:{id:string;timeSlots?:{id:string}[]}[];rules:{id:string;productId:string;variantId:string}[];closures:{productId:string;variantId?:string}[]};
 export function duplicateProduct<T extends CopySource>(source:T,makeId:()=>string=()=>crypto.randomUUID()){
  const{english,...copy}=structuredClone(source),id=makeId(),variants=new Map(source.variants.map(variant=>[variant.id,makeId()]));
  const variantId=(old:string)=>{const next=variants.get(old);if(!next)throw new Error('Lịch bán tham chiếu gói không tồn tại. Kiểm tra sản phẩm gốc trước khi nhân bản.');return next;};

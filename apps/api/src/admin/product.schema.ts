@@ -16,7 +16,7 @@ export const productSchema = z.object({
   id, supplierId:z.uuid().optional(),slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160),
   name: text.min(1).max(200), destination: text.min(1).max(150), destinationId:z.uuid().optional(), type: id, description: text,
   cover:imageRef.nullable().default(null),gallery:z.array(imageRef).max(20).default([]),detailHtml:z.string().max(200000).default(''),
-  status: z.enum(['DRAFT', 'PUBLISHED']), demo: z.boolean().default(false), version: z.number().int().min(0),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']), demo: z.boolean().default(false), version: z.number().int().min(0),
   variants: z.array(z.object({ id, name: text.min(1).max(100), prices,timeSlots:z.array(slotSchema).max(30).default([]),
     conditions: z.object({ ADULT: text.max(300).optional(), CHILD: text.max(300).optional(), SENIOR: text.max(300).optional(), LOCAL_ADULT: text.max(300).optional(), LOCAL_CHILD: text.max(300).optional(), LOCAL_SENIOR: text.max(300).optional() }).strict().optional()
   }).strict()).min(1).max(30),
