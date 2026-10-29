@@ -12,9 +12,9 @@ export function OrderFiles({ orderId, version, tickets, locked, disabled, onChan
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => { let active = true; api('orders/' + orderId + '/files').then(r => { if (active) setFiles(r.data); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [orderId, version,prefix]);
   const blocked = busy || disabled;
-  return <section className="order-file-panel"><h3>File vé riêng tư</h3><p className="admin-hint">Tải PDF hoặc ảnh vé đối tác lên, không cần nhập mã. Mỗi file cấp một vé cho một khách. Khách tải trong trang tra cứu có xác thực; không dùng thư viện ảnh công khai. File không làm tăng số khách đã giao.</p>
+  return <section className="order-file-panel"><h3>File vé riêng tư</h3><p className="admin-hint">Tải PDF hoặc ảnh vé đối tác lên, không cần nhập mã. Số khách tự lấy theo booking, không cần nhập lại. Khách tải trong trang tra cứu có xác thực; không dùng thư viện ảnh công khai. Nếu gắn thêm file vào vé đã giao, số khách không bị tính thêm.</p>
     {!locked && (tickets.length > 0||remaining>0) && <form onSubmit={async e => { e.preventDefault(); if (!file) return; setBusy(true); setError(''); setNotice(''); try {
-      const body = new FormData(); if(ticket)body.set('ticketId',ticket);else if(remaining>0)body.set('covers','1');else body.set('ticketId',tickets[0].id); body.set('version', String(version)); body.set('file', file);
+      const body = new FormData(); if(ticket)body.set('ticketId',ticket);else if(remaining<=0) body.set('ticketId',tickets[0].id); body.set('version', String(version)); body.set('file', file);
       const response = await fetch('/api/v1/'+prefix+'/orders/' + orderId + '/files', { method: 'POST', headers: { 'X-Jingo-Admin': '1','X-Jingo-POS':'1' }, body }), result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Không đính kèm được file.');
       setSourceFileId(result.id);if(result.ticketId)setBrandTicket(result.ticketId);setFile(null); if (input.current) input.current.value = ''; await onChanged(); setNotice(result.duplicate ? 'File này đã được gắn vào mã vé, không tạo bản trùng.' : 'Đã gắn file vé. Đơn CTV nhận trong tài khoản; đơn web/quầy xếp hàng email nếu SMTP đang bật.');

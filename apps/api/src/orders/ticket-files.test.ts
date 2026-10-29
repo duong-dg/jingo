@@ -22,8 +22,8 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     cookie = (await call('/admin/login', { email: process.env.ADMIN_EMAIL, password: process.env.ADMIN_PASSWORD })).headers.get('set-cookie')!.split(';')[0];
     const row = (await pool.query('SELECT id,data FROM jingo_products WHERE id=$1', ['demo-bana'])).rows[0], product = { ...row.data, demo: false };
     await pool.query('UPDATE jingo_products SET data=$1 WHERE id=$2', [JSON.stringify(product), row.id]);
-    const make = async () => {
-      const accessKey = randomBytes(32).toString('hex'), response = await call('/orders', { requestId: randomUUID(), accessKey, productId: product.id, variantId: product.variants[0].id, date: '2099-06-01', quantities: { ADULT: 1 }, expectedTotal: product.variants[0].prices.ADULT, contact: { name: 'File fixture', phone: '0901234567', email: 'file-guest@example.test', note: '' }, accepted: true });
+    const make = async (guests=1) => {
+      const accessKey = randomBytes(32).toString('hex'), response = await call('/orders', { requestId: randomUUID(), accessKey, productId: product.id, variantId: product.variants[0].id, date: '2099-06-01', quantities: { ADULT: guests }, expectedTotal: product.variants[0].prices.ADULT*guests, contact: { name: 'File fixture', phone: '0901234567', email: 'file-guest@example.test', note: '' }, accepted: true });
       assert.equal(response.status, 201); const { code } = await response.json(); const id = (await pool.query('SELECT id FROM jingo_orders WHERE code=$1', [code])).rows[0].id;
       return { id, code, accessKey };
     };
@@ -31,12 +31,12 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     const detail = (id: string) => call('/admin/orders/' + id, undefined, true).then(r => r.json());
     const action = async (id: string, input: object) => { const order = await detail(id); return call('/admin/orders/' + id + '/actions', { requestId: randomUUID(), version: order.version, note: 'Fixture operation', ...input }, true); };
     const issue = async (id: string) => { assert.equal((await action(id, { action: 'PAY', amount: product.variants[0].prices.ADULT, reference: randomUUID() })).status, 201); assert.equal((await action(id, { action: 'DELIVER', tickets: [{ code: randomUUID(), kind: 'SUPPLIER_CODE', covers: 1, note: '' }] })).status, 201); return (await detail(id)).tickets[0].id as string; };
-    const fileOnly=await make();
-    const directFile=async(version:number)=>{const body=new FormData();body.set('version',String(version));body.set('covers','1');body.set('file',new Blob(['%PDF-1.7 file-only fixture']),'original.pdf');return fetch(base+'/admin/orders/'+fileOnly.id+'/files',{method:'POST',headers:{Origin:'http://localhost:3000','X-Jingo-Admin':'1',Cookie:cookie},body});};
+    const fileOnly=await make(5);
+    const directFile=async(version:number)=>{const body=new FormData();body.set('version',String(version));body.set('file',new Blob(['%PDF-1.7 file-only fixture']),'original.pdf');return fetch(base+'/admin/orders/'+fileOnly.id+'/files',{method:'POST',headers:{Origin:'http://localhost:3000','X-Jingo-Admin':'1',Cookie:cookie},body});};
     assert.equal((await directFile(1)).status,409,'unpaid file-only delivery rejected');
-    assert.equal((await action(fileOnly.id,{action:'PAY',amount:product.variants[0].prices.ADULT,reference:randomUUID()})).status,201);
+    assert.equal((await action(fileOnly.id,{action:'PAY',amount:product.variants[0].prices.ADULT*5,reference:randomUUID()})).status,201);
     const beforeFile=await detail(fileOnly.id),uploaded=await directFile(beforeFile.version);assert.equal(uploaded.status,201);const uploadedFile=await uploaded.json();
-    const afterFile=await detail(fileOnly.id);assert.equal(afterFile.deliveredGuests,1);assert.match(afterFile.tickets[0].code,/^FILE-/);
+    const afterFile=await detail(fileOnly.id);assert.equal(afterFile.deliveredGuests,5,'file automatically covers all five guests in this booking');assert.equal(afterFile.tickets[0].covers,5);assert.match(afterFile.tickets[0].code,/^FILE-/);
     const repeated=await directFile(beforeFile.version);assert.equal(repeated.status,201);assert.equal((await repeated.json()).id,uploadedFile.id);assert.equal((await detail(fileOnly.id)).tickets.length,1,'retry must not issue twice');
     const ticketId = await issue(first.id), otherTicket = await issue(other.id), pdf = Buffer.from('%PDF-1.7\n% fixture only\n%%EOF');
     const upload = (orderId: string, ticket: string, version: number, bytes: Buffer = pdf, name = 'supplier-ticket.pdf', admin = true, csrf = '1') => {

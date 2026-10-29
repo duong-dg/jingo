@@ -143,9 +143,12 @@ export class TicketFilesService {
         const duplicate=(await client.query('SELECT id,ticket_id FROM jingo_ticket_files WHERE order_id=$1 AND hash=$2 AND revoked_at IS NULL',[orderId,hash])).rows[0];
         if(duplicate){await client.query('COMMIT');return{id:duplicate.id,ticketId:duplicate.ticket_id,duplicate:true};}
         if(order.version!==input.data.version)throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi đính kèm.');
-        if(!input.data.covers)throw new BadRequestException('Chọn số khách có vé trong file.');
+        const issued=(await client.query('SELECT covers FROM jingo_order_tickets WHERE order_id=$1',[orderId])).rows.reduce((sum,t)=>sum+Number(t.covers),0);
+        const remaining=order.snapshot.lines.reduce((sum:number,line:{quantity:number})=>sum+line.quantity,0)-issued;
+        const covers=input.data.covers??remaining;
+        if(covers<1)throw new ConflictException('Booking đã giao đủ vé. Chọn vé đã giao để gắn thêm file.');
         const code='FILE-'+randomUUID();
-        const delivered=await this.orders.act(orderId,{requestId:randomUUID(),version:order.version,action:'DELIVER',note:'Giao vé bằng file đối tác, không nhập mã thủ công',tickets:[{code,kind:'TOUR_VOUCHER',covers:input.data.covers,note:'Mã quản lý file JinGo; dùng QR gốc trong file để vào cổng.'}]},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
+        const delivered=await this.orders.act(orderId,{requestId:randomUUID(),version:order.version,action:'DELIVER',note:'Giao vé bằng file đối tác, không nhập mã thủ công',tickets:[{code,kind:'TOUR_VOUCHER',covers,note:'Mã quản lý file JinGo; dùng QR gốc trong file để vào cổng.'}]},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
         input.data.ticketId=delivered.tickets.find(t=>t.code===code)!.id;
         order.version=delivered.version;input.data.version=delivered.version;
       }
