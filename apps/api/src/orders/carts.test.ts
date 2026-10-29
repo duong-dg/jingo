@@ -24,7 +24,8 @@ test('multi-package basket across web, POS and CTV: one checkout, atomic validat
     assert.equal((await call('/admin/products', product, admin)).status, 201);
     await pool.query("INSERT INTO jingo_settings(id,data)VALUES('smtp',$1)", [JSON.stringify({ enabled: true })]);
     const make = (variants = ['eco', 'high', 'vip', 'combo']) => ({ requestId: randomUUID(), accessKey: randomBytes(32).toString('hex'), contact: { name: 'Basket guest', phone: '0901234567', email: 'basket-guest@example.test', note: '' }, accepted: true, items: variants.map(variantId => ({ productId: product.id, variantId, date: '2099-06-01', quantities: { ADULT: 1 }, expectedTotal: product.variants.find(v => v.id === variantId)!.prices.ADULT })) });
-    const input = make(), total = 1850000;
+    const initial=make(),invoice={name:'Invoice fixture company',taxCode:'0101234567',address:'123 Fixture Street',email:'invoice@example.test'},input={...initial,contact:{...initial.contact,invoice}},total=1850000;
+    assert.equal((await call('/carts',{...make(),contact:{...initial.contact,invoice:{...invoice,email:'invalid'}}})).status,400);
     assert.equal((await call('/carts', input, '', { 'X-Jingo-Request': '0' })).status, 403);
     assert.equal((await call('/carts', input, '', { Origin: 'https://evil.example' })).status, 403);
     const bad = make(); bad.items[3].expectedTotal--; assert.equal((await call('/carts', bad)).status, 409);
@@ -52,7 +53,8 @@ test('multi-package basket across web, POS and CTV: one checkout, atomic validat
     for (const variant of ['Eco', 'High', 'VIP', 'High + buffet']) assert.ok(confirmation.text.includes(variant));
     assert.ok(confirmation.text.includes('/gio-hang#' + first.code + ':' + input.accessKey));
     const lookup = (code = first.code, accessKey = input.accessKey) => call('/carts/lookup', { code, accessKey });
-    let view = await (await lookup()).json(); assert.equal(view.total, total); assert.equal(view.payable, total); assert.equal(view.items.length, 4); assert.ok(view.items.every((i: any) => i.accessKey === input.accessKey));
+    let view = await (await lookup()).json();
+    const invoiceOrder=(await(await call('/admin/orders/'+view.items[0].id,undefined,admin)).json());assert.deepEqual(invoiceOrder.contact.invoice,invoice,'invoice request is persisted for admin processing'); assert.equal(view.total, total); assert.equal(view.payable, total); assert.equal(view.items.length, 4); assert.ok(view.items.every((i: any) => i.accessKey === input.accessKey));
     assert.doesNotMatch(JSON.stringify(view), /access_hash|request_hash|encrypted|unit_cost/);
     assert.equal((await call('/carts/lookup', { code: first.code, email: 'wrong@example.test' })).status, 404);
     assert.equal((await call('/admin/carts/' + first.code)).status, 401);
