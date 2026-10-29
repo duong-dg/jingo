@@ -1,5 +1,5 @@
-import{supplierQrImage}from'./supplier-qr';
-import{brandedTicketPdf}from'./branded-ticket';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import type{PosActor}from'../pos/pos.schema';
+import{supplierQrImage,supplierQrImages}from'./supplier-qr';
+import{brandedTicketPdf,brandedTicketsPdf}from'./branded-ticket';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import type{PosActor}from'../pos/pos.schema';
 import { BadRequestException, Body, ConflictException, Controller, Get, HttpException, HttpCode, Injectable, Module, NotFoundException, Param, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
@@ -172,6 +172,38 @@ export class TicketFilesService {
       throw error;
     } finally { client.release(); this.processing = false; }
   }
+  async batch(orderId:string,body:unknown,file:Upload,actor:string,posActor?:PosActor){
+    const parsed=z.object({version:z.coerce.number().int().positive()}).strict().safeParse(body);
+    if(!parsed.success||!file?.buffer?.length||file.buffer.length>5*1024*1024)throw new BadRequestException('Chọn PDF/ảnh vé gốc tối đa 5 MB.');
+    if(posActor)await this.posOrder(orderId,posActor,true);
+    if(this.processing)throw new HttpException('Đang xử lý vé khác, thử lại sau.',429);
+    this.processing=true;let saved:string|undefined;let client:PoolClient|undefined;
+    try{
+      const sourceHash=createHash('sha256').update(file.buffer).digest('hex'),name='JinGo-lo-'+sourceHash+'.pdf';
+      const previous=(await this.db.pool.query('SELECT id,ticket_id FROM jingo_ticket_files WHERE order_id=$1 AND name=$2 AND revoked_at IS NULL',[orderId,name])).rows[0];
+      if(previous)return{...previous,duplicate:true};
+      let qrs:Awaited<ReturnType<typeof supplierQrImages>>;try{qrs=await supplierQrImages(file.buffer);}catch(e){throw new BadRequestException((e as Error).message);}
+      client=await this.db.pool.connect();await client.query('BEGIN');
+      const row=(await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE',[orderId])).rows[0];if(!row)throw new NotFoundException();
+      if(posActor)await this.posWriteScope(client,orderId,posActor);
+      if(row.version!==parsed.data.version)throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi giao vé.');
+      if(row.booking_status!=='CONFIRMED'||!['PAID','CREDIT'].includes(row.payment_status)||(await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[orderId])).rowCount)throw new ConflictException('Thu tiền trước khi giao vé.');
+      const partner=(await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[orderId])).rowCount;
+      if(row.payment_status==='CREDIT'&&!partner)throw new ConflictException('Đơn quầy chưa thu đủ tiền.');
+      if(Number((await client.query('SELECT COUNT(*) AS total FROM jingo_ticket_files WHERE order_id=$1',[orderId])).rows[0].total)>=50)throw new BadRequestException('Đơn đã đạt giới hạn file.');
+      const tickets=qrs.map(q=>({code:'JGV'+createHash('sha256').update(q.identity).digest('hex').slice(0,24).toUpperCase(),kind:'TOUR_VOUCHER' as const,covers:1,note:'Dùng QR đối tác trên vé JinGo để vào cổng.'}));
+      const order=await this.orders.act(orderId,{requestId:randomUUID(),version:row.version,action:'DELIVER',note:'Tự động tách '+qrs.length+' QR từ file và xuất vé JinGo',tickets},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
+      const snapshot=order.snapshot,data=await brandedTicketsPdf(tickets.map((ticket,i)=>({...ticket,product:snapshot.productName,variant:snapshot.variantName,date:snapshot.date,time:snapshot.timeSlot?snapshot.timeSlot.start+(snapshot.timeSlot.end?' - '+snapshot.timeSlot.end:''):undefined,image:qrs[i].image})));
+      if(data.length>10*1024*1024)throw new BadRequestException('PDF JinGo vượt 10 MB, chia file thành lô nhỏ hơn.');
+      const id=randomUUID(),ticketId=order.tickets.find(t=>t.code===tickets[0].code)!.id;
+      await mkdir(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets'),{recursive:true,mode:0o700});await writeFile(this.path(id),data,{flag:'wx',mode:0o600});saved=id;
+      await client.query('INSERT INTO jingo_ticket_files(id,order_id,ticket_id,name,mime,bytes,hash)VALUES($1,$2,$3,$4,$5,$6,$7)',[id,orderId,ticketId,name,'application/pdf',data.length,createHash('sha256').update(data).digest('hex')]);
+      await client.query('UPDATE jingo_ticket_files SET partner_shared=true WHERE id=$1',[id]);
+      await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),actor,'ticket-file.batch',id]);
+      await this.mail.enqueue(client,orderId,'TICKET_READY',order.version);
+      await client.query('COMMIT');saved=undefined;return{id,count:qrs.length,codes:tickets.map(t=>t.code),duplicate:false};
+    }catch(e){if(client)await client.query('ROLLBACK');if(saved)await unlink(this.path(saved)).catch(()=>{});throw e;}finally{client?.release();this.processing=false;}
+  }
   async branded(orderId:string,body:unknown,file:Upload|undefined,actor:string,posActor?:PosActor){
     const parsed=z.object({ticketId:z.uuid(),version:z.coerce.number().int().positive(),payload:z.string().max(2000).optional(),confirmed:z.literal('true'),page:z.coerce.number().int().min(1).max(50).default(1),sourceFileId:z.uuid().optional(),qrNumber:z.coerce.number().int().min(1).max(10).default(1),preview:z.literal('true').optional()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Chọn mã vé và xác nhận QR gốc.');const input=parsed.data;
     if(input.sourceFileId){if(file?.buffer||input.payload)throw new BadRequestException('Chỉ chọn một nguồn QR.');const source=await this.download(input.sourceFileId,orderId);if(!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL',[input.sourceFileId,orderId])).rowCount)throw new NotFoundException();file={buffer:source.data,size:source.data.length,originalname:'supplier-ticket'};}
@@ -215,6 +247,8 @@ class AdminTicketFilesController {
   @Get() list(@Param('orderId') orderId: string, @Res({ passthrough: true }) res: Response) { privateHeaders(res); return this.files.list(orderId); }
   @Post() @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 3 } }))
   upload(@Param('orderId') orderId: string, @Body() body: unknown, @UploadedFile() file: Upload, @Req() req: Request & { admin: { id: string } }) { return this.files.upload(orderId, body, file, req.admin.id); }
+  @Post('batch') @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:1}}))
+  batch(@Param('orderId')orderId:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request&{admin:{id:string}}){return this.files.batch(orderId,body,file,req.admin.id);}
   @Post('branded') @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:8}}))
   branded(@Param('orderId')orderId:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request&{admin:{id:string}}){return this.files.branded(orderId,body,file,req.admin.id);}
   @Get(':id/download') async download(@Param('orderId') orderId: string, @Param('id') id: string, @Res() res: Response) { send(res, await this.files.download(id, orderId)); }
@@ -252,6 +286,7 @@ class SharedTicketFilesController {
  constructor(private readonly files:TicketFilesService,private readonly auth:PosAuthService){}
  @Get()async list(@Param('orderId')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){privateHeaders(res);return this.files.posList(id,await this.auth.require(req));}
  @Post()@UseInterceptors(FileInterceptor('file',{limits:{fileSize:10*1024*1024,files:1,fields:3}}))async upload(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posUpload(id,body,file,await this.auth.require(req));}
+ @Post('batch')@UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:1}}))async batch(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);const actor=await this.auth.require(req);return this.files.batch(id,body,file,actor.role==='STAFF'?'pos-user:'+actor.id:actor.id,actor);}
  @Post('branded')@UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:8}}))async branded(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posBranded(id,body,file,await this.auth.require(req));}
  @Post(':id/revoke')async revoke(@Param('orderId')orderId:string,@Param('id')id:string,@Body()body:unknown,@Req()req:Request){this.auth.checkMutation(req);return this.files.posRevoke(orderId,id,body,await this.auth.require(req));}
  @Get(':id/download')async download(@Param('orderId')orderId:string,@Param('id')id:string,@Req()req:Request,@Res()res:Response){send(res,await this.files.posDownload(orderId,id,await this.auth.require(req)));}
