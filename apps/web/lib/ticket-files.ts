@@ -10,3 +10,8 @@ export async function downloadTicketFile(url: string, body?: unknown) {
 }
 
 export async function attachDeliveryFile(prefix:'admin'|'pos',order:{id:string;version:number;tickets:{id:string;code:string}[]},code:string,file:File){const ticket=order.tickets.find(t=>t.code===code);if(!ticket)throw new Error('Đã lưu mã nhưng chưa xác định được mã nhận file. Mở phần Đính kèm file để tiếp tục.');const body=new FormData();body.set('ticketId',ticket.id);body.set('version',String(order.version));body.set('file',file);let response:Response;try{response=await fetch('/api/v1/'+prefix+'/orders/'+order.id+'/files',{method:'POST',headers:{'X-Jingo-Admin':'1','X-Jingo-POS':'1'},body});}catch{throw new Error('Đã giao mã, nhưng chưa xác nhận được file do lỗi kết nối. Cập nhật đơn và kiểm tra phần file trước khi thử lại.');}const data=await response.json();if(!response.ok)throw new Error('Đã giao mã, nhưng chưa gắn được file: '+(data.message||'hãy đính kèm lại ở phần file vé.'));return data;}
+
+export async function openTicketForPrint(url:string){
+ const preview=window.open('about:blank','_blank');if(!preview)throw new Error('Cho phép mở cửa sổ để xem và in vé.');preview.opener=null;
+ try{const response=await fetch(url,{headers:{'X-Jingo-Admin':'1','X-Jingo-POS':'1'},cache:'no-store'});if(!response.ok)throw new Error('Không mở được file vé.');const blob=await response.blob();if(!['application/pdf','image/webp'].includes(blob.type))throw new Error('File vé không hợp lệ.');const objectUrl=URL.createObjectURL(blob);preview.location.href=objectUrl;setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);}catch(error){preview.close();throw error;}
+}

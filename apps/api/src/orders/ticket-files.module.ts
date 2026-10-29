@@ -115,8 +115,8 @@ export class TicketFilesService {
     return this.download(id, order.id);
   }
   async upload(orderId: string, body: unknown, file: Upload, actor: string, branded=false,posActor?:PosActor) {
-    const input = z.object({ ticketId: z.uuid(), version: z.coerce.number().int().positive() }).strict().safeParse(body);
-    if (!input.success || !file?.buffer || file.buffer.length > 10 * 1024 * 1024 || !file.buffer.length) throw new BadRequestException('Chọn mã vé và file PDF/JPG/PNG/WebP tối đa 10 MB.');
+    const input = z.object({ ticketId: z.uuid().optional(), covers:z.coerce.number().int().min(1).max(150).optional(), version: z.coerce.number().int().positive() }).strict().safeParse(body);
+    if (!input.success || !file?.buffer || file.buffer.length > 10 * 1024 * 1024 || !file.buffer.length) throw new BadRequestException('Chọn file PDF/JPG/PNG/WebP tối đa 10 MB và số khách hoặc vé nhận file.');
     if (this.processing) throw new HttpException('Đang xử lý file khác. Vui lòng thử lại.', 429);
     this.processing = true;
     const client = await this.db.pool.connect().catch(error => { this.processing = false; throw error; });
@@ -139,6 +139,16 @@ export class TicketFilesService {
       if(posActor)await this.posWriteScope(client,orderId,posActor);
       const partner = (await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1', [orderId])).rowCount;
       if (order.booking_status !== 'CONFIRMED' || !(order.payment_status === 'PAID' || partner && order.payment_status === 'CREDIT') || (await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1', [orderId])).rowCount) throw new ConflictException('Chỉ gắn file cho đơn đã thanh toán hoặc công nợ CTV, đang hoạt động.');
+      if(!input.data.ticketId){
+        const duplicate=(await client.query('SELECT id,ticket_id FROM jingo_ticket_files WHERE order_id=$1 AND hash=$2 AND revoked_at IS NULL',[orderId,hash])).rows[0];
+        if(duplicate){await client.query('COMMIT');return{id:duplicate.id,ticketId:duplicate.ticket_id,duplicate:true};}
+        if(order.version!==input.data.version)throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi đính kèm.');
+        if(!input.data.covers)throw new BadRequestException('Chọn số khách có vé trong file.');
+        const code='FILE-'+randomUUID();
+        const delivered=await this.orders.act(orderId,{requestId:randomUUID(),version:order.version,action:'DELIVER',note:'Giao vé bằng file đối tác, không nhập mã thủ công',tickets:[{code,kind:'TOUR_VOUCHER',covers:input.data.covers,note:'Mã quản lý file JinGo; dùng QR gốc trong file để vào cổng.'}]},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
+        input.data.ticketId=delivered.tickets.find(t=>t.code===code)!.id;
+        order.version=delivered.version;input.data.version=delivered.version;
+      }
       if (!(await client.query('SELECT id FROM jingo_order_tickets WHERE id=$1 AND order_id=$2', [input.data.ticketId, orderId])).rowCount) throw new NotFoundException('Mã vé không thuộc đơn.');
       const prior = (await client.query('SELECT id FROM jingo_ticket_files WHERE order_id=$1 AND ticket_id=$2 AND hash=$3 AND revoked_at IS NULL', [orderId, input.data.ticketId, hash])).rows[0];
       if (prior) { await client.query('COMMIT'); return { id: prior.id, duplicate: true }; }
@@ -155,7 +165,7 @@ export class TicketFilesService {
       if(branded)await client.query('UPDATE jingo_ticket_files SET partner_shared=true WHERE id=$1',[id]);
       await this.mail.enqueue(client, orderId, partner&&!branded?'DELIVER':'TICKET_READY', order.version + 1);
       await client.query('COMMIT'); saved = undefined;
-      return { id, duplicate: false };
+      return { id,ticketId:input.data.ticketId, duplicate: false };
     } catch (error) {
       await client.query('ROLLBACK');
       if (saved) await unlink(this.path(saved)).catch(() => {});
@@ -163,7 +173,8 @@ export class TicketFilesService {
     } finally { client.release(); this.processing = false; }
   }
   async branded(orderId:string,body:unknown,file:Upload|undefined,actor:string,posActor?:PosActor){
-    const parsed=z.object({ticketId:z.uuid(),version:z.coerce.number().int().positive(),payload:z.string().max(2000).optional(),confirmed:z.literal('true'),page:z.coerce.number().int().min(1).max(50).default(1),qrNumber:z.coerce.number().int().min(1).max(10).default(1),preview:z.literal('true').optional()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Chọn mã vé và xác nhận QR gốc.');const input=parsed.data;
+    const parsed=z.object({ticketId:z.uuid(),version:z.coerce.number().int().positive(),payload:z.string().max(2000).optional(),confirmed:z.literal('true'),page:z.coerce.number().int().min(1).max(50).default(1),sourceFileId:z.uuid().optional(),qrNumber:z.coerce.number().int().min(1).max(10).default(1),preview:z.literal('true').optional()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Chọn mã vé và xác nhận QR gốc.');const input=parsed.data;
+    if(input.sourceFileId){if(file?.buffer||input.payload)throw new BadRequestException('Chỉ chọn một nguồn QR.');const source=await this.download(input.sourceFileId,orderId);if(!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL',[input.sourceFileId,orderId])).rowCount)throw new NotFoundException();file={buffer:source.data,size:source.data.length,originalname:'supplier-ticket'};}
     if((!!input.payload)===(!!file?.buffer))throw new BadRequestException('Chỉ dùng một nguồn: nội dung QR gốc hoặc ảnh QR đã cắt.');if(file&&file.buffer.length>5*1024*1024)throw new BadRequestException('Ảnh QR tối đa 5 MB.');
     const order=await this.orders.get(orderId),ticket=order.tickets.find(t=>t.id===input.ticketId);if(!ticket)throw new NotFoundException('Mã vé không thuộc đơn.');if(order.version!==input.version)throw new ConflictException('Đơn đã thay đổi. Tải lại.');
     let data:Buffer;try{data=await brandedTicketPdf({code:ticket.code,product:order.snapshot.productName,variant:order.snapshot.variantName,date:order.snapshot.date,time:order.snapshot.timeSlot?order.snapshot.timeSlot.start+(order.snapshot.timeSlot.end?' - '+order.snapshot.timeSlot.end:''):undefined,covers:ticket.covers,note:ticket.note,payload:input.payload,image:file?.buffer?await supplierQrImage(file.buffer,input.page,input.qrNumber):undefined});}catch(e){throw new BadRequestException((e as Error).message);}
@@ -202,9 +213,9 @@ export class TicketFilesService {
 class AdminTicketFilesController {
   constructor(private readonly files: TicketFilesService) {}
   @Get() list(@Param('orderId') orderId: string, @Res({ passthrough: true }) res: Response) { privateHeaders(res); return this.files.list(orderId); }
-  @Post() @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 2 } }))
+  @Post() @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 3 } }))
   upload(@Param('orderId') orderId: string, @Body() body: unknown, @UploadedFile() file: Upload, @Req() req: Request & { admin: { id: string } }) { return this.files.upload(orderId, body, file, req.admin.id); }
-  @Post('branded') @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:7}}))
+  @Post('branded') @UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:8}}))
   branded(@Param('orderId')orderId:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request&{admin:{id:string}}){return this.files.branded(orderId,body,file,req.admin.id);}
   @Get(':id/download') async download(@Param('orderId') orderId: string, @Param('id') id: string, @Res() res: Response) { send(res, await this.files.download(id, orderId)); }
   @Post(':id/revoke') revoke(@Param('orderId') orderId: string, @Param('id') id: string, @Body() body: unknown, @Req() req: Request & { admin: { id: string } }) { return this.files.revoke(orderId, id, body, req.admin.id); }
@@ -240,8 +251,8 @@ class SharedTicketFilesController {
 @Controller('pos/orders/:orderId/files')class PosTicketFilesController{
  constructor(private readonly files:TicketFilesService,private readonly auth:PosAuthService){}
  @Get()async list(@Param('orderId')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){privateHeaders(res);return this.files.posList(id,await this.auth.require(req));}
- @Post()@UseInterceptors(FileInterceptor('file',{limits:{fileSize:10*1024*1024,files:1,fields:2}}))async upload(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posUpload(id,body,file,await this.auth.require(req));}
- @Post('branded')@UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:7}}))async branded(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posBranded(id,body,file,await this.auth.require(req));}
+ @Post()@UseInterceptors(FileInterceptor('file',{limits:{fileSize:10*1024*1024,files:1,fields:3}}))async upload(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posUpload(id,body,file,await this.auth.require(req));}
+ @Post('branded')@UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:8}}))async branded(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posBranded(id,body,file,await this.auth.require(req));}
  @Post(':id/revoke')async revoke(@Param('orderId')orderId:string,@Param('id')id:string,@Body()body:unknown,@Req()req:Request){this.auth.checkMutation(req);return this.files.posRevoke(orderId,id,body,await this.auth.require(req));}
  @Get(':id/download')async download(@Param('orderId')orderId:string,@Param('id')id:string,@Req()req:Request,@Res()res:Response){send(res,await this.files.posDownload(orderId,id,await this.auth.require(req)));}
 }

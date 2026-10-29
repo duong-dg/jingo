@@ -31,6 +31,13 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     const detail = (id: string) => call('/admin/orders/' + id, undefined, true).then(r => r.json());
     const action = async (id: string, input: object) => { const order = await detail(id); return call('/admin/orders/' + id + '/actions', { requestId: randomUUID(), version: order.version, note: 'Fixture operation', ...input }, true); };
     const issue = async (id: string) => { assert.equal((await action(id, { action: 'PAY', amount: product.variants[0].prices.ADULT, reference: randomUUID() })).status, 201); assert.equal((await action(id, { action: 'DELIVER', tickets: [{ code: randomUUID(), kind: 'SUPPLIER_CODE', covers: 1, note: '' }] })).status, 201); return (await detail(id)).tickets[0].id as string; };
+    const fileOnly=await make();
+    const directFile=async(version:number)=>{const body=new FormData();body.set('version',String(version));body.set('covers','1');body.set('file',new Blob(['%PDF-1.7 file-only fixture']),'original.pdf');return fetch(base+'/admin/orders/'+fileOnly.id+'/files',{method:'POST',headers:{Origin:'http://localhost:3000','X-Jingo-Admin':'1',Cookie:cookie},body});};
+    assert.equal((await directFile(1)).status,409,'unpaid file-only delivery rejected');
+    assert.equal((await action(fileOnly.id,{action:'PAY',amount:product.variants[0].prices.ADULT,reference:randomUUID()})).status,201);
+    const beforeFile=await detail(fileOnly.id),uploaded=await directFile(beforeFile.version);assert.equal(uploaded.status,201);const uploadedFile=await uploaded.json();
+    const afterFile=await detail(fileOnly.id);assert.equal(afterFile.deliveredGuests,1);assert.match(afterFile.tickets[0].code,/^FILE-/);
+    const repeated=await directFile(beforeFile.version);assert.equal(repeated.status,201);assert.equal((await repeated.json()).id,uploadedFile.id);assert.equal((await detail(fileOnly.id)).tickets.length,1,'retry must not issue twice');
     const ticketId = await issue(first.id), otherTicket = await issue(other.id), pdf = Buffer.from('%PDF-1.7\n% fixture only\n%%EOF');
     const upload = (orderId: string, ticket: string, version: number, bytes: Buffer = pdf, name = 'supplier-ticket.pdf', admin = true, csrf = '1') => {
       const body = new FormData(); body.set('ticketId', ticket); body.set('version', String(version)); body.set('file', new Blob([new Uint8Array(bytes)], { type: 'application/pdf' }), name);
@@ -44,7 +51,7 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     assert.equal((await upload(first.id, ticketId, 3, Buffer.from('<svg onload="alert(1)"></svg>'))).status, 400);
     assert.equal((await upload(first.id, ticketId, 3, Buffer.alloc(10 * 1024 * 1024 + 1))).status, 413);
     let response = await upload(first.id, ticketId, 3, pdf, '../ticket.pdf'); assert.equal(response.status, 201); const file = await response.json();
-    response = await upload(first.id, ticketId, 3); assert.equal(response.status, 201); assert.equal((await response.json()).id, file.id); assert.equal((await pool.query('SELECT id FROM jingo_ticket_files')).rowCount, 1);
+    response = await upload(first.id, ticketId, 3); assert.equal(response.status, 201); assert.equal((await response.json()).id, file.id); assert.equal((await pool.query('SELECT id FROM jingo_ticket_files WHERE order_id=$1',[first.id])).rowCount, 1);
     assert.equal((await detail(first.id)).deliveredGuests, 1, 'file does not issue another guest');
     const auth = { code: first.code, accessKey: first.accessKey };
     const listed = await (await call('/orders/files', auth)).json(); assert.equal(listed.data[0].id, file.id); assert.doesNotMatch(JSON.stringify(listed), /\.tickets|\.bin|hash|revoke_reason/);
@@ -89,12 +96,13 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     await pool.query("UPDATE jingo_orders SET booking_status='CONFIRMED' WHERE id=$1", [other.id]);
     assert.equal((await upload(other.id, otherTicket, (await detail(other.id)).version)).status, 201);
     assert.equal((await call('/orders/files', {code:other.code,accessKey:other.accessKey})).status, 404);
-    assert.equal((await readdir(join(media, '.tickets'))).length, 4, 'failed uploads do not create orphan files');
+    assert.equal((await readdir(join(media, '.tickets'))).length, 5, 'failed uploads do not create orphan files');
     await pool.query("INSERT INTO jingo_settings(id,data)VALUES('smtp',$1)",[JSON.stringify({enabled:true})]);
     const brandedRequest=(body:FormData,admin=true)=>fetch(base+'/admin/orders/'+other.id+'/files/branded',{method:'POST',headers:{Origin:'http://localhost:3000','X-Jingo-Admin':'1',...(admin?{Cookie:cookie}:{})},body});
     const brandBody=(preview=false)=>{const body=new FormData();body.set('ticketId',otherTicket);body.set('version',String(4));body.set('confirmed','true');body.set('payload','EXACT-SUPPLIER-QR-NOT-THE-ORDER-CODE');if(preview)body.set('preview','true');return body;};
     assert.equal((await brandedRequest(brandBody(),false)).status,401);const before=(await pool.query('SELECT id FROM jingo_ticket_files')).rowCount;response=await brandedRequest(brandBody(true));assert.equal(response.status,201);const preview=await response.json();assert.match(Buffer.from(preview.preview,'base64').toString('ascii',0,5),/%PDF-/);assert.equal((await pool.query('SELECT id FROM jingo_ticket_files')).rowCount,before,'preview never publishes or emails a ticket');
     response=await brandedRequest(brandBody());assert.equal(response.status,201);const brand=await response.json();assert.equal((await pool.query('SELECT partner_shared FROM jingo_ticket_files WHERE id=$1',[brand.id])).rows[0].partner_shared,true,'admin-approved branded ticket is available for guest sharing');assert.equal((await pool.query("SELECT id FROM jingo_mail_outbox WHERE order_id=$1 AND event='TICKET_READY'",[other.id])).rowCount,1,'CTV ticket gets an attachment email even without a retail lookup key');
+    const reused=brandBody(true);reused.delete('payload');reused.set('version','5');reused.set('sourceFileId',brand.id);assert.equal((await brandedRequest(reused)).status,201,'reuse stored supplier file without uploading or typing QR again');
     const stale=brandBody();assert.equal((await brandedRequest(stale)).status,409);assert.equal((await detail(other.id)).deliveredGuests,1,'PDF creation does not issue a second guest or a new supplier code');
   } finally { await app.close(); await rm(media, { recursive: true, force: true }); }
 });
