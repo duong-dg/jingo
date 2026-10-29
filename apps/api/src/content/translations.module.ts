@@ -22,7 +22,7 @@ class TranslationsController{
   if(input.publish)this.validate(input.kind,translationSource(input.kind,item),english);
   const{updatedAt,...current}=item as any;const payload={...current,version:input.version,english};
   if(input.kind==='PRODUCT')return{data:await this.catalog.save(payload,req.admin.id)};
-  if(input.kind==='POST')return{data:await this.posts.save(payload,req.admin.id)};
+  if(input.kind==='POST')return{data:await this.posts.save(payload,req.admin.id,'TRANSLATE')};
   return{data:await this.types.save(payload,req.admin.id)};
  }
  private validate(kind:TranslationKind,source:any,en:any){

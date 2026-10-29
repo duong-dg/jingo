@@ -3,7 +3,7 @@
 | Hạng mục | Sửa | Xóa / ngừng sử dụng |
 | --- | --- | --- |
 | Bài blog | Nội dung, SEO, lịch đăng, bản dịch, lịch sử phiên bản | Xóa vào thùng rác, ẩn trang công khai; khôi phục thành nháp |
-| Chuyên mục blog | Đổi tên và cập nhật bài liên quan | Xóa, chuyển bài sang Cẩm nang; giữ lịch sử và đánh dấu bản dịch cần rà soát |
+| Chuyên mục blog | Đổi tên và cập nhật bài liên quan | Xóa, chuyển bài sang Cẩm nang; giữ lịch sử và giữ nguyên bản tiếng Anh |
 | Sản phẩm vé/tour | Thông tin, ảnh, gói, giá, lịch, SEO, dịch | Lưu trữ/ngừng bán; lọc lưu trữ và khôi phục thành nháp; giữ đơn cũ |
 | Loại sản phẩm | Form sửa | Trạng thái Lưu trữ; chặn khi còn sản phẩm đang tham chiếu |
 | Điểm đến | Tên, cây cha/con, dịch, thứ tự | Trạng thái Lưu trữ; kiểm tra điểm con và sản phẩm đang sử dụng |

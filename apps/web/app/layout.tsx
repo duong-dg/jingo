@@ -14,6 +14,7 @@ import './content.css';
 export const metadata: Metadata = {
     metadataBase: new URL(process.env.PUBLIC_BASE_URL || 'http://localhost:3000'),
     title: { default: 'JinGo — Mỗi chuyến đi, một câu chuyện', template: '%s | JinGo' },
+    applicationName:'JinGo',
     description: 'Khám phá vé tham quan, show diễn và tour địa phương cùng JinGo.',
     robots: { index: false, follow: false }
 };

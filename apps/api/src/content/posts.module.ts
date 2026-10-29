@@ -69,6 +69,7 @@ export class PostsService{
     for(const id of new Set(post.relatedProductIds)){const row=await this.db.pool.query('SELECT id FROM jingo_products WHERE id=$1',[id]);if(!row.rowCount)throw new BadRequestException('Sản phẩm liên quan không tồn tại.');}
     const client=await this.db.pool.connect();try{await client.query('BEGIN');
       const current=post.version?await client.query('SELECT slug,data,version,updated_at FROM jingo_posts WHERE id=$1 FOR UPDATE',[post.id]):null;
+      if(current?.rows[0]&&reason!=='TRANSLATE'&&reason!=='RESTORE'){post.english=current.rows[0].data.english;markTranslation('POST',post);}
       if(current?.rows[0]){const row=current.rows[0];await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(post_id,version) DO NOTHING',[post.id,row.version,JSON.stringify(row.data),'legacy','BASELINE',row.updated_at]);}
       await reserveSlug(client,'POST',post.id,post.slug,current?.rows[0]?.slug);
       if(post.version===0)await client.query('INSERT INTO jingo_posts(id,slug,data)VALUES($1,$2,$3)',[post.id,post.slug,JSON.stringify(post)]);

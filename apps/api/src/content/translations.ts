@@ -8,7 +8,7 @@ export function translationSource(kind:TranslationKind,item:any){
   return{name:item.name,description:item.description||''};
 }
 export const sourceHash=(kind:TranslationKind,item:any)=>createHash('sha256').update(JSON.stringify(translationSource(kind,item))).digest('hex');
-export function translationStatus(kind:TranslationKind,item:any){if(!item.english)return'MISSING';if(item.english.status==='PUBLISHED'&&item.english.sourceHash!==sourceHash(kind,item))return'NEEDS_REVIEW';return item.english.status||'DRAFT';}
+export function translationStatus(kind:TranslationKind,item:any){if(!item.english)return'MISSING';if(kind==='POST')return item.english.status==='NEEDS_REVIEW'?'PUBLISHED':item.english.status||'DRAFT';if(item.english.status==='PUBLISHED'&&item.english.sourceHash!==sourceHash(kind,item))return'NEEDS_REVIEW';return item.english.status||'DRAFT';}
 export const translated=(kind:TranslationKind,item:any)=>translationStatus(kind,item)==='PUBLISHED';
-export function markTranslation(kind:TranslationKind,item:any){if(item.english?.status==='PUBLISHED'&&!translated(kind,item))item.english.status='NEEDS_REVIEW';}
+export function markTranslation(kind:TranslationKind,item:any){if(kind==='POST'){if(item.english?.status==='NEEDS_REVIEW')item.english.status='PUBLISHED';return;}if(item.english?.status==='PUBLISHED'&&!translated(kind,item))item.english.status='NEEDS_REVIEW';}
 export function localizeProduct(item:any){const en=item.english;return{...item,name:en.name,destination:en.destination,description:en.description,detailHtml:en.detailHtml,seoTitle:en.seoTitle,seoDescription:en.seoDescription,cover:item.cover?{...item.cover,alt:en.name}:null,gallery:(item.gallery||[]).map((image:any)=>({...image,alt:en.name})),variants:item.variants.map((v:any)=>({...v,name:en.variants.find((t:any)=>t.id===v.id)?.name||v.name,conditions:en.variants.find((t:any)=>t.id===v.id)?.conditions||{}}))};}

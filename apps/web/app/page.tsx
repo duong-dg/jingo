@@ -1,12 +1,13 @@
+import{loadSiteSeo,homeMetadata,homeSchema}from'../lib/site-seo';
 import{CatalogExplorer}from'./components/catalog-explorer';
 import type{DestinationNode}from'../lib/destinations';
 import { requestLocale } from '../lib/request-locale';
 import { translator, localizedPath, dateLocale } from '../lib/i18n';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Product, ProductType, contentApi, siteBase, indexing } from '../lib/content-api';
+import { Product, ProductType, contentApi, siteBase, indexing,jsonLd } from '../lib/content-api';
 import { ProductCard } from './components/product-card';
-export async function generateMetadata(): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); return {title:locale==='en'?'JinGo — Every journey, a story':'JinGo — Mỗi chuyến đi, một câu chuyện',description:locale==='en'?'Discover attraction tickets, shows and local tours with JinGo.':'Khám phá vé tham quan, show diễn và tour địa phương cùng JinGo.', alternates: { canonical: new URL(localizedPath('/', locale), siteBase()).toString(), languages: { vi: siteBase(), en: new URL('/en', siteBase()).toString(),'x-default':siteBase() } }, robots: { index: indexing(), follow: true } }; }
+export async function generateMetadata():Promise<Metadata>{const locale=await requestLocale();return homeMetadata(await loadSiteSeo(),locale,siteBase(),indexing());}
 export default async function Home() {
     const locale = await requestLocale(), t = translator(locale);
     let products: Product[] = [];
@@ -22,7 +23,7 @@ export default async function Home() {
     catch {
         unavailable = true;
     }
-    return <main id="main">
+    return <main id="main"><script type="application/ld+json" dangerouslySetInnerHTML={{__html:jsonLd(homeSchema(siteBase(),locale))}}/>
     <section className="hero"><div className="hero-copy"><p className="eyebrow">{t("ĐI ĐỂ CÓ CHUYỆN KỂ")}</p><h1>{t("Chuyến đi nhỏ.")}<br /><em>{t("Kỷ niệm lớn.")}</em></h1><p>{t("Vé vui chơi, những đêm diễn đáng nhớ và tour địa phương.")}<br className="desktop"/>{t("Tìm trải nghiệm dành riêng cho hành trình của bạn.")}</p><a href="#experiences" className="button">{t("Khám phá trải nghiệm")}<span>↗</span></a><div className="hero-foot"><span>{t("01 — MIỀN TRUNG")}</span><span>{t("Đà Nẵng · Hội An")}</span></div></div>
       <div className="hero-art" role="img" aria-label={t("Minh họa phong cảnh núi và mặt trời")}><div className="sun"/><div className="mountain back"/><div className="mountain front"/><div className="art-label">{t("Những điều đẹp đẽ")}<br />{t("đang chờ bạn ngoài kia.")}<span>16°03′ N · 108°12′ E</span></div><span className="vertical-label">THE LOCAL EXPERIENCE</span></div>
     </section>
