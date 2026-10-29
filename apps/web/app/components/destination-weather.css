@@ -9,3 +9,29 @@
 
 /* Ticket pages keep weather secondary to ticket selection. */
 .destination-weather.weather-compact{padding:0;margin:22px 0;border-radius:14px;background:#f3f6ef;box-shadow:none}.weather-compact header{display:none}.weather-compact .weather-disclosure>summary{padding:16px 18px;gap:14px}.weather-compact .weather-summary-icon{font-size:28px}.weather-compact .weather-summary-copy{gap:5px}.weather-compact .weather-summary-copy>span:first-child{color:#627666;font-size:12px}.weather-compact .weather-summary-copy>strong{font-size:24px;gap:10px;letter-spacing:-.5px}.weather-compact .weather-summary-copy>strong small{font-size:13px;color:#526a5c}.weather-compact .weather-summary-toggle{color:#52705d;font-size:11px}.weather-compact .weather-disclosure>summary:focus-visible{outline-color:#315a49;border-radius:14px}.weather-compact .weather-disclosure-body{padding:0 18px 18px}.weather-compact .weather-days{margin:0 0 14px;gap:8px}.weather-compact .weather-days button{padding:11px 6px;gap:5px}.weather-compact .weather-day-icon{font-size:23px}.weather-compact .weather-days button>span:not(.weather-day-icon){font-size:14px}.weather-compact .weather-tips{padding-top:13px}.weather-compact .weather-tips h3{font-size:15px;margin:14px 0 9px}.weather-compact .weather-tips ul{font-size:13px;gap:6px}.weather-compact .weather-credit{margin-top:14px;padding-top:12px;gap:5px}.weather-compact .weather-credit small{font-size:10px}@media(max-width:600px){.destination-weather.weather-compact{margin:16px 0}.weather-compact .weather-disclosure>summary{padding:13px 14px;gap:11px}.weather-compact .weather-summary-icon{font-size:24px}.weather-compact .weather-summary-copy>strong{font-size:22px}.weather-compact .weather-summary-copy>strong small{font-size:12px}.weather-compact .weather-disclosure-body{padding:0 14px 14px}.weather-compact .weather-days{gap:6px}.weather-compact .weather-days strong{font-size:11px}.weather-compact .weather-metrics{font-size:11px;gap:6px 12px}.weather-compact .weather-tips ul{font-size:13px}}
+
+/* Desktop has room for the forecast; smaller screens retain the compact disclosure. */
+@media(min-width:951px){
+ .destination-hero:has(.weather-on-hero){min-height:460px;gap:44px}
+ .destination-hero .weather-on-hero{align-self:start}
+ .weather-compact .weather-disclosure>summary{padding:22px 24px;gap:18px}
+ .weather-compact .weather-summary-icon{font-size:36px}
+ .weather-compact .weather-summary-copy{gap:8px}
+ .weather-compact .weather-summary-copy>span:first-child{font-size:14px}
+ .weather-compact .weather-summary-copy>strong{font-size:32px}
+ .weather-compact .weather-summary-copy>strong small{font-size:15px}
+ .weather-compact .weather-summary-toggle{font-size:12px}
+ .weather-compact .weather-disclosure-body{padding:0 24px 24px}
+ .weather-compact .weather-days{gap:12px;margin-bottom:20px}
+ .weather-compact .weather-days button{padding:16px 9px;gap:8px}
+ .weather-compact .weather-days strong{font-size:14px}
+ .weather-compact .weather-day-icon{font-size:30px}
+ .weather-compact .weather-days button>span:not(.weather-day-icon){font-size:17px}
+ .weather-compact .weather-days small{font-size:12px}
+ .weather-compact .weather-metrics{font-size:13px;gap:8px 18px}
+ .weather-compact .weather-tips{padding-top:18px}
+ .weather-compact .weather-tips h3{font-size:18px;margin:20px 0 12px}
+ .weather-compact .weather-tips ul{font-size:15px;gap:10px;line-height:1.8}
+ .weather-compact .weather-credit{margin-top:20px;font-size:12px}
+ .weather-compact .weather-credit small{font-size:11px}
+}
