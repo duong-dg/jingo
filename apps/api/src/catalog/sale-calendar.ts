@@ -1,0 +1,1 @@
+export function publicSaleClosures(product:{closures:{variantId?:string;startDate:string;endDate:string;weekdays?:number[]}[]}){return(product.closures||[]).map(({variantId,startDate,endDate,weekdays})=>({...(variantId?{variantId}:{}),startDate,endDate,...(weekdays?{weekdays}: {})}));}

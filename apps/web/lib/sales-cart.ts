@@ -1,6 +1,7 @@
+import type{SaleClosure}from'./sale-calendar';
 import type { CartLine } from './ticket-cart';
 export type SaleGroup = 'ADULT' | 'CHILD' | 'SENIOR' | 'LOCAL_ADULT' | 'LOCAL_CHILD' | 'LOCAL_SENIOR';
-export type SaleProduct = { id: string; name: string; destination: string; cover?: { id: string; alt: string } | null; description?: string; variants: { id: string; name: string; prices?: Partial<Record<SaleGroup, number>>; customerTypes?: SaleGroup[]; conditions?: Partial<Record<SaleGroup, string>>; timeSlots?: { id: string; start: string; end?: string }[] }[] };
+export type SaleProduct = { saleClosures?:SaleClosure[];id: string; name: string; destination: string; cover?: { id: string; alt: string } | null; description?: string; variants: { id: string; name: string; prices?: Partial<Record<SaleGroup, number>>; customerTypes?: SaleGroup[]; conditions?: Partial<Record<SaleGroup, string>>; timeSlots?: { id: string; start: string; end?: string }[] }[] };
 export const saleIdentity = (line: Pick<CartLine, 'productId' | 'variantId' | 'date' | 'slotId'>) => JSON.stringify([line.productId, line.variantId, line.date, line.slotId || '']);
 export const saleSignature = (items: CartLine[]) => JSON.stringify(items.map(i => ({ id: i.id, key: saleIdentity(i), quantities: i.quantities })));
 export function setSaleQuantity(items: CartLine[], selection: CartLine, group: string, quantity: number, rates: Partial<Record<string, number>> = {}): CartLine[] {

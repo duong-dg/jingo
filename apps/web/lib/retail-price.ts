@@ -1,0 +1,2 @@
+type PriceProduct={variants:{prices?:Partial<Record<string,number>>}[]};
+export function adultStartingPrice(product:PriceProduct){const amounts=(group:string)=>product.variants.flatMap(v=>{const price=v.prices?.[group];return typeof price==='number'&&Number.isFinite(price)&&price>=0?[price]:[];});const adults=amounts('ADULT'),prices=adults.length?adults:amounts('LOCAL_ADULT');return prices.length?Math.min(...prices):null;}

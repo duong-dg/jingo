@@ -50,10 +50,12 @@ test('admin authentication, persistent catalog, schedules and public isolation',
     const overlap = { ...saved, rules: [...saved.rules, { ...saved.rules[0], id: 'conflict' }] };
     assert.equal(productSchema.safeParse(overlap).success, false);
     assert.equal((await call('/admin/products', overlap)).status, 400);
-    saved.closures = [{ productId: saved.id, startDate: '2027-06-01', endDate: '2027-06-02' }];
+    saved.closures = [{ productId: saved.id, startDate: '2027-06-01', endDate: '2027-06-02',reason:'PRIVATE CLOSURE NOTE' }];
     res = await call('/admin/products', saved); const closed = (await res.json()).data;
     assert.equal((await call(`/products/${product.slug}/prices?date=2027-06-01&variantId=${product.variants[0].id}`)).status, 400);
     assert.equal((await call('/quotes', { productId: product.id, variantId: product.variants[0].id, date: '2027-06-01', quantities: { ADULT: 1 } })).status, 400);
+    const calendar=(await (await call(`/products/${product.slug}`)).json()).data;assert.deepEqual(calendar.saleClosures,[{startDate:'2027-06-01',endDate:'2027-06-02'}]);assert.doesNotMatch(JSON.stringify(calendar),/PRIVATE CLOSURE NOTE/);
+    const dateOnly=(await (await call(`/products/${product.id}/sale-calendar`)).json()).data;assert.deepEqual(dateOnly.saleClosures,calendar.saleClosures);assert.doesNotMatch(JSON.stringify(dateOnly),/PRIVATE CLOSURE NOTE|prices|supplierId/);
     closed.status = 'DRAFT'; await call('/admin/products', closed);
     assert.equal((await call(`/products/${product.slug}`)).status, 404);
     assert.equal((await (await call('/products')).json()).data.some((p: { id: string }) => p.id === product.id), false);

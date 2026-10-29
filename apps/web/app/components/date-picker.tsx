@@ -3,11 +3,11 @@ import {useId,useRef,useState} from 'react';
 import {useLocale} from './locale-context';
 const iso=(date:Date)=>date.toISOString().slice(0,10);
 const localToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Ho_Chi_Minh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-export function DatePicker({label,value,onChange,min,max,disabled=false}:{label:string;value:string;onChange:(value:string)=>void;min?:string;max?:string;disabled?:boolean}){
+export function DatePicker({label,value,onChange,min,max,disabled=false,isDateDisabled}:{label:string;value:string;onChange:(value:string)=>void;min?:string;max?:string;disabled?:boolean;isDateDisabled?:(date:string)=>boolean}){
  const locale=useLocale(),en=locale==='en',id=useId(),root=useRef<HTMLDetailsElement>(null),trigger=useRef<HTMLElement>(null);
  const [month,setMonth]=useState(()=>((value||min||localToday()).slice(0,7)));
  const [year,number]=month.split('-').map(Number),first=new Date(Date.UTC(year,number-1,1)),offset=(first.getUTCDay()+6)%7,days=new Date(Date.UTC(year,number,0)).getUTCDate();
- const allowed=(date:string)=>(!min||date>=min)&&(!max||date<=max);
+ const allowed=(date:string)=>(!min||date>=min)&&(!max||date<=max)&&!isDateDisabled?.(date);
  const choose=(date:string)=>{if(!allowed(date))return;onChange(date);if(root.current)root.current.open=false;trigger.current?.focus();};
  const move=(delta:number)=>setMonth(iso(new Date(Date.UTC(year,number-1+delta,1))).slice(0,7));
  const display=value?new Intl.DateTimeFormat(en?'en-GB':'vi-VN',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T00:00:00Z')):(en?'Choose a date':'Chọn ngày');
