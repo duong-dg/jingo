@@ -114,7 +114,7 @@ export class TicketFilesService {
     if (!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL AND partner_shared=true', [id, order.id])).rowCount) throw new NotFoundException();
     return this.download(id, order.id);
   }
-  async upload(orderId: string, body: unknown, file: Upload, actor: string, branded=false) {
+  async upload(orderId: string, body: unknown, file: Upload, actor: string, branded=false,posActor?:PosActor) {
     const input = z.object({ ticketId: z.uuid(), version: z.coerce.number().int().positive() }).strict().safeParse(body);
     if (!input.success || !file?.buffer || file.buffer.length > 10 * 1024 * 1024 || !file.buffer.length) throw new BadRequestException('Chọn mã vé và file PDF/JPG/PNG/WebP tối đa 10 MB.');
     if (this.processing) throw new HttpException('Đang xử lý file khác. Vui lòng thử lại.', 429);
@@ -136,6 +136,7 @@ export class TicketFilesService {
       await client.query('BEGIN');
       const order = (await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE', [orderId])).rows[0];
       if (!order) throw new NotFoundException();
+      if(posActor)await this.posWriteScope(client,orderId,posActor);
       const partner = (await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1', [orderId])).rowCount;
       if (order.booking_status !== 'CONFIRMED' || !(order.payment_status === 'PAID' || partner && order.payment_status === 'CREDIT') || (await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1', [orderId])).rowCount) throw new ConflictException('Chỉ gắn file cho đơn đã thanh toán hoặc công nợ CTV, đang hoạt động.');
       if (!(await client.query('SELECT id FROM jingo_order_tickets WHERE id=$1 AND order_id=$2', [input.data.ticketId, orderId])).rowCount) throw new NotFoundException('Mã vé không thuộc đơn.');
@@ -161,18 +162,22 @@ export class TicketFilesService {
       throw error;
     } finally { client.release(); this.processing = false; }
   }
-  async branded(orderId:string,body:unknown,file:Upload|undefined,actor:string){
+  async branded(orderId:string,body:unknown,file:Upload|undefined,actor:string,posActor?:PosActor){
     const parsed=z.object({ticketId:z.uuid(),version:z.coerce.number().int().positive(),payload:z.string().max(2000).optional(),confirmed:z.literal('true'),page:z.coerce.number().int().min(1).max(50).default(1),qrNumber:z.coerce.number().int().min(1).max(10).default(1),preview:z.literal('true').optional()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Chọn mã vé và xác nhận QR gốc.');const input=parsed.data;
     if((!!input.payload)===(!!file?.buffer))throw new BadRequestException('Chỉ dùng một nguồn: nội dung QR gốc hoặc ảnh QR đã cắt.');if(file&&file.buffer.length>5*1024*1024)throw new BadRequestException('Ảnh QR tối đa 5 MB.');
     const order=await this.orders.get(orderId),ticket=order.tickets.find(t=>t.id===input.ticketId);if(!ticket)throw new NotFoundException('Mã vé không thuộc đơn.');if(order.version!==input.version)throw new ConflictException('Đơn đã thay đổi. Tải lại.');
     let data:Buffer;try{data=await brandedTicketPdf({code:ticket.code,product:order.snapshot.productName,variant:order.snapshot.variantName,date:order.snapshot.date,time:order.snapshot.timeSlot?order.snapshot.timeSlot.start+(order.snapshot.timeSlot.end?' - '+order.snapshot.timeSlot.end:''):undefined,covers:ticket.covers,note:ticket.note,payload:input.payload,image:file?.buffer?await supplierQrImage(file.buffer,input.page,input.qrNumber):undefined});}catch(e){throw new BadRequestException((e as Error).message);}
     if(input.preview)return{preview:data.toString('base64')};
-    return this.upload(orderId,{ticketId:input.ticketId,version:input.version},{buffer:data,size:data.length,originalname:'JinGo-'+ticket.id+'.pdf'},actor,true);
+    return this.upload(orderId,{ticketId:input.ticketId,version:input.version},{buffer:data,size:data.length,originalname:'JinGo-'+ticket.id+'.pdf'},actor,true,posActor);
   }
-  private async posOrder(orderId:string,actor:PosActor){const pos=(await this.db.pool.query('SELECT counter_id FROM jingo_pos_orders WHERE order_id=$1',[orderId])).rows[0];if(!actor.permissions.includes('PRINT')||!pos||actor.role!=='ADMIN'&&!actor.counterIds.includes(pos.counter_id))throw new NotFoundException('Không tìm thấy vé được phép in.');const order=await this.orders.get(orderId);if(order.bookingStatus!=='CONFIRMED'||!['PAID','CREDIT'].includes(order.paymentStatus)||(await this.db.pool.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[orderId])).rowCount)throw new NotFoundException('Vé không còn khả dụng.');}
+  private async posOrder(orderId:string,actor:PosActor,write=false){const pos=(await this.db.pool.query('SELECT counter_id FROM jingo_pos_orders WHERE order_id=$1',[orderId])).rows[0];if(!(write?actor.permissions.includes('DELIVER'):actor.permissions.some(p=>p==='PRINT'||p==='DELIVER'))||!pos||actor.role!=='ADMIN'&&!actor.counterIds.includes(pos.counter_id))throw new NotFoundException('Không tìm thấy vé được phép in.');const order=await this.orders.get(orderId);if(order.bookingStatus!=='CONFIRMED'||!['PAID','CREDIT'].includes(order.paymentStatus)||(await this.db.pool.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[orderId])).rowCount)throw new NotFoundException('Vé không còn khả dụng.');}
+  private async posWriteScope(client:Pick<PoolClient,'query'>,orderId:string,actor:PosActor){const pos=(await client.query('SELECT counter_id FROM jingo_pos_orders WHERE order_id=$1',[orderId])).rows[0];if(!pos)throw new NotFoundException();if(actor.role==='ADMIN')return;const user=(await client.query('SELECT data FROM jingo_pos_users WHERE id=$1 FOR SHARE',[actor.id])).rows[0]?.data;if(!user||user.status!=='ACTIVE'||!user.permissions.includes('DELIVER')||!user.counterIds.includes(pos.counter_id))throw new NotFoundException('Quyền giao vé hoặc quầy đã thay đổi.');}
+  async posUpload(orderId:string,body:unknown,file:Upload,actor:PosActor){await this.posOrder(orderId,actor,true);return this.upload(orderId,body,file,actor.role==='STAFF'?'pos-user:'+actor.id:actor.id,false,actor);}
+  async posBranded(orderId:string,body:unknown,file:Upload,actor:PosActor){await this.posOrder(orderId,actor,true);return this.branded(orderId,body,file,actor.role==='STAFF'?'pos-user:'+actor.id:actor.id,actor);}
+  async posRevoke(orderId:string,id:string,body:unknown,actor:PosActor){await this.posOrder(orderId,actor,true);return this.revoke(orderId,id,body,actor.role==='STAFF'?'pos-user:'+actor.id:actor.id,actor);}
   async posList(orderId:string,actor:PosActor){await this.posOrder(orderId,actor);const all=await this.list(orderId);return{data:all.data.filter(f=>!f.revoked_at)};}
   async posDownload(orderId:string,id:string,actor:PosActor){await this.posOrder(orderId,actor);if(!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE order_id=$1 AND id=$2 AND revoked_at IS NULL',[orderId,id])).rowCount)throw new NotFoundException();return this.download(id,orderId);}
-  async revoke(orderId: string, id: string, body: unknown, actor: string) {
+  async revoke(orderId: string, id: string, body: unknown, actor: string,posActor?:PosActor) {
     const input = z.object({ version: z.number().int().positive(), reason: z.string().trim().min(3).max(500) }).strict().safeParse(body);
     if (!input.success) throw new BadRequestException('Nhập lý do thu hồi file.');
     const client = await this.db.pool.connect();
@@ -181,6 +186,7 @@ export class TicketFilesService {
       const order = (await client.query('SELECT version FROM jingo_orders WHERE id=$1 FOR UPDATE', [orderId])).rows[0];
       const file = (await client.query('SELECT id,revoked_at FROM jingo_ticket_files WHERE id=$1 AND order_id=$2', [id, orderId])).rows[0];
       if (!order || !file) throw new NotFoundException();
+      if(posActor)await this.posWriteScope(client,orderId,posActor);
       if (file.revoked_at) { await client.query('COMMIT'); return { ok: true }; }
       if (order.version !== input.data.version) throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi thu hồi.');
       await client.query('UPDATE jingo_ticket_files SET revoked_at=now(),revoke_reason=$2 WHERE id=$1', [id, input.data.reason]);
@@ -234,6 +240,9 @@ class SharedTicketFilesController {
 @Controller('pos/orders/:orderId/files')class PosTicketFilesController{
  constructor(private readonly files:TicketFilesService,private readonly auth:PosAuthService){}
  @Get()async list(@Param('orderId')id:string,@Req()req:Request,@Res({passthrough:true})res:Response){privateHeaders(res);return this.files.posList(id,await this.auth.require(req));}
+ @Post()@UseInterceptors(FileInterceptor('file',{limits:{fileSize:10*1024*1024,files:1,fields:2}}))async upload(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posUpload(id,body,file,await this.auth.require(req));}
+ @Post('branded')@UseInterceptors(FileInterceptor('file',{limits:{fileSize:5*1024*1024,files:1,fields:7}}))async branded(@Param('orderId')id:string,@Body()body:unknown,@UploadedFile()file:Upload,@Req()req:Request){this.auth.checkMutation(req);return this.files.posBranded(id,body,file,await this.auth.require(req));}
+ @Post(':id/revoke')async revoke(@Param('orderId')orderId:string,@Param('id')id:string,@Body()body:unknown,@Req()req:Request){this.auth.checkMutation(req);return this.files.posRevoke(orderId,id,body,await this.auth.require(req));}
  @Get(':id/download')async download(@Param('orderId')orderId:string,@Param('id')id:string,@Req()req:Request,@Res()res:Response){send(res,await this.files.posDownload(orderId,id,await this.auth.require(req)));}
 }
 @Module({ imports: [AuthModule, OrdersModule, MailModule, PartnersModule,PosModule], controllers: [AdminTicketFilesController, CustomerTicketFilesController, PartnerTicketFilesController, SharedTicketFilesController,PosTicketFilesController], providers: [TicketFilesService] })
