@@ -15,3 +15,9 @@ export async function openTicketForPrint(url:string){
  const preview=window.open('about:blank','_blank');if(!preview)throw new Error('Cho phép mở cửa sổ để xem và in vé.');preview.opener=null;
  try{const response=await fetch(url,{headers:{'X-Jingo-Admin':'1','X-Jingo-POS':'1'},cache:'no-store'});if(!response.ok)throw new Error('Không mở được file vé.');const blob=await response.blob();if(!['application/pdf','image/webp'].includes(blob.type))throw new Error('File vé không hợp lệ.');const objectUrl=URL.createObjectURL(blob);preview.location.href=objectUrl;setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);}catch(error){preview.close();throw error;}
 }
+
+export async function readTicketResponse(response:Response){
+ let data:any;try{data=await response.json();}catch{throw new Error('Máy chủ chưa trả kết quả xuất vé (HTTP '+response.status+'). File nhiều vé có thể vẫn đang xử lý. Cập nhật đơn và kiểm tra vé đã tạo trước khi thử lại.');}
+ if(!response.ok)throw new Error(Array.isArray(data?.message)?data.message.join(' · '):data?.message||'Không xử lý được file vé (HTTP '+response.status+').');
+ if(!data||typeof data!=='object')throw new Error('Kết quả xuất vé không hợp lệ. Cập nhật đơn để kiểm tra.');return data;
+}

@@ -20,3 +20,8 @@ Không suy đoán số khách cho QR dùng chung nhiều người. Nếu đối 
 Tạo vé, cấp mã, lưu PDF riêng tư, kiểm tra quyền DELIVER/quầy, cập nhật giá vốn và xếp hàng một email TICKET_READY nằm trong cùng giao dịch. Lỗi sẽ rollback và dọn file mới. Tải lại cùng file trả về PDF đã tạo, không cấp mã hay gửi email trùng. Mã JGV xác định từ nội dung QR, nên không thể cấp cùng QR sang đơn khác qua luồng này. Email dùng SMTP đang bật và email liên hệ của đơn; file đính kèm là PDF JinGo nhiều trang, chứa mã JinGo và QR đối tác. File gốc đầu vào không lưu thêm trong luồng tự động này.
 
 Nút In vé JinGo mở PDF riêng tư để chọn In từ trình xem PDF của trình duyệt. Các thao tác đính kèm/giao mã cũ nằm trong phần File đã giao và xử lý bổ sung, mặc định thu gọn.
+
+
+### PDF nhiều vé và thời gian chờ
+
+Web cho phép proxy API chờ tối đa 120 giây (mặc định Next là 30 giây) để quét PDF nhiều trang. Lỗi phản hồi text/HTML từ proxy được hiển thị bằng thông báo HTTP dễ hiểu; không hiện JSON SyntaxError. Khi chưa xác nhận kết quả, cập nhật đơn và kiểm tra file trước khi xuất lại vì API có thể đã hoàn tất phía sau. Reverse proxy bên ngoài cần có thời gian chờ phù hợp với cấu hình web. Kiểm tra tự động bao gồm booking 8 khách, PDF 8 trang/8 QR, và phản hồi lỗi text HTTP 500/504.

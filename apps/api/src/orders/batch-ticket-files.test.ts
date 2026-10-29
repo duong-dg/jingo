@@ -22,6 +22,9 @@ test('counter batch files: discover all unique QR, issue one code/page each, ema
  const file=await fetch(base+'/pos/orders/'+id+'/files/'+result.id+'/download',{headers:{Cookie:pos}});assert.equal(file.status,200);const printed=await supplierQrImages(Buffer.from(await file.arrayBuffer()));assert.equal(printed.length,2,'printed PDF preserves both supplier QR');assert.deepEqual(printed.map(q=>q.identity).sort(),qrs.map(q=>q.identity).sort(),'supplier QR bytes remain unchanged');
  const retry=await upload(id,before.version,pdf,pos,'1','pos');assert.equal(retry.status,201);assert.equal((await retry.json()).id,result.id);assert.equal((await get(id)).tickets.length,2);
  assert.equal((await pool.query("SELECT id FROM jingo_mail_outbox WHERE order_id=$1 AND event='TICKET_READY'",[id])).rowCount,1);
+ const eightImages=await Promise.all(Array.from({length:8},(_,i)=>QRCode.toBuffer('SUPPLIER-EIGHT-TICKET-'+i,{width:400,margin:4})));
+ const eightPdf=await new Promise<Buffer>(resolve=>{const chunks:Buffer[]=[],doc=new PDFDocument({size:'A5'});doc.on('data',c=>chunks.push(c));doc.on('end',()=>resolve(Buffer.concat(chunks)));eightImages.forEach((image,i)=>{if(i)doc.addPage();doc.fontSize(20).text('Supplier ticket '+(i+1),40,40);doc.image(image,70,150,{width:280});});doc.end();});
+ const eight=await make(8);await pay(eight,8);const eightResult=await upload(eight,(await get(eight)).version,eightPdf);assert.equal(eightResult.status,201);assert.equal((await eightResult.json()).count,8);assert.equal((await get(eight)).deliveredGuests,8,'all eight booking guests receive tickets');
  const other=await make(2);await pay(other,2);assert.equal((await upload(other,(await get(other)).version)).status,409,'same QR cannot be issued in another order');assert.equal((await get(other)).tickets.length,0);
  }finally{await app.close();await rm(media,{recursive:true,force:true});}
 });
