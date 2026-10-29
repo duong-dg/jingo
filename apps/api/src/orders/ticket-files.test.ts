@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { Test } from '@nestjs/testing';
 import { newDb } from 'pg-mem';
+import{TicketFileRetention}from'./ticket-file-retention';
 import { AppModule } from '../app.module';
 
 test('private ticket files: paid issued tickets, idempotent uploads, authenticated downloads, POS key privacy and audited revocation', async () => {
@@ -104,5 +105,10 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     response=await brandedRequest(brandBody());assert.equal(response.status,201);const brand=await response.json();assert.equal((await pool.query('SELECT partner_shared FROM jingo_ticket_files WHERE id=$1',[brand.id])).rows[0].partner_shared,true,'admin-approved branded ticket is available for guest sharing');assert.equal((await pool.query("SELECT id FROM jingo_mail_outbox WHERE order_id=$1 AND event='TICKET_READY'",[other.id])).rowCount,1,'CTV ticket gets an attachment email even without a retail lookup key');
     const reused=brandBody(true);reused.delete('payload');reused.set('version','5');reused.set('sourceFileId',brand.id);assert.equal((await brandedRequest(reused)).status,201,'reuse stored supplier file without uploading or typing QR again');
     const stale=brandBody();assert.equal((await brandedRequest(stale)).status,409);assert.equal((await detail(other.id)).deliveredGuests,1,'PDF creation does not issue a second guest or a new supplier code');
+    const orderCount=(await pool.query('SELECT id FROM jingo_orders')).rowCount;
+    assert.ok((await app.get(TicketFileRetention).clean(new Date('2099-07-02T00:00:00Z'))).deleted>0);
+    response=await call('/admin/orders/'+other.id+'/files/'+brand.id+'/download',undefined,true);assert.equal(response.status,200,'branded PDF remains after original cleanup');
+    assert.ok((await(await call('/admin/orders/'+other.id+'/files',undefined,true)).json()).data.every((f:any)=>f.file_kind==='BRANDED'?!f.deleted_at:!!f.deleted_at));
+    assert.equal((await pool.query('SELECT id FROM jingo_orders')).rowCount,orderCount,'expiry keeps all bookings');
   } finally { await app.close(); await rm(media, { recursive: true, force: true }); }
 });

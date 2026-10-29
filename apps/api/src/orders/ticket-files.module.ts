@@ -1,3 +1,4 @@
+import{TicketFileRetention,ticketFileExpiresAt}from'./ticket-file-retention';
 import{supplierQrImage,supplierQrImages}from'./supplier-qr';
 import{brandedTicketPdf,brandedTicketsPdf}from'./branded-ticket';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import type{PosActor}from'../pos/pos.schema';
 import { BadRequestException, Body, ConflictException, Controller, Get, HttpException, HttpCode, Injectable, Module, NotFoundException, Param, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
@@ -18,7 +19,7 @@ import { PartnersModule } from '../partners/partners.module';
 import { PartnerAuthService } from '../partners/partner-auth.service';
 import type { PoolClient } from 'pg';
 
-const fields = 'id,ticket_id,name,mime,bytes,created_at,revoked_at';
+const fields = 'id,ticket_id,name,mime,bytes,created_at,revoked_at,deleted_at,file_kind';
 type Upload = { buffer: Buffer; size: number; originalname: string };
 function privateHeaders(res: Response) {
   res.setHeader('Cache-Control', 'private, no-store');
@@ -29,7 +30,7 @@ function send(res: Response, file: { data: Buffer; id: string; mime: string }) {
   privateHeaders(res);
   res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'");
   res.setHeader('Content-Type', file.mime);
-  res.setHeader('Content-Disposition', `attachment; filename="jingo-ticket-${file.id}.${file.mime === 'application/pdf' ? 'pdf' : 'webp'}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="jingo-ticket-${file.id}.${file.mime === 'application/pdf' ? 'pdf' : file.mime === 'image/png' ? 'png' : file.mime === 'image/jpeg' ? 'jpg' : 'webp'}"`);
   res.send(file.data);
 }
 
@@ -40,7 +41,7 @@ export class TicketFilesService {
   private path(id: string) { return join(resolve(process.env.MEDIA_DIR || 'data/media'), '.tickets', id + '.bin'); }
   async list(orderId: string) {
     if (!(await this.db.pool.query('SELECT id FROM jingo_orders WHERE id=$1', [orderId])).rowCount) throw new NotFoundException();
-    return { data: (await this.db.pool.query(`SELECT ${fields} FROM jingo_ticket_files WHERE order_id=$1 ORDER BY created_at,id`, [orderId])).rows };
+    return { data: (await this.db.pool.query(`SELECT ${fields} FROM jingo_ticket_files WHERE order_id=$1 ORDER BY created_at,id`, [orderId])).rows.map(f=>({...f,expires_at:f.file_kind==='ORIGINAL'?ticketFileExpiresAt(f.created_at)?.toISOString()||null:null})) };
   }
   private async customer(body: unknown) {
     const input = lookupInput.safeParse(body);
@@ -58,6 +59,7 @@ export class TicketFilesService {
     if (!z.uuid().safeParse(id).success) throw new NotFoundException();
     const file = (await this.db.pool.query('SELECT * FROM jingo_ticket_files WHERE id=$1 AND order_id=$2', [id, orderId])).rows[0];
     if (!file) throw new NotFoundException('Không tìm thấy file vé.');
+    if(file.deleted_at)throw new NotFoundException('File gốc đã tự xóa theo lịch lưu trữ đầu tháng.');
     if (customerBody !== undefined) {
       const order = await this.customer(customerBody);
       if (order.id !== file.order_id || file.revoked_at || !order.tickets.some(t => t.id === file.ticket_id)) throw new NotFoundException('Không tìm thấy file vé.');
@@ -75,8 +77,8 @@ export class TicketFilesService {
     return order;
   }
   async partnerList(orderId: string, partnerId: string) {
-    await this.partnerOrder(orderId, partnerId);
-    return { data: (await this.db.pool.query(`SELECT ${fields},partner_shared,sharing_version FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL ORDER BY created_at,id`, [orderId])).rows };
+    const order=await this.partnerOrder(orderId, partnerId);
+    return { data: (await this.db.pool.query(`SELECT ${fields},partner_shared,sharing_version FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL ORDER BY created_at,id`, [orderId])).rows.map(f=>({...f,expires_at:f.file_kind==='ORIGINAL'?ticketFileExpiresAt(f.created_at)?.toISOString()||null:null})) };
   }
   async partnerDownload(id: string, orderId: string, partnerId: string) {
     await this.partnerOrder(orderId, partnerId);
@@ -106,8 +108,8 @@ export class TicketFilesService {
   }
   async sharedList(body: unknown) {
     const order = await this.sharedOrder(body);
-    const rows = (await this.db.pool.query('SELECT id,ticket_id,mime,bytes,created_at FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL AND partner_shared=true ORDER BY created_at,id', [order.id])).rows;
-    return { data: rows.map((row, i) => ({ ...row, name: `File vé ${i + 1}.${row.mime === 'application/pdf' ? 'pdf' : 'webp'}`, revoked_at: null })) };
+    const rows = (await this.db.pool.query('SELECT id,ticket_id,mime,bytes,created_at,file_kind FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL AND partner_shared=true ORDER BY created_at,id', [order.id])).rows;
+    return { data: rows.map((row, i) => ({ ...row, expires_at:row.file_kind==='ORIGINAL'?ticketFileExpiresAt(row.created_at)?.toISOString()||null:null,name: `File vé ${i + 1}.${row.mime === 'application/pdf' ? 'pdf' : row.mime==='image/png'?'png':row.mime==='image/jpeg'?'jpg':'webp'}`, revoked_at: null })) };
   }
   async sharedDownload(id: string, body: unknown) {
     const order = await this.sharedOrder(body);
@@ -165,7 +167,7 @@ export class TicketFilesService {
       await client.query('UPDATE jingo_orders SET version=version+1 WHERE id=$1', [orderId]);
       await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)', [randomUUID(), actor, 'ticket-file.attach', id]);
       await client.query('INSERT INTO jingo_order_actions(id,order_id,request_hash,admin_id,action,note)VALUES($1,$2,$3,$4,$5,$6)', [randomUUID(),orderId,hash,actor,'ATTACH_FILE','Đính kèm file: '+name]);
-      if(branded)await client.query('UPDATE jingo_ticket_files SET partner_shared=true WHERE id=$1',[id]);
+      if(branded)await client.query("UPDATE jingo_ticket_files SET partner_shared=true,file_kind='BRANDED' WHERE id=$1",[id]);
       await this.mail.enqueue(client, orderId, partner&&!branded?'DELIVER':'TICKET_READY', order.version + 1);
       await client.query('COMMIT'); saved = undefined;
       return { id,ticketId:input.data.ticketId, duplicate: false };
@@ -180,7 +182,7 @@ export class TicketFilesService {
     if(!parsed.success||!file?.buffer?.length||file.buffer.length>5*1024*1024)throw new BadRequestException('Chọn PDF/ảnh vé gốc tối đa 5 MB.');
     if(posActor)await this.posOrder(orderId,posActor,true);
     if(this.processing)throw new HttpException('Đang xử lý vé khác, thử lại sau.',429);
-    this.processing=true;let saved:string|undefined;let client:PoolClient|undefined;
+    this.processing=true;const saved:string[]=[];let client:PoolClient|undefined;
     try{
       const sourceHash=createHash('sha256').update(file.buffer).digest('hex'),name='JinGo-lo-'+sourceHash+'.pdf';
       const previous=(await this.db.pool.query('SELECT id,ticket_id FROM jingo_ticket_files WHERE order_id=$1 AND name=$2 AND revoked_at IS NULL',[orderId,name])).rows[0];
@@ -193,19 +195,24 @@ export class TicketFilesService {
       if(row.booking_status!=='CONFIRMED'||!['PAID','CREDIT'].includes(row.payment_status)||(await client.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[orderId])).rowCount)throw new ConflictException('Thu tiền trước khi giao vé.');
       const partner=(await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[orderId])).rowCount;
       if(row.payment_status==='CREDIT'&&!partner)throw new ConflictException('Đơn quầy chưa thu đủ tiền.');
-      if(Number((await client.query('SELECT COUNT(*) AS total FROM jingo_ticket_files WHERE order_id=$1',[orderId])).rows[0].total)>=50)throw new BadRequestException('Đơn đã đạt giới hạn file.');
+      if(Number((await client.query('SELECT COUNT(*) AS total FROM jingo_ticket_files WHERE order_id=$1',[orderId])).rows[0].total)>48)throw new BadRequestException('Đơn đã đạt giới hạn file.');
       const tickets=qrs.map(q=>({code:'JGV'+createHash('sha256').update(q.identity).digest('hex').slice(0,24).toUpperCase(),kind:'TOUR_VOUCHER' as const,covers:1,note:'Dùng QR đối tác trên vé JinGo để vào cổng.'}));
       const order=await this.orders.act(orderId,{requestId:randomUUID(),version:row.version,action:'DELIVER',note:'Tự động tách '+qrs.length+' QR từ file và xuất vé JinGo',tickets},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
       const snapshot=order.snapshot,data=await brandedTicketsPdf(tickets.map((ticket,i)=>({...ticket,product:snapshot.productName,variant:snapshot.variantName,date:snapshot.date,time:snapshot.timeSlot?snapshot.timeSlot.start+(snapshot.timeSlot.end?' - '+snapshot.timeSlot.end:''):undefined,image:qrs[i].image})));
       if(data.length>10*1024*1024)throw new BadRequestException('PDF JinGo vượt 10 MB, chia file thành lô nhỏ hơn.');
       const id=randomUUID(),ticketId=order.tickets.find(t=>t.code===tickets[0].code)!.id;
-      await mkdir(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets'),{recursive:true,mode:0o700});await writeFile(this.path(id),data,{flag:'wx',mode:0o600});saved=id;
+      await mkdir(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets'),{recursive:true,mode:0o700});await writeFile(this.path(id),data,{flag:'wx',mode:0o600});saved.push(id);
       await client.query('INSERT INTO jingo_ticket_files(id,order_id,ticket_id,name,mime,bytes,hash)VALUES($1,$2,$3,$4,$5,$6,$7)',[id,orderId,ticketId,name,'application/pdf',data.length,createHash('sha256').update(data).digest('hex')]);
-      await client.query('UPDATE jingo_ticket_files SET partner_shared=true WHERE id=$1',[id]);
+      await client.query("UPDATE jingo_ticket_files SET partner_shared=true,file_kind='BRANDED' WHERE id=$1",[id]);
+      const originalId=randomUUID();let originalMime='application/pdf';
+      if(file.buffer.subarray(0,5).toString()!=='%PDF-'){const format=(await sharp(file.buffer).metadata()).format;originalMime=format==='jpeg'?'image/jpeg':format==='png'?'image/png':'image/webp';}
+      await writeFile(this.path(originalId),file.buffer,{flag:'wx',mode:0o600});saved.push(originalId);
+      const originalName=file.originalname.replace(/[\\/\x00-\x1f\x7f]/g,'_').slice(0,150)||'Ve-goc.pdf';
+      await client.query('INSERT INTO jingo_ticket_files(id,order_id,ticket_id,name,mime,bytes,hash)VALUES($1,$2,$3,$4,$5,$6,$7)',[originalId,orderId,ticketId,originalName,originalMime,file.buffer.length,sourceHash]);
       await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),actor,'ticket-file.batch',id]);
       await this.mail.enqueue(client,orderId,'TICKET_READY',order.version);
-      await client.query('COMMIT');saved=undefined;return{id,count:qrs.length,codes:tickets.map(t=>t.code),duplicate:false};
-    }catch(e){if(client)await client.query('ROLLBACK');if(saved)await unlink(this.path(saved)).catch(()=>{});throw e;}finally{client?.release();this.processing=false;}
+      await client.query('COMMIT');saved.length=0;return{id,originalId,count:qrs.length,codes:tickets.map(t=>t.code),duplicate:false};
+    }catch(e){if(client)await client.query('ROLLBACK');for(const id of saved)await unlink(this.path(id)).catch(()=>{});throw e;}finally{client?.release();this.processing=false;}
   }
   async branded(orderId:string,body:unknown,file:Upload|undefined,actor:string,posActor?:PosActor){
     const parsed=z.object({ticketId:z.uuid(),version:z.coerce.number().int().positive(),payload:z.string().max(2000).optional(),confirmed:z.literal('true'),page:z.coerce.number().int().min(1).max(50).default(1),sourceFileId:z.uuid().optional(),qrNumber:z.coerce.number().int().min(1).max(10).default(1),preview:z.literal('true').optional()}).strict().safeParse(body);if(!parsed.success)throw new BadRequestException('Chọn mã vé và xác nhận QR gốc.');const input=parsed.data;
@@ -294,5 +301,5 @@ class SharedTicketFilesController {
  @Post(':id/revoke')async revoke(@Param('orderId')orderId:string,@Param('id')id:string,@Body()body:unknown,@Req()req:Request){this.auth.checkMutation(req);return this.files.posRevoke(orderId,id,body,await this.auth.require(req));}
  @Get(':id/download')async download(@Param('orderId')orderId:string,@Param('id')id:string,@Req()req:Request,@Res()res:Response){send(res,await this.files.posDownload(orderId,id,await this.auth.require(req)));}
 }
-@Module({ imports: [AuthModule, OrdersModule, MailModule, PartnersModule,PosModule], controllers: [AdminTicketFilesController, CustomerTicketFilesController, PartnerTicketFilesController, SharedTicketFilesController,PosTicketFilesController], providers: [TicketFilesService] })
+@Module({ imports: [AuthModule, OrdersModule, MailModule, PartnersModule,PosModule], controllers: [AdminTicketFilesController, CustomerTicketFilesController, PartnerTicketFilesController, SharedTicketFilesController,PosTicketFilesController], providers: [TicketFilesService,TicketFileRetention] })
 export class TicketFilesModule {}

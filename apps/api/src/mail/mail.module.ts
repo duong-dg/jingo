@@ -43,8 +43,10 @@ type Config=z.infer<typeof configSchema>&{encryptedPassword?:string};
  const partner=(await this.db.pool.query('SELECT p.data FROM jingo_partners p JOIN jingo_partner_orders o ON o.partner_id=p.id WHERE o.order_id=$1',[job.order_id])).rows[0]?.data;
  const attachments:{filename:string;content:Buffer;contentType:string}[]=[];let attachedBytes=0;
  if(job.event==='TICKET_READY'&&order.booking_status==='CONFIRMED'&&['PAID','CREDIT'].includes(order.payment_status)&&!(await this.db.pool.query('SELECT order_id FROM jingo_order_archives WHERE order_id=$1',[job.order_id])).rowCount){
-  const files=(await this.db.pool.query('SELECT id,name,mime,bytes,partner_shared FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL ORDER BY created_at,id',[job.order_id])).rows;
-  for(const file of files){if(partner&&!file.partner_shared||attachedBytes+Number(file.bytes)>12*1024*1024)continue;try{const content=await readFile(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets',file.id+'.bin'));attachments.push({filename:file.name,content,contentType:file.mime});attachedBytes+=content.length;}catch{throw new Error('Ticket attachment unavailable');}}
+  const files=(await this.db.pool.query('SELECT id,name,mime,bytes,partner_shared,file_kind FROM jingo_ticket_files WHERE order_id=$1 AND revoked_at IS NULL ORDER BY created_at,id',[job.order_id])).rows;
+  const isPos=!!(await this.db.pool.query('SELECT order_id FROM jingo_pos_orders WHERE order_id=$1',[job.order_id])).rowCount;
+  const selected=isPos?files.filter(f=>f.file_kind==='ORIGINAL'):files;
+  for(const file of selected){if(partner&&!file.partner_shared||attachedBytes+Number(file.bytes)>12*1024*1024)continue;try{const content=await readFile(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets',file.id+'.bin'));attachments.push({filename:file.name,content,contentType:file.mime});attachedBytes+=content.length;}catch{throw new Error('Ticket attachment unavailable');}}
  }
  if(job.event==='TICKET_READY'&&!attachments.length){await this.db.pool.query("UPDATE jingo_mail_outbox SET status='SENT',sent_at=now(),last_error='' WHERE id=$1",[job.id]);return;}
  const mailText=job.event==='TICKET_READY'&&partner?['Vé điện tử JinGo của bạn',order.snapshot.productName,order.snapshot.variantName,'Ngày sử dụng: '+order.snapshot.date,'Vé nằm trong file đính kèm. Giữ kín QR và xuất trình theo điều kiện sử dụng.','Liên hệ cộng tác viên đứng đơn nếu cần hỗ trợ.'].join('\n\n'):text;

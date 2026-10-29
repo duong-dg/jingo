@@ -80,6 +80,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS jingo_ticket_stock_lot_status ON jingo_ticket_stock(lot_id,status);
       CREATE TABLE IF NOT EXISTS jingo_stock_imports(id text PRIMARY KEY,lot_id text NOT NULL REFERENCES jingo_supply_lots(id),request_hash text NOT NULL,quantity integer NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_ticket_files(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),ticket_id text NOT NULL REFERENCES jingo_order_tickets(id),name text NOT NULL,mime text NOT NULL,bytes integer NOT NULL,hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),revoked_at timestamptz,revoke_reason text NOT NULL DEFAULT '');
+      ALTER TABLE jingo_ticket_files ADD COLUMN IF NOT EXISTS file_kind text NOT NULL DEFAULT 'ORIGINAL';
+      UPDATE jingo_ticket_files SET file_kind='BRANDED' WHERE file_kind='ORIGINAL' AND name LIKE 'JinGo-%';
+      ALTER TABLE jingo_ticket_files ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
       ALTER TABLE jingo_ticket_files ADD COLUMN IF NOT EXISTS partner_shared boolean NOT NULL DEFAULT false;
       ALTER TABLE jingo_ticket_files ADD COLUMN IF NOT EXISTS sharing_version integer NOT NULL DEFAULT 1;
       CREATE INDEX IF NOT EXISTS jingo_ticket_files_order ON jingo_ticket_files(order_id);
