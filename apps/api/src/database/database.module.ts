@@ -9,6 +9,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject('DB_POOL') public readonly pool: Pool) {}
   async onModuleInit() {
     await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS jingo_weather_cache(id text PRIMARY KEY,data jsonb,fetched_at bigint NOT NULL DEFAULT 0,next_attempt bigint NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS jingo_weather_usage(month text PRIMARY KEY,calls integer NOT NULL DEFAULT 0,blocked boolean NOT NULL DEFAULT false);
       CREATE TABLE IF NOT EXISTS jingo_settings(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_migrations (id text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_vouchers(id text PRIMARY KEY,code text NOT NULL UNIQUE,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);

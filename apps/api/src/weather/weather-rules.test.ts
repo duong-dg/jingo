@@ -1,0 +1,8 @@
+import{test}from'node:test';import assert from'node:assert/strict';import{normalizeForecast,weatherAdvice,type WeatherDay}from'./weather-rules';
+const base:WeatherDay={date:'2026-10-29',min:23,max:28,rain:10,precip:0,wind:10,humidity:60,visibility:10,uv:3,code:1003};
+const ids=(patch:Partial<WeatherDay>)=>weatherAdvice({...base,...patch}).map(t=>t.id);
+test('weather advice prioritizes adverse conditions, caps three and prevents contradictory pleasant suggestions',()=>{
+ assert.deepEqual(ids({code:1276,wind:45,precip:40,max:38,uv:10}),['thunder','wind-strong','heavy-rain']);assert.deepEqual(ids({}),['pleasant']);assert.ok(!ids({code:1087}).includes('pleasant'));assert.ok(!ids({wind:40}).includes('pleasant'));assert.ok(!ids({eveningRain:80}).includes('pleasant'));assert.ok(!ids({min:12}).includes('pleasant'));
+ for(const [patch,id]of [[{rain:60},'rain'],[{rain:30},'showers'],[{max:35},'hot'],[{max:30,humidity:80},'muggy'],[{max:30},'warm'],[{min:15},'cold'],[{min:20},'cool'],[{uv:8},'uv-very-high'],[{uv:6},'uv-high'],[{visibility:1},'visibility'],[{eveningRain:80},'evening-rain'],[{max:33,eveningMin:22},'evening-cool'],[{rain:40,humidity:90},'damp']] as [Partial<WeatherDay>,string][]){assert.ok(ids(patch).includes(id),id);}assert.ok(weatherAdvice(base).every(t=>t.vi&&t.en));
+});
+test('forecast rejects malformed and stale payloads',()=>{assert.throws(()=>normalizeForecast({forecast:{}}));assert.throws(()=>normalizeForecast({current:{temp_c:25,condition:{code:1000,text:'Clear'},last_updated_epoch:1},forecast:{forecastday:[{date:'2000-01-01',day:{maxtemp_c:28,mintemp_c:23,maxwind_kph:10,totalprecip_mm:0,avghumidity:60,avgvis_km:10,daily_chance_of_rain:10,uv:3,condition:{code:1000,text:'Clear'}}}]}}));});
