@@ -13,6 +13,7 @@ export interface PriceRule {
   amount: number;
 }
 export interface Closure {
+  weekdays?: number[];
   productId: string;
   variantId?: string;
   startDate: string;
@@ -32,9 +33,9 @@ export function calculateQuote(
   validateDate(date);
   const variant = product.variants.find((item) => item.id === variantId);
   if (!variant) throw new Error('Gói vé không tồn tại.');const timeSlot=checkSchedule(variant,date,slotId,now);
-  if (closures.some((item) => item.productId === product.id && (!item.variantId || item.variantId === variantId)
-    && item.startDate <= date && date <= item.endDate)) throw new Error('Ngày này đã khóa bán.');
   const weekday = new Date(`${date}T00:00:00Z`).getUTCDay() || 7;
+  if (closures.some((item) => item.productId === product.id && (!item.variantId || item.variantId === variantId)
+    && item.startDate <= date && date <= item.endDate && (!item.weekdays || item.weekdays.includes(weekday)))) throw new Error('Ngày này đã khóa bán.');
   const entries = Object.entries(quantities).filter(([, quantity]) => quantity !== undefined) as [CustomerType, number][];
   if (!entries.length || entries.every(([, quantity]) => quantity === 0)) throw new Error('Chọn ít nhất một khách.');
   const lines = entries.map(([customerType, quantity]) => {

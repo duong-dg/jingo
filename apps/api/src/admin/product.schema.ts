@@ -11,7 +11,7 @@ const id = z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/);
 const text = z.string().trim().max(10000);
 const rule = z.object({ id, productId: id, variantId: id, customerType: z.enum(['ADULT', 'CHILD', 'SENIOR', 'LOCAL_ADULT', 'LOCAL_CHILD', 'LOCAL_SENIOR']), startDate: date, endDate: date,
   weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7).optional(), priority: z.number().int().min(0).max(10000), amount: money }).strict();
-const closure = z.object({ productId: id, variantId: id.optional(), startDate: date, endDate: date, reason: text.max(200).optional() }).strict();
+const closure = z.object({ weekdays:z.array(z.number().int().min(1).max(7)).min(1).max(7).refine(days=>new Set(days).size===days.length,'Các thứ khóa bán không được trùng.').optional(), productId: id, variantId: id.optional(), startDate: date, endDate: date, reason: text.max(200).optional() }).strict();
 export const productSchema = z.object({
   id, supplierId:z.uuid().optional(),slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160),
   name: text.min(1).max(200), destination: text.min(1).max(150), destinationId:z.uuid().optional(), type: id, description: text,

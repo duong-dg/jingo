@@ -70,3 +70,10 @@ test('admin authentication, persistent catalog, schedules and public isolation',
     assert.equal((await call('/admin/login', { email: 'unknown@example.test', password: 'wrong' })).status, 429);
   } finally { await app.close(); }
 });
+
+test('weekly closure configuration rejects empty invalid or duplicate weekdays and keeps legacy dates',()=>{
+ const product={id:'weekly-show',slug:'weekly-show',name:'Weekly show',destination:'Hoi An',type:'TICKET',description:'',status:'DRAFT',demo:false,version:0,variants:[{id:'eco',name:'Eco',prices:{ADULT:100000}}],rules:[],closures:[{productId:'weekly-show',startDate:'2099-01-01',endDate:'2099-12-31',weekdays:[2]}]};
+ assert.equal(productSchema.safeParse(product).success,true);
+ for(const weekdays of [[],[0],[8],[2,2]])assert.equal(productSchema.safeParse({...product,closures:[{...product.closures[0],weekdays}]}).success,false);
+ const {weekdays,...legacy}=product.closures[0];assert.equal(productSchema.safeParse({...product,closures:[legacy]}).success,true);
+});

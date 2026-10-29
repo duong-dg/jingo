@@ -45,3 +45,12 @@ test('six visitor/local groups share the 150 guest order limit', () => {
   assert.equal(calculateQuote(local,'eco','2099-06-01',{ADULT:25,CHILD:25,SENIOR:25,LOCAL_ADULT:25,LOCAL_CHILD:25,LOCAL_SENIOR:25}).total,150);
   assert.throws(()=>calculateQuote(local,'eco','2099-06-01',{ADULT:50,CHILD:50,LOCAL_ADULT:50,LOCAL_CHILD:1}),/150/);
 });
+
+test('weekly closures block only selected ISO weekdays inside the inclusive range and selected package',()=>{
+ const closure={productId:product.id,variantId:'eco',startDate:'2027-06-01',endDate:'2027-06-29',weekdays:[2,7]};
+ for(const date of ['2027-06-01','2027-06-06','2027-06-29'])assert.throws(()=>calculateQuote(product,'eco',date,{ADULT:1},[],[closure]),/khóa bán/);
+ for(const date of ['2027-05-30','2027-05-31','2027-06-02','2027-07-04'])assert.equal(calculateQuote(product,'eco',date,{ADULT:1},[],[closure]).total,400000);
+ assert.equal(calculateQuote(product,'high','2027-06-01',{ADULT:1},[],[closure]).total,550000);
+ assert.throws(()=>calculateQuote(product,'high','2027-06-01',{ADULT:1},[],[{...closure,variantId:undefined}]),/khóa bán/);
+ assert.throws(()=>calculateQuote(product,'eco','2027-06-02',{ADULT:1},[],[{...closure,weekdays:undefined}]),/khóa bán/,'legacy closures still close every day in the range');
+});
