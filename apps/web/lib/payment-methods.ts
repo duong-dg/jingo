@@ -1,0 +1,2 @@
+export function paymentLabel(provider:string,en=false){return ({VNPAY:'VNPay',SEPAY:en?'Bank transfer · SePay':'Chuyển khoản tự động · SePay',VNPAY_CARD:en?'International card · VNPay':'Thẻ quốc tế · VNPay',SEPAY_CARD:en?'International card · SePay':'Thẻ quốc tế · SePay'} as Record<string,string>)[provider]||provider;}
+export const isOnlinePayment=(method:string)=>['VNPAY','SEPAY','VNPAY_CARD','SEPAY_CARD'].includes(method);

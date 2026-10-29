@@ -7,6 +7,8 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Module,Post
  @Post('checkout')checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.throttle(req);if(req.headers['x-jingo-request']!=='1'||req.headers.origin&&req.headers.origin!==new URL(process.env.PUBLIC_BASE_URL||'http://localhost:3000').origin)throw new ForbiddenException('Invalid payment request origin');res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1');}
  @Get('vnpay/ipn')ipn(@Query()query:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.service.vnpay(query);}
  @Get('vnpay/return')returned(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
+ @Post('sepay/card-ipn')@HttpCode(200)cardIpn(@Body()body:unknown,@Req()req:Request){return this.service.sepayCard(body,String(req.headers['x-secret-key']||''));}
+ @Get('sepay/card-return')cardReturn(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
  @Post('sepay/webhook')@HttpCode(200)webhook(@Body()body:unknown,@Req()req:Request){return this.service.sepay(body,req.headers.authorization||'');}
 }
 @Controller('admin/payments')@UseGuards(AdminGuard)class AdminPaymentsController{
