@@ -1,3 +1,4 @@
+import{englishSlug,reserveEnglishPost}from'./localized-slugs';
 import{comparePosts}from'./post-comparison';
 import{z}from'zod';
 import{markTranslation,translated}from'./translations';
@@ -49,7 +50,7 @@ export class PostsService{
     await client.query('INSERT INTO jingo_audit(id,admin_id,action,entity_id)VALUES($1,$2,$3,$4)',[randomUUID(),adminId,'post.'+reason.toLowerCase(),id]);await client.query('COMMIT');
    }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}return this.byId(id);
   }
-  async find(slug:string,admin=false){let result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE slug=$1',[slug]);if(!result.rowCount)result=await this.db.pool.query('SELECT p.data,p.version,p.updated_at FROM jingo_slug_aliases a JOIN jingo_posts p ON p.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['POST',slug]);const post=result.rowCount?this.unpack(result.rows[0]):undefined;if(!post||!admin&&!this.visible(post))throw new NotFoundException('Bài viết chưa xuất bản hoặc không tồn tại.');return post;}
+  async find(slug:string,admin=false,lang?:string){if(lang==='en'){const current=(await this.db.pool.query("SELECT data,version,updated_at FROM jingo_posts WHERE data->'english'->>'slug'=$1",[slug])).rows[0]||(await this.db.pool.query('SELECT p.data,p.version,p.updated_at FROM jingo_slug_aliases a JOIN jingo_posts p ON p.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['POST_EN',slug])).rows[0];if(current){const post=this.unpack(current);if(!admin&&!this.visible(post))throw new NotFoundException();return post;}}let result=await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE slug=$1',[slug]);if(!result.rowCount)result=await this.db.pool.query('SELECT p.data,p.version,p.updated_at FROM jingo_slug_aliases a JOIN jingo_posts p ON p.id=a.entity_id WHERE a.kind=$1 AND a.slug=$2',['POST',slug]);const post=result.rowCount?this.unpack(result.rows[0]):undefined;if(!post||!admin&&!this.visible(post))throw new NotFoundException('Bài viết chưa xuất bản hoặc không tồn tại.');return post;}
   async byId(id:string){const row=(await this.db.pool.query('SELECT data,version,updated_at FROM jingo_posts WHERE id=$1',[id])).rows[0];if(!row)throw new NotFoundException('Không tìm thấy bài viết.');return this.unpack(row);}
   async revisions(id:string){await this.byId(id);return(await this.db.pool.query('SELECT version,data,saved_by,reason,created_at FROM jingo_post_revisions WHERE post_id=$1 ORDER BY version DESC LIMIT 50',[id])).rows.map(r=>({version:r.version,title:r.data.title,status:r.data.status,reason:r.reason,savedBy:r.saved_by,createdAt:r.created_at}));}
   async preview(id:string,lang='vi',revision?:string){if(!['vi','en'].includes(lang))throw new BadRequestException('Ngôn ngữ không hợp lệ.');let post=await this.byId(id);if(revision!==undefined){if(!/^[1-9][0-9]{0,8}$/.test(revision))throw new BadRequestException('Phiên bản không hợp lệ.');const saved=(await this.db.pool.query('SELECT data,version,created_at FROM jingo_post_revisions WHERE post_id=$1 AND version=$2',[id,Number(revision)])).rows[0];if(!saved)throw new NotFoundException('Không tìm thấy phiên bản.');post={...saved.data,version:saved.version,updatedAt:new Date(saved.created_at).toISOString()};}if(lang==='en'&&!post.english?.title?.trim())throw new BadRequestException('Chưa có tiêu đề bản dịch tiếng Anh để xem trước.');
@@ -67,10 +68,11 @@ export class PostsService{
     if(post.status==='PUBLISHED'&&!post.publishedAt)post.publishedAt=new Date().toISOString();
     await this.media.validateIds([...(post.cover?[post.cover.id]:[]),...contentImageIds(post.contentHtml),...contentImageIds(post.english?.contentHtml||'')]);
     for(const id of new Set(post.relatedProductIds)){const row=await this.db.pool.query('SELECT id FROM jingo_products WHERE id=$1',[id]);if(!row.rowCount)throw new BadRequestException('Sản phẩm liên quan không tồn tại.');}
-    const client=await this.db.pool.connect();try{await client.query('BEGIN');
+    const client=await this.db.pool.connect();try{await client.query('BEGIN');await client.query("SELECT id FROM jingo_migrations WHERE id='041_english_urls_lock' FOR UPDATE");
       const current=post.version?await client.query('SELECT slug,data,version,updated_at FROM jingo_posts WHERE id=$1 FOR UPDATE',[post.id]):null;
       if(current?.rows[0]&&reason!=='TRANSLATE'&&reason!=='RESTORE'){post.english=current.rows[0].data.english;markTranslation('POST',post);}
       if(current?.rows[0]){const row=current.rows[0];await client.query('INSERT INTO jingo_post_revisions(post_id,version,data,saved_by,reason,created_at)VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(post_id,version) DO NOTHING',[post.id,row.version,JSON.stringify(row.data),'legacy','BASELINE',row.updated_at]);}
+      if(post.english?.title){const slug=String(post.english.slug||current?.rows[0]?.data.english?.slug||englishSlug(post.english.title)||post.slug);post.english.slug=slug;await reserveEnglishPost(client,post.id,slug,current?.rows[0]?.data.english?.slug||current?.rows[0]?.slug);}
       await reserveSlug(client,'POST',post.id,post.slug,current?.rows[0]?.slug);
       if(post.version===0)await client.query('INSERT INTO jingo_posts(id,slug,data)VALUES($1,$2,$3)',[post.id,post.slug,JSON.stringify(post)]);
       else{const updated=await client.query('UPDATE jingo_posts SET slug=$1,data=$2,version=version+1,updated_at=now() WHERE id=$3 AND version=$4',[post.slug,JSON.stringify(post),post.id,post.version]);if(!updated.rowCount)throw new ConflictException('Bài viết đã thay đổi ở cửa sổ khác. Tải lại trước khi lưu.');}
@@ -80,11 +82,11 @@ export class PostsService{
     return this.find(post.slug,true);
   }
 }
-function publicPost(post:Post&{updatedAt:string},lang?:string){const{english,version,...published}=post;const languages=translated('POST',post)?['vi','en']:['vi'];return{...published,...(lang==='en'?{title:english!.title,excerpt:english!.excerpt,contentHtml:english!.contentHtml,category:english!.category,seoTitle:english!.seoTitle,seoDescription:english!.seoDescription,cover:post.cover?{...post.cover,alt:english!.title}:null}:{}),languages};}
+function publicPost(post:Post&{updatedAt:string},lang?:string){const{english,version,...published}=post;const languages=translated('POST',post)?['vi','en']:['vi'];return{...published,slug:lang==='en'?english?.slug||post.slug:post.slug,localePaths:{vi:'/cam-nang/'+post.slug,...(languages.includes('en')?{en:'/en/blog/'+(english?.slug||post.slug)}:{})},...(lang==='en'?{title:english!.title,excerpt:english!.excerpt,contentHtml:english!.contentHtml,category:english!.category,seoTitle:english!.seoTitle,seoDescription:english!.seoDescription,cover:post.cover?{...post.cover,alt:english!.title}:null}:{}),languages};}
 @Controller('posts')class PublicPostsController{
   constructor(private readonly posts:PostsService){}
   @Get()async list(@Query('lang')lang?:string){return{data:(await this.posts.list()).filter(post=>lang!=='en'||translated('POST',post)).map(post=>{const{contentHtml,...summary}=publicPost(post,lang);return summary;})};}
-  @Get(':slug')async detail(@Param('slug')slug:string,@Query('lang')lang?:string){const post=await this.posts.find(slug);if(lang==='en'&&!translated('POST',post))throw new NotFoundException('Translation unavailable.');return{data:publicPost(post,lang)};}
+  @Get(':slug')async detail(@Param('slug')slug:string,@Query('lang')lang?:string){const post=await this.posts.find(slug,false,lang);if(lang==='en'&&!translated('POST',post))throw new NotFoundException('Translation unavailable.');return{data:publicPost(post,lang)};}
 }
 @Controller('admin/posts')@UseGuards(AdminGuard)class AdminPostsController{
   constructor(private readonly posts:PostsService){}

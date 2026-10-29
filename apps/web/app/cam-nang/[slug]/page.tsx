@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: {
         slug: string;
     }>;
 }): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const post = await getPost((await params).slug); if (!post)
-    return { title: 'Không tìm thấy bài viết' }; const canonical = new URL(localizedPath(`/cam-nang/${post.slug}`, locale), siteBase()).toString(); return { title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, alternates: { canonical,languages:languageAlternates(`/cam-nang/${post.slug}`,post.languages) }, robots: { index: indexing(), follow: true }, openGraph: { type: 'article', url: canonical, title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, publishedTime: post.publishedAt || undefined, modifiedTime: post.updatedAt, authors: [post.author], images: post.cover ? [{ url: new URL(imageUrl(post.cover), siteBase()).toString(), alt: post.cover.alt || post.title }] : [] } }; }
+    return { title: 'Không tìm thấy bài viết' }; const canonical = new URL(localizedPath(`/cam-nang/${post.slug}`, locale), siteBase()).toString(); return { title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, alternates: { canonical,languages:languageAlternates(`/cam-nang/${post.slug}`,post.languages,post.localePaths) }, robots: { index: indexing(), follow: true }, openGraph: { type: 'article', url: canonical, title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, publishedTime: post.publishedAt || undefined, modifiedTime: post.updatedAt, authors: [post.author], images: post.cover ? [{ url: new URL(imageUrl(post.cover), siteBase()).toString(), alt: post.cover.alt || post.title }] : [] } }; }
 export default async function ArticlePage({ params }: {
     params: Promise<{
         slug: string;
@@ -37,6 +37,6 @@ export default async function ArticlePage({ params }: {
     let products: Product[] = [];
     if (post.relatedProductIds.length)
         products = (await contentApi<Product[]>('products', locale)).filter(product => post.relatedProductIds.includes(product.id));
-    const url = new URL(`/cam-nang/${post.slug}`, siteBase()).toString();
+    const url = new URL(localizedPath(`/cam-nang/${post.slug}`,locale), siteBase()).toString();
     return <><ArticleView post={post} products={products} locale={locale}/><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ '@context': 'https://schema.org', '@type': 'BlogPosting',inLanguage:locale, headline: post.title, description: post.excerpt, url, datePublished: post.publishedAt || post.updatedAt, dateModified: post.updatedAt, author: { '@type': 'Organization', name: post.author }, publisher: { '@type': 'Organization', name: 'JinGo' }, mainEntityOfPage: url, ...(post.cover ? { image: new URL(imageUrl(post.cover), siteBase()).toString() } : {}) }) }}/></>;
 }

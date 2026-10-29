@@ -10,7 +10,7 @@ export const postSchema=z.object({
   author:z.string().trim().min(1).max(100),status:z.enum(['DRAFT','PUBLISHED','TRASH']),publishedAt:z.iso.datetime({offset:true}).nullable().default(null),
   seoTitle:z.string().trim().max(200).default(''),seoDescription:z.string().trim().max(500).default(''),
   relatedProductIds:z.array(z.string().max(80)).max(12).default([]),version:z.number().int().min(0),
-  english:z.object({title:z.string().max(200),excerpt:z.string().max(1000),contentHtml:z.string().max(200000),seoTitle:z.string().max(200),seoDescription:z.string().max(500),category:z.string().trim().max(100).default(''),...translationState}).strict().optional()
+  english:z.object({slug:z.union([slugSchema,z.literal('')]).optional(),title:z.string().max(200),excerpt:z.string().max(1000),contentHtml:z.string().max(200000),seoTitle:z.string().max(200),seoDescription:z.string().max(500),category:z.string().trim().max(100).default(''),...translationState}).strict().optional()
 }).strict();
 export type Post=z.infer<typeof postSchema>;
 export type ProductType=z.infer<typeof typeSchema>;

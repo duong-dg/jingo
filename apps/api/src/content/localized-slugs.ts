@@ -1,0 +1,3 @@
+import{ConflictException}from'@nestjs/common';import type{PoolClient}from'pg';import{reserveSlug}from'./slug-alias';
+export const englishSlug=(text:string)=>text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,150).replace(/-$/,'');
+export async function reserveEnglishPost(client:PoolClient,id:string,slug:string,oldSlug?:string){const other=await client.query("SELECT id FROM jingo_posts WHERE slug=$1 OR data->'english'->>'slug'=$1",[slug]);if(other.rows.some(r=>r.id!==id))throw new ConflictException('URL tiếng Anh đã được bài khác sử dụng. Chọn URL khác.');await reserveSlug(client,'POST_EN',id,slug,oldSlug);}
