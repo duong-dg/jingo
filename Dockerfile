@@ -19,6 +19,7 @@ ENV INTERNAL_API_URL=$INTERNAL_API_URL NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=build --chown=node:node /app /app

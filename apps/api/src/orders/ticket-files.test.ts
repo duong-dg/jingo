@@ -67,6 +67,9 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     assert.equal((await (await call('/orders/files', { code: first.code, email: 'file-guest@example.test' })).json()).data.length, 0, 'POS email-only lookup cannot reveal files');
     assert.equal((await call('/orders/files/' + imageFile.id + '/download', { code: first.code, email: 'file-guest@example.test' })).status, 404);
     assert.equal((await call('/orders/files/' + imageFile.id + '/download', auth)).status, 200);
+    const posLogin=async(email:string,password:string)=>{const r=await fetch(base+'/pos/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:'http://localhost:3000','X-Jingo-POS':'1'},body:JSON.stringify({email,password})});assert.equal(r.status,201);return r.headers.get('set-cookie')!.split(';')[0];};const posCookie=await posLogin(process.env.ADMIN_EMAIL!,process.env.ADMIN_PASSWORD!);
+    assert.equal((await fetch(base+'/pos/orders/'+first.id+'/files')).status,401);assert.equal((await fetch(base+'/pos/orders/'+first.id+'/files/'+imageFile.id+'/download',{headers:{Cookie:posCookie}})).status,200);
+    const seller={id:randomUUID(),name:'No print',email:'no-print-files@example.test',password:'no-print-password-123',status:'ACTIVE',counterIds:['main'],permissions:['SELL'],version:0};assert.equal((await call('/admin/pos-users',seller,true)).status,201);const sellerCookie=await posLogin(seller.email,seller.password);assert.equal((await fetch(base+'/pos/orders/'+first.id+'/files',{headers:{Cookie:sellerCookie}})).status,404,'SELL alone cannot download private ticket PDFs');
     await pool.query('INSERT INTO jingo_order_archives(order_id,archived_by,reason)VALUES($1,$2,$3)', [first.id, 'fixture', 'Fixture archive']);
     assert.equal((await call('/orders/files/' + imageFile.id + '/download', auth)).status, 404);
     assert.equal((await upload(first.id, ticketId, (await detail(first.id)).version, Buffer.from('%PDF-new'))).status, 409);
@@ -79,5 +82,11 @@ test('private ticket files: paid issued tickets, idempotent uploads, authenticat
     assert.equal((await upload(other.id, otherTicket, (await detail(other.id)).version)).status, 201);
     assert.equal((await call('/orders/files', {code:other.code,accessKey:other.accessKey})).status, 404);
     assert.equal((await readdir(join(media, '.tickets'))).length, 3, 'failed uploads do not create orphan files');
+    await pool.query("INSERT INTO jingo_settings(id,data)VALUES('smtp',$1)",[JSON.stringify({enabled:true})]);
+    const brandedRequest=(body:FormData,admin=true)=>fetch(base+'/admin/orders/'+other.id+'/files/branded',{method:'POST',headers:{Origin:'http://localhost:3000','X-Jingo-Admin':'1',...(admin?{Cookie:cookie}:{})},body});
+    const brandBody=(preview=false)=>{const body=new FormData();body.set('ticketId',otherTicket);body.set('version',String(4));body.set('confirmed','true');body.set('payload','EXACT-SUPPLIER-QR-NOT-THE-ORDER-CODE');if(preview)body.set('preview','true');return body;};
+    assert.equal((await brandedRequest(brandBody(),false)).status,401);const before=(await pool.query('SELECT id FROM jingo_ticket_files')).rowCount;response=await brandedRequest(brandBody(true));assert.equal(response.status,201);const preview=await response.json();assert.match(Buffer.from(preview.preview,'base64').toString('ascii',0,5),/%PDF-/);assert.equal((await pool.query('SELECT id FROM jingo_ticket_files')).rowCount,before,'preview never publishes or emails a ticket');
+    response=await brandedRequest(brandBody());assert.equal(response.status,201);const brand=await response.json();assert.equal((await pool.query('SELECT partner_shared FROM jingo_ticket_files WHERE id=$1',[brand.id])).rows[0].partner_shared,true,'admin-approved branded ticket is available for guest sharing');assert.equal((await pool.query("SELECT id FROM jingo_mail_outbox WHERE order_id=$1 AND event='TICKET_READY'",[other.id])).rowCount,1,'CTV ticket gets an attachment email even without a retail lookup key');
+    const stale=brandBody();assert.equal((await brandedRequest(stale)).status,409);assert.equal((await detail(other.id)).deliveredGuests,1,'PDF creation does not issue a second guest or a new supplier code');
   } finally { await app.close(); await rm(media, { recursive: true, force: true }); }
 });
