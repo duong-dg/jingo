@@ -1,3 +1,5 @@
+import{PublicMotion}from'./components/public-motion';
+import'./motion.css';
 import { CartDrawer } from './components/cart-drawer';
 import{CartLink}from'./components/cart-link';
 import'./gio-hang/cart.css';
@@ -23,7 +25,7 @@ export default async function RootLayout({ children }: {
 }) {
     const locale = await requestLocale(), t = translator(locale);
     return <html lang={locale} data-scroll-behavior="smooth"><body><LocaleContext value={locale}>
-    <SkipLink /><CartDrawer/>
+    <PublicMotion/><SkipLink /><CartDrawer/>
     <header className="header"><Link className="logo" href={localizedPath('/', locale)}>jin<span>go</span><i>↗</i></Link>
       <nav className="public-desktop-nav" aria-label={locale==='en'?'Main navigation':'Điều hướng chính'}><Link href={localizedPath('/', locale) + '#experiences'}>{t("Vé & trải nghiệm")}</Link><Link href={localizedPath('/', locale) + '#local'}>{t("Tour địa phương")}</Link><Link href={localizedPath('/cam-nang', locale)}>{t("Cẩm nang")}</Link></nav>
       <MobileMenu label={locale==='en'?'Main navigation':'Điều hướng chính'} links={[{href:localizedPath('/',locale)+'#experiences',label:t('Vé & trải nghiệm')},{href:localizedPath('/',locale)+'#local',label:t('Tour địa phương')},{href:localizedPath('/cam-nang',locale),label:t('Cẩm nang')},{href:localizedPath('/gio-hang',locale),label:locale==='en'?'Ticket basket':'Giỏ vé'},{href:localizedPath('/tra-cuu',locale),label:t('Tra cứu đơn hàng ↗')},{href:'/ctv',label:t('Cổng CTV ↗')}]}/><LanguageSwitcher/><CartLink/><span className="header-note">{t("Đi gần hơn. Trải nghiệm nhiều hơn.")}</span>
