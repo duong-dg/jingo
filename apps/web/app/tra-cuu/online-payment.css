@@ -1,3 +1,5 @@
 .online-payment{padding:20px;border:1px solid #dfe6df;border-radius:12px;background:#f8faf7;margin:20px 0;min-width:0}.online-payment-buttons{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.online-payment img{display:block;max-width:100%;height:auto;background:#fff;border-radius:10px}.online-payment strong{overflow-wrap:anywhere}.online-payment p{line-height:1.7}.online-payment small{display:block;margin-top:16px;line-height:1.7}.online-payment .button{white-space:normal;text-align:center}@media(max-width:550px){.online-payment{padding:16px}.online-payment-buttons>*{width:100%;justify-content:center}}
 
 .online-payment .payment-countdown{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#e7f2e7;color:#315d3a;border-radius:10px;font-size:14px}.payment-countdown strong{font-variant-numeric:tabular-nums;font-size:20px;white-space:nowrap}
+
+.payment-check-notice{padding:12px 14px;border:1px solid #d5e5db;border-radius:10px;background:#f3f8f4;color:#315d45;font-size:14px;line-height:1.6}

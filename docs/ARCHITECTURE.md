@@ -294,3 +294,8 @@ Cảnh báo REVIEW chỉ đếm thông báo môi trường LIVE và có cả l�
 Chi tiết JG có header riêng: mã gói, mã JC nếu thuộc đơn nhiều gói, trạng thái và liên kết In phiếu đặt vé. Thông tin vé/khách, dòng số lượng/đơn giá/thành tiền và tổng gói tách khỏi thao tác xử lý. Thu chung JC nằm trong khung mở rộng riêng, chỉ tải tổng hợp khi mở; bản ghi mã JG dùng cho thao tác từng gói. Tổng hợp JC độc lập chỉ hiện khi chưa chọn gói, có nút mở gói trực tiếp thay vì điều hướng sang một trang thu tiền khác. Callback thu chung tải lại cả danh sách và chi tiết gói để cập nhật trạng thái/version.
 
 Các mục tệp vé/bản in JinGo, kho mã, lịch sử thu tiền, nguồn/giá vốn, email, nhật ký và lưu trữ được gom trong khung riêng. Lưu trữ/xóa chuyển cuối chi tiết; không thay rule nghiệp vụ hoặc API. Bỏ nút window.print mơ hồ trên tổng hợp JC trong admin; in phiếu từng JG qua route in riêng, tạo/in PDF JinGo từ phần tệp vé. Các màn hình POS/CTV/web giữ khả năng in hiện có. Nhãn thu tiền chung được làm rõ là tổng còn lại, payload và cơ chế chống thu trùng không đổi.
+
+
+### Manual SePay reconciliation
+
+Admin payment configuration and journal are separate routes under the Thanh toán menu. `PaymentReconciliation` previews JG/JC targets and atomically links a verified LIVE SEPAY REVIEW transfer to an exactly matching unpaid order or whole basket. Canonical payment references, event/order row locks and an immutable resolution record prevent reuse; ledger, shift receipts, email outbox and audit commit together. See `docs/SEPAY-SECURITY.md` for limits and operational workflow.

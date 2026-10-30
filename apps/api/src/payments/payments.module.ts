@@ -1,3 +1,4 @@
+import{PaymentReconciliation}from'./reconciliation';
 import{randomUUID}from'node:crypto';
 import{ShiftsModule}from'../shifts/shifts.module';import{PartnersModule}from'../partners/partners.module';import{PartnerAuthService}from'../partners/partner-auth.service';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import{permissions}from'../pos/pos.schema';
 import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Logger,Module,Post,Query,Req,Res,UseGuards}from'@nestjs/common';import type{Request,Response}from'express';import{AuthModule,AdminGuard}from'../admin/auth.module';import{MailModule}from'../mail/mail.module';import{PaymentSettings}from'./settings';import{PaymentsService}from'./payments.service';
@@ -16,9 +17,11 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Logger,Modu
  @Post('sepay/webhook')@HttpCode(200)webhook(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){return this.observe('bank-webhook',res,()=>this.service.sepay(body,req.headers.authorization||'',{raw:(req as Request&{rawBody?:Buffer}).rawBody,timestamp:String(req.headers['x-sepay-timestamp']||''),signature:String(req.headers['x-sepay-signature']||'')}));}
 }
 @Controller('admin/payments')@UseGuards(AdminGuard)class AdminPaymentsController{
- constructor(private readonly settings:PaymentSettings,private readonly service:PaymentsService){}
+ constructor(private readonly settings:PaymentSettings,private readonly service:PaymentsService,private readonly reconciliation:PaymentReconciliation){}
  @Get()view(@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.settings.view();}
  @Post()save(@Body()body:unknown,@Req()req:Request&{admin:{id:string}}){return this.settings.save(body,req.admin.id);}
+ @Post('reconciliation/preview')preview(@Body()body:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.reconciliation.preview(body);}
+ @Post('reconciliation/resolve')resolve(@Body()body:unknown,@Req()req:Request&{admin:{id:string}},@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.reconciliation.resolve(body,req.admin.id);}
  @Get('events')events(@Query()query:Record<string,unknown>,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.events(query);}
  @Post('checkout')checkout(@Body()body:unknown,@Req()req:Request&{admin:{id:string;email:string}},@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'ADMIN',actor:{...req.admin,name:req.admin.email,role:'ADMIN',counterIds:[],permissions:[...permissions]}});}
  @Post('test-checkout')test(@Body()body:unknown){return this.service.checkout(body,'127.0.0.1',true);}
@@ -31,4 +34,4 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Logger,Modu
  constructor(private readonly service:PaymentsService,private readonly auth:PosAuthService){}
  @Post('checkout')async checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.auth.checkMutation(req);res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'POS',actor:await this.auth.require(req)});}
 }
-@Module({imports:[AuthModule,MailModule,ShiftsModule,PartnersModule,PosModule],controllers:[PublicPaymentsController,AdminPaymentsController,PartnerPaymentsController,PosPaymentsController],providers:[PaymentSettings,PaymentsService]})export class PaymentsModule{}
+@Module({imports:[AuthModule,MailModule,ShiftsModule,PartnersModule,PosModule],controllers:[PublicPaymentsController,AdminPaymentsController,PartnerPaymentsController,PosPaymentsController],providers:[PaymentSettings,PaymentsService,PaymentReconciliation]})export class PaymentsModule{}

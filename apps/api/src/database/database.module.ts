@@ -39,6 +39,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS jingo_gateway_attempts(id text PRIMARY KEY,order_id text NOT NULL REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,config_version integer NOT NULL,config jsonb NOT NULL,status text NOT NULL DEFAULT 'PENDING',created_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_gateway_attempt_order ON jingo_gateway_attempts(order_id,provider);
       CREATE TABLE IF NOT EXISTS jingo_gateway_events(id text PRIMARY KEY,attempt_id text REFERENCES jingo_gateway_attempts(id),order_id text REFERENCES jingo_orders(id),provider text NOT NULL,mode text NOT NULL,amount bigint NOT NULL,status text NOT NULL,reason text NOT NULL,fingerprint text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS jingo_gateway_resolutions(event_id text PRIMARY KEY REFERENCES jingo_gateway_events(id),target_code text NOT NULL,admin_id text NOT NULL,note text NOT NULL,original_reason text NOT NULL,original_order_id text,created_at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE IF NOT EXISTS jingo_sepay_payloads(id text PRIMARY KEY,payload_encrypted text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
       CREATE INDEX IF NOT EXISTS jingo_sepay_payloads_date ON jingo_sepay_payloads(created_at);
       CREATE INDEX IF NOT EXISTS jingo_gateway_event_status_date ON jingo_gateway_events(status,created_at);

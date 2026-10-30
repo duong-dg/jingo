@@ -84,6 +84,17 @@ test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, ex
  pool.query=async(...args:any[])=>{if(failOnce&&String(args[0]).startsWith('INSERT INTO jingo_sepay_payloads')){failOnce=false;throw new Error('Simulated storage outage');}return originalQuery(...args);};
  try{assert.equal((await bankHook(hook(retryIntent,990006))).status,500);}finally{pool.query=originalQuery;}
  assert.equal((await bankHook(hook(retryIntent,990006))).status,200);assert.equal((await bankHook(hook(retryIntent,990006))).status,200);assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[retryOrder.id])).rowCount,1,'retry after storage recovery settles once');
+
+ const target={eventId:'SEPAY:LIVE:990004',targetCode:codeOrder.code},resolve={...target,expectedAmount:price,note:'Đã đối chiếu ngân hàng và đúng khách',verified:true};
+ assert.equal((await call('/admin/payments/reconciliation/preview',target)).status,401);
+ assert.equal((await call('/admin/payments/reconciliation/resolve',resolve,true,{'X-Jingo-Admin':'0'})).status,403);
+ assert.equal((await call('/admin/payments/reconciliation/preview',{...target,targetCode:oauthOrder.code},true)).status,409,'cannot attach to paid order');
+ response=await call('/admin/payments/reconciliation/preview',target,true);assert.equal(response.status,201);const preview=await response.json();assert.equal(preview.amount,price);assert.equal(preview.items.length,1);assert.doesNotMatch(JSON.stringify(preview),/accessKey|Encrypted|gateway-guest/);
+ assert.equal((await call('/admin/payments/reconciliation/resolve',{...resolve,verified:false},true)).status,400);assert.equal((await call('/admin/payments/reconciliation/resolve',{...resolve,expectedAmount:price+1},true)).status,409);
+ assert.equal((await call('/admin/payments/reconciliation/resolve',resolve,true)).status,201);assert.equal((await call('/admin/payments/reconciliation/resolve',resolve,true)).status,201,'resolution retry is idempotent');
+ assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[codeOrder.id])).rowCount,1);assert.equal((await pool.query('SELECT payment_status FROM jingo_orders WHERE id=$1',[codeOrder.id])).rows[0].payment_status,'PAID');
+ assert.equal((await pool.query('SELECT status FROM jingo_gateway_events WHERE id=$1',[target.eventId])).rows[0].status,'PAID');const resolution=(await pool.query('SELECT * FROM jingo_gateway_resolutions WHERE event_id=$1',[target.eventId])).rows[0];assert.match(resolution.original_reason,/không khớp/);assert.equal(resolution.target_code,codeOrder.code);assert.ok(resolution.admin_id);
+ assert.equal((await call('/admin/payments/reconciliation/resolve',{...resolve,targetCode:expiredOrder.code},true)).status,409,'cannot reassign a resolved bank transaction');
  response=await call('/admin/payments',{...fields(c),sepayOauthSecret:oauthSecret+'-rotated'},true);assert.equal(response.status,201);c=await response.json();assert.equal((await oauthHook(token.access_token)).status,401,'rotation revokes old tokens');assert.equal((await tokenRequest()).status,401);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,200);
  response=await call('/admin/payments',{...fields(c),sepayEnabled:false},true);assert.equal(response.status,201);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,401,'disabled gateway issues no tokens');
  }finally{await app.close();await rm(media,{recursive:true,force:true});}
