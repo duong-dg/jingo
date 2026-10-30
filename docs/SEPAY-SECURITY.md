@@ -71,3 +71,11 @@ sudo docker exec proxy-app-1 sh -c 'nginx -T 2>&1 | grep -nE "set_real_ip_from|r
 Share only these directive lines, never the entire configuration. Audit overly broad trust such as 0.0.0.0/0, ::/0, or large private networks. Do not blindly remove entries used by other hosts without identifying their upstream proxies.
 
 Nginx original-peer documentation: https://nginx.org/en/docs/http/ngx_http_realip_module.html#embedded_variables .
+
+## Extracted code and customer status refresh
+
+The full JGP + 24 hex identifier in original bank content is the authoritative intent match. SePay `code` is an optional value extracted using merchant-configured prefixes; unrelated or truncated extracted values must not invalidate a complete matching JGP in content. If `code` itself is a full JGP identifier and contradicts content, the transfer still goes to REVIEW. Missing/multiple JGP content, wrong amounts/accounts, expired intents and duplicate-ID conflicts retain their safeguards.
+
+Existing REVIEW events are historical and are NOT automatically re-settled by replay after upgrading. For a confirmed real bank transfer, open the JC basket in admin and use the existing combined receipt action with the bank transaction reference, once, after verifying no receipt exists. Do not pay again or force an automatic settlement by editing transaction IDs. The payment journal now supports exact JC code lookup and displays its parent basket alongside JG.
+
+Customer polling runs while the online-payment component is mounted, including the return page before a new intent exists. It checks every 5 seconds while visible, checks immediately on tab/window return, and reports lookup/network failures rather than silently swallowing them. Automatic polling is bounded to 30 minutes per mount; manual checking remains available. Expired QR display does not itself stop read-only status checks. Only a server-confirmed settled/PAID status marks payment successful.
