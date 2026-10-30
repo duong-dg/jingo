@@ -20,3 +20,12 @@ Các trang công khai (vé, blog, điểm đến, trang nội dung/liên hệ v�
 Next htmlLimitedBots giữ danh sách mặc định và thêm Zalo/Telegram/Facebot/meta-externalagent/Pinterest để metadata nằm trong head ban đầu, tránh bot bỏ qua metadata stream ở cuối body. robots.txt cho phép các bot chia sẻ đọc trang công khai và ảnh ngay cả khi SEO_INDEXING chưa bật; các khu vực quản trị, API (ngoại trừ media), quầy, CTV, giỏ/đặt vé và tra cứu vẫn bị disallow. Công tắc Google/search indexing không tự bật vì yêu cầu sửa preview.
 
 Kiểm tra triển khai: PUBLIC_BASE_URL là domain HTTPS chính thức; HTML với User-Agent Zalo/1.0, facebookexternalhit/1.1 và TelegramBot phải có og:title/og:description/og:image trong head; URL ảnh trả 200 image/jpeg hoặc image/png, không cần đăng nhập. Build production local đã kiểm tra 18 tổ hợp bot/trang, PNG mặc định và robots.txt; API kiểm tra JPEG cùng lúc/cache/UUID không tồn tại. Kết quả hiển thị cuối cùng còn do mạng xã hội và cache của họ. Sau khi cập nhật, có thể cần yêu cầu lấy lại link qua công cụ debug của mạng xã hội hoặc gửi lại link; bài đăng cũ không tự được thay hình ngay.
+
+
+### Cập nhật khi Facebook vẫn báo 403 dù NPM ghi nhận 200
+
+Access log thực tế ghi nhận facebookexternalhit từ IP bên ngoài nhận 200 cho trang vé/blog; các lần kiểm tra nội bộ cũng tải HTML và ảnh thành công. Cấu hình host NPM Public, không có Advanced hoặc Custom location chặn bot. Điều này loại trừ kết luận chắc chắn NPM đang trả 403 cho những lần truy cập đã ghi nhận; chưa xác nhận nguyên nhân phía Facebook.
+
+robots.txt được đơn giản thành một nhóm User-Agent: * cho phép các trang công khai và media, vẫn disallow các khu vực riêng tư. Không còn nhóm wildcard Disallow: / đi kèm ngoại lệ từng bot. Đây là biện pháp loại trừ cách xử lý/cache robots khác nhau, không khẳng định quy tắc cũ sai chuẩn. SEO_INDEXING vẫn quyết định meta robots noindex của trang và sitemap; cho phép crawl để đọc preview không tự bật index tìm kiếm. Cập nhật này thay quy tắc robots theo từng bot đã mô tả ở trên. Bổ sung meta-externalfetcher vào nhóm nhận metadata head ban đầu.
+
+Sau triển khai cần đối chiếu thời gian Thu thập lại trên Debugger và log NPM host #16. Nếu vẫn lỗi, xem dòng robots.txt và ảnh cùng lần fetch, thay vì tiếp tục tắt bảo vệ NPM hoặc khẳng định lỗi cache. Không có quyền xóa bộ nhớ robots của Facebook từ ứng dụng JinGo.
