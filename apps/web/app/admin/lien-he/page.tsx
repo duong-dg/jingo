@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{ContactInbox}from'./contact-inbox';import'../admin.css';import'./contact-inbox.css';export const metadata={title:'Yêu cầu liên hệ',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Yêu cầu liên hệ" active="contact-inbox"><ContactInbox/></AdminFrame>;}
