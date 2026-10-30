@@ -1,3 +1,4 @@
+import{pageShareMetadata}from'../../../lib/share-metadata';
 import{breadcrumbData}from'../../../lib/seo-breadcrumbs';
 import { requestLocale } from '../../../lib/request-locale';
 import { translator, localizedPath, dateLocale } from '../../../lib/i18n';
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: {
         slug: string;
     }>;
 }): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const post = await getPost((await params).slug); if (!post)
-    return { title: 'Không tìm thấy bài viết' }; const canonical = new URL(localizedPath(`/cam-nang/${post.slug}`, locale), siteBase()).toString(); return { title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, alternates: { canonical,languages:languageAlternates(`/cam-nang/${post.slug}`,post.languages,post.localePaths) }, robots: { index: indexing(), follow: true }, twitter:{card:post.cover?'summary_large_image':'summary',title:post.seoTitle||post.title,description:post.seoDescription||post.excerpt,images:post.cover?[new URL(imageUrl(post.cover),siteBase()).toString()]:[]},openGraph: { type: 'article', url: canonical, title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, publishedTime: post.publishedAt || undefined, modifiedTime: post.updatedAt, authors: [post.author], images: post.cover ? [{ url: new URL(imageUrl(post.cover), siteBase()).toString(), alt: post.cover.alt || post.title }] : [] } }; }
+    return { title: 'Không tìm thấy bài viết' }; const canonical = new URL(localizedPath(`/cam-nang/${post.slug}`, locale), siteBase()).toString(); return { title: post.seoTitle || post.title, description: post.seoDescription || post.excerpt, alternates: { canonical,languages:languageAlternates(`/cam-nang/${post.slug}`,post.languages,post.localePaths) }, robots: { index: indexing(), follow: true }, ...await pageShareMetadata({title:post.seoTitle||post.title,description:post.seoDescription||post.excerpt,path:localizedPath('/cam-nang/'+post.slug,locale),locale,image:post.cover,article:{publishedTime:post.publishedAt||undefined,modifiedTime:post.updatedAt,authors:[post.author]}}) }; }
 export default async function ArticlePage({ params }: {
     params: Promise<{
         slug: string;

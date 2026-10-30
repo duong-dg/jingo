@@ -1,3 +1,4 @@
+import{pageShareMetadata}from'../../../lib/share-metadata';
 import { requestLocale } from '../../../lib/request-locale';
 import { translator, localizedPath, dateLocale } from '../../../lib/i18n';
 import{languageAlternates}from'../../../lib/content-api';
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: {
     params: Promise<{
         slug: string;
     }>;
-}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const { slug } = await params; const type = await getType(slug); return { title: type?.name || 'Không tìm thấy loại sản phẩm', description: type?.description, alternates: { languages:languageAlternates(`/loai/${type?.slug||''}`,type?.languages||[]),canonical: new URL(localizedPath(`/loai/${type?.slug || slug}`, locale), siteBase()).toString() }, robots: { index: !!type && indexing(), follow: true } }; }
+}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const { slug } = await params; const type = await getType(slug); return {...await pageShareMetadata({title:type?.name||'JinGo',description:type?.description||(locale==='en'?'Tickets and local experiences with JinGo.':'Vé và trải nghiệm địa phương cùng JinGo.'),path:localizedPath('/loai/'+(type?.slug||slug),locale),locale}), title: type?.name || 'Không tìm thấy loại sản phẩm', description: type?.description, alternates: { languages:languageAlternates(`/loai/${type?.slug||''}`,type?.languages||[]),canonical: new URL(localizedPath(`/loai/${type?.slug || slug}`, locale), siteBase()).toString() }, robots: { index: !!type && indexing(), follow: true } }; }
 export default async function TypePage({ params }: {
     params: Promise<{
         slug: string;

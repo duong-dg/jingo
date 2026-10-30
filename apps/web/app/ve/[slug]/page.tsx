@@ -1,3 +1,4 @@
+import{pageShareMetadata}from'../../../lib/share-metadata';
 import{breadcrumbData}from'../../../lib/seo-breadcrumbs';
 import{SocialShare}from'../../components/social-share';
 import{DestinationWeather}from'../../components/destination-weather';
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: {
     params: Promise<{
         slug: string;
     }>;
-}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const { slug } = await params; const product = await getProduct(slug); return { title: product?.seoTitle || product?.name || 'Không tìm thấy trải nghiệm', description: product?.seoDescription || product?.description, alternates: { languages:languageAlternates(`/ve/${product?.slug||''}`,product?.languages||[]),canonical: new URL(localizedPath(`/ve/${product?.slug || slug}`, locale), siteBase()).toString() }, robots: { index: !!product && indexing() && !product.demo, follow: true }, twitter:{card:product?.cover?'summary_large_image':'summary',title:product?.seoTitle||product?.name,description:product?.seoDescription||product?.description,images:product?.cover?[new URL(imageUrl(product.cover),siteBase()).toString()]:[]},openGraph: { type:'website',url:new URL(localizedPath(`/ve/${product?.slug||slug}`,locale),siteBase()).toString(),title: product?.seoTitle || product?.name, description: product?.seoDescription || product?.description, images: product?.cover ? [{ url: new URL(imageUrl(product.cover), siteBase()).toString(), alt: product.cover.alt || product.name }] : [] } }; }
+}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const { slug } = await params; const product = await getProduct(slug); return { title: product?.seoTitle || product?.name || 'Không tìm thấy trải nghiệm', description: product?.seoDescription || product?.description, alternates: { languages:languageAlternates(`/ve/${product?.slug||''}`,product?.languages||[]),canonical: new URL(localizedPath(`/ve/${product?.slug || slug}`, locale), siteBase()).toString() }, robots: { index: !!product && indexing() && !product.demo, follow: true }, ...await pageShareMetadata({title:product?.seoTitle||product?.name||'JinGo',description:product?.seoDescription||product?.description||'',path:localizedPath('/ve/'+(product?.slug||slug),locale),locale,image:product?.cover}) }; }
 export default async function ProductPage({ params }: {
     params: Promise<{
         slug: string;

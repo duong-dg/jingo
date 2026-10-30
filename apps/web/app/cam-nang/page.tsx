@@ -1,3 +1,4 @@
+import{pageShareMetadata}from'../../lib/share-metadata';
 import { requestLocale } from '../../lib/request-locale';
 import { translator, localizedPath, dateLocale } from '../../lib/i18n';
 import{languageAlternates}from'../../lib/content-api';
@@ -6,7 +7,7 @@ import Link from 'next/link';
 import { contentApi, Post, imageUrl, siteBase, indexing } from '../../lib/content-api';
 export async function generateMetadata({ searchParams }: {
     searchParams: Promise<Record<string, string | string[] | undefined>>;
-}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const params = await searchParams; return { title: t("Cẩm nang du lịch & trải nghiệm"), description: t("Kinh nghiệm, lịch trình và những câu chuyện địa phương cùng JinGo."), alternates: { languages:languageAlternates('/cam-nang',['vi','en']),canonical: new URL(localizedPath('/cam-nang', locale), siteBase()).toString() }, robots: { index: indexing() && !(params.chuyen_muc||params.category), follow: true } }; }
+}): Promise<Metadata> { const locale = await requestLocale(), t = translator(locale); const params = await searchParams; return {...await pageShareMetadata({title:t('Cẩm nang du lịch & trải nghiệm'),description:t('Kinh nghiệm, lịch trình và những câu chuyện địa phương cùng JinGo.'),path:localizedPath('/cam-nang',locale),locale}), title: t("Cẩm nang du lịch & trải nghiệm"), description: t("Kinh nghiệm, lịch trình và những câu chuyện địa phương cùng JinGo."), alternates: { languages:languageAlternates('/cam-nang',['vi','en']),canonical: new URL(localizedPath('/cam-nang', locale), siteBase()).toString() }, robots: { index: indexing() && !(params.chuyen_muc||params.category), follow: true } }; }
 export default async function Journal({ searchParams }: {
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {

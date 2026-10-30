@@ -1,6 +1,8 @@
+import{shareHtmlBots}from'./lib/share-metadata';
 import type { NextConfig } from 'next';
 const config: NextConfig = {
   poweredByHeader: false,
+  htmlLimitedBots:shareHtmlBots,
   experimental: { proxyClientMaxBodySize: '12mb', proxyTimeout: 120000 },
   async redirects(){return[{source:'/en/cam-nang/:path*',destination:'/en/blog/:path*',permanent:true},{source:'/en/diem-den/:path*',destination:'/en/destinations/:path*',permanent:true}];},
   async rewrites() {

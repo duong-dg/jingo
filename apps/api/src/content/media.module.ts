@@ -2,7 +2,7 @@ import {BadRequestException,Controller,Get,Injectable,Module,NotFoundException,P
 import {FileInterceptor} from '@nestjs/platform-express';
 import type {Request,Response} from 'express';
 import {randomUUID} from 'node:crypto';
-import {mkdir,writeFile,unlink,stat} from 'node:fs/promises';
+import {mkdir,writeFile,unlink,stat,rename,readFile} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import sharp from 'sharp';
 import {z} from 'zod';
@@ -12,6 +12,7 @@ type Upload={buffer:Buffer;originalname:string;size:number};
 @Injectable()
 export class MediaService{
   private processing=false;
+  private previews=new Map<string,Promise<string>>();
   constructor(private readonly db:DatabaseService){}
   private get directory(){return resolve(process.env.MEDIA_DIR||join(process.cwd(),'data','media'));}
   async upload(file:Upload,alt:string,adminId:string){
@@ -33,6 +34,11 @@ export class MediaService{
         return this.publicMetadata(row.rows[0]);
       }catch(error){await unlink(path).catch(()=>{});throw error;}
     }catch(error){if(error instanceof BadRequestException)throw error;if((error as {code?:string}).code)throw error;throw new BadRequestException('Ảnh không hợp lệ. Chỉ nhận JPG, PNG, WebP, tối đa 25 triệu điểm ảnh.');}finally{this.processing=false;}
+  }
+  async shareFile(id:string){
+    const source=await this.file(id),target=join(this.directory,`${id}.share-v1.jpg`);try{await stat(target);return target;}catch{}
+    const previous=this.previews.get(id);if(previous)return previous;if(this.previews.size>=2)throw new HttpException('Đang tạo ảnh chia sẻ. Thử lại sau.',429);
+    const operation=(async()=>{const temporary=join(this.directory,`${id}.${randomUUID()}.share.tmp`);try{const data=await sharp(await readFile(source),{limitInputPixels:25_000_000}).resize(1200,630,{fit:'contain',background:'#f5f4ee'}).flatten({background:'#f5f4ee'}).jpeg({quality:86,mozjpeg:true}).toBuffer();await writeFile(temporary,data,{flag:'wx'});await rename(temporary,target);return target;}finally{await unlink(temporary).catch(()=>{});}})();this.previews.set(id,operation);try{return await operation;}finally{this.previews.delete(id);}
   }
   private publicMetadata(row:Record<string,unknown>){const {created_by,...image}=row;return {...image,url:`/api/v1/media/${row.id}`};}
   async list(){return (await this.db.pool.query('SELECT * FROM jingo_media ORDER BY created_at DESC LIMIT 100')).rows.map(row=>this.publicMetadata(row));}
@@ -57,6 +63,7 @@ class AdminMediaController{
 @Controller('media')
 class PublicMediaController{
   constructor(private readonly media:MediaService){}
+  @Get(':id/share.jpg')async share(@Param('id')id:string,@Res()res:Response){const path=await this.media.shareFile(id);res.setHeader('Content-Type','image/jpeg');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','public, max-age=31536000, immutable');res.sendFile(path,error=>{if(error&&!res.headersSent)res.status(404).end();});}
   @Get(':id')async file(@Param('id')id:string,@Res()res:Response){const path=await this.media.file(id);res.setHeader('Content-Type','image/webp');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Cache-Control','public, max-age=31536000, immutable');res.sendFile(path,error=>{if(error&&!res.headersSent)res.status(404).end();});}
 }
 @Module({imports:[AuthModule],providers:[MediaService],controllers:[AdminMediaController,PublicMediaController],exports:[MediaService]})
