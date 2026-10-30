@@ -1,4 +1,5 @@
 'use client';
+import{AdminLogin}from'./admin-login';
 import{duplicateProduct}from'../../lib/duplicate-product';
 import{DestinationNode,destinationRows}from'../../lib/destinations';
 import{DatePicker}from'../components/date-picker';
@@ -72,10 +73,7 @@ export function AdminConsole() {
   const updateRule = (index: number, patch: Partial<Rule>) => change({ rules: editing!.rules.map((r, i) => i === index ? { ...r, ...patch } : r) });
   const updateClosure = (index: number, patch: Partial<Closure>) => change({ closures: editing!.closures.map((c, i) => i === index ? { ...c, ...patch } : c) });
   if (initializing) return <main id="main" className="admin-shell admin-loading">Đang mở bàn làm việc…</main>;
-  if (!user) return <main id="main" className="admin-shell login-shell"><div className="login-story"><a href="/" className="logo">jin<span>go</span>↗</a><p className="eyebrow">KHÔNG GIAN VẬN HÀNH</p><h1>Mọi hành trình.<br/>Một nơi quản lý.</h1><p>Sản phẩm, bảng giá và lịch bán của bạn.</p><div className="login-decoration" aria-hidden="true">↗</div></div><div className="login-card"><p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p><h2>Đăng nhập quản trị</h2><p>Tài khoản được thiết lập trên server của bạn.</p><form onSubmit={async e => { e.preventDefault(); const form = new FormData(e.currentTarget); setBusy(true); setError(''); try { const data = await request('login', { email: form.get('email'), password: form.get('password') }); setUser(data.email); await load(); } catch (err) { setError((err as Error).message); } finally { setBusy(false); } }}>
-    <label>Email<input name="email" type="email" autoComplete="username" required maxLength={200}/></label>
-    <label>Mật khẩu<input name="password" type="password" autoComplete="current-password" required maxLength={200}/></label>
-    {error && <p className="admin-error" role="alert">{error}</p>}<button className="button" disabled={busy}>{busy ? 'Đang đăng nhập…' : 'Vào trang quản trị ↗'}</button></form><a className="text-link" href="/">← Xem website</a></div></main>;
+  if (!user) return <AdminLogin onSuccess={async email=>{setUser(email);await load();}}/>;
   const previewSlots=editing?.variants.find(v=>v.id===previewVariant)?.timeSlots||[];const selectedPreviewSlot=previewSlots.some(s=>s.id===previewSlot)?previewSlot:previewSlots[0]?.id;return <main id="main" className="admin-shell"><AdminSidebar active="products" user={user||''}/>
     <div className="admin-workspace"><header className="admin-topbar"><div><p className="eyebrow">QUẢN LÝ KINH DOANH</p><h1>Sản phẩm & bảng giá</h1></div><button className="button" onClick={() => choose({ id: newId(), slug: '', name: '', destination: '', type: (typeOptions.find(type=>type.id==='TICKET'&&type.status==='ACTIVE')||typeOptions.find(type=>type.status==='ACTIVE'))?.id||'TICKET', description: '', status: 'DRAFT', demo: false, version: 0, variants: [{ id: newId(), name: 'Vé tiêu chuẩn', prices: { ADULT: 0 } }], rules: [], closures: [], seoTitle: '', seoDescription: '' })}>＋ Thêm sản phẩm</button></header>
 

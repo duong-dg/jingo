@@ -22,6 +22,15 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS jingo_admins (id text PRIMARY KEY, email text NOT NULL UNIQUE, password_hash text NOT NULL);
       CREATE TABLE IF NOT EXISTS jingo_sessions (token_hash text PRIMARY KEY, admin_id text NOT NULL REFERENCES jingo_admins(id), expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_sessions_expiry ON jingo_sessions(expires_at);
+      CREATE TABLE IF NOT EXISTS jingo_admin_geo_cache(id text PRIMARY KEY,data jsonb NOT NULL,expires_at timestamptz NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_admin_geo_usage(id text PRIMARY KEY,calls integer NOT NULL DEFAULT 0);
+      CREATE TABLE IF NOT EXISTS jingo_admin_security(id text PRIMARY KEY,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS jingo_admin_otp(id text PRIMARY KEY,admin_id text NOT NULL REFERENCES jingo_admins(id),purpose text NOT NULL,code_hash text NOT NULL,binding_hash text NOT NULL,data jsonb NOT NULL,status text NOT NULL DEFAULT 'PENDING',attempts integer NOT NULL DEFAULT 0,expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_admin_otp_expiry ON jingo_admin_otp(expires_at);
+      CREATE INDEX IF NOT EXISTS jingo_admin_otp_admin ON jingo_admin_otp(admin_id,purpose,created_at);
+      CREATE TABLE IF NOT EXISTS jingo_admin_login_limits(id text PRIMARY KEY,attempts integer NOT NULL DEFAULT 0,until_at timestamptz NOT NULL);
+      CREATE TABLE IF NOT EXISTS jingo_admin_login_log(id text PRIMARY KEY,admin_id text,email text NOT NULL,event text NOT NULL,data jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+      CREATE INDEX IF NOT EXISTS jingo_admin_login_log_date ON jingo_admin_login_log(created_at);
       CREATE TABLE IF NOT EXISTS jingo_pos_users(id text PRIMARY KEY,email text NOT NULL UNIQUE,password_hash text NOT NULL,data jsonb NOT NULL,version integer NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS jingo_pos_sessions(token_hash text PRIMARY KEY,user_id text NOT NULL,role text NOT NULL,expires_at timestamptz NOT NULL);
       CREATE INDEX IF NOT EXISTS jingo_pos_sessions_expiry ON jingo_pos_sessions(expires_at);

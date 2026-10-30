@@ -7,3 +7,6 @@ node_modules
 .env.*
 *.log
 **/data/media
+
+# Local QA fixtures, mock OTP outputs and generated previews are never shipped.
+tmp

@@ -32,6 +32,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3100}
       MEDIA_DIR: /app/data/media
+      ADMIN_PROXY_SECRET: ${ADMIN_PROXY_SECRET:-}
     volumes: [media_data:/app/data/media]
     mem_limit: 512m
     healthcheck:

@@ -299,3 +299,8 @@ Các mục tệp vé/bản in JinGo, kho mã, lịch sử thu tiền, nguồn/gi
 ### Manual SePay reconciliation
 
 Admin payment configuration and journal are separate routes under the Thanh toán menu. `PaymentReconciliation` previews JG/JC targets and atomically links a verified LIVE SEPAY REVIEW transfer to an exactly matching unpaid order or whole basket. Canonical payment references, event/order row locks and an immutable resolution record prevent reuse; ledger, shift receipts, email outbox and audit commit together. See `docs/SEPAY-SECURITY.md` for limits and operational workflow.
+
+
+### Admin login security
+
+Configurable private admin entry, bound single-use email OTP, verified setup activation, session rotation and persistent login/IP/device history are implemented by AdminSecurityService. IP geolocation is opt-in and cached; NPM client-IP metadata requires a separate shared secret and original-peer headers. Existing login behavior remains until verified activation. See `docs/ADMIN-SECURITY.md`.

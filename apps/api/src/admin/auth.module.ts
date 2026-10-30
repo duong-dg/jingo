@@ -1,3 +1,5 @@
+import{LoginGeoService}from'./login-geo';
+import{AdminSecurityService}from'./security.service';
 import { CanActivate, ExecutionContext, Injectable, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 @Injectable()
@@ -10,5 +12,5 @@ export class AdminGuard implements CanActivate {
     return true;
   }
 }
-@Module({providers:[AuthService,AdminGuard],exports:[AuthService,AdminGuard]})
+@Module({providers:[AuthService,AdminGuard,AdminSecurityService,LoginGeoService],exports:[AuthService,AdminGuard,AdminSecurityService]})
 export class AuthModule {}

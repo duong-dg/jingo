@@ -1,0 +1,3 @@
+import type{Metadata}from'next';import{notFound}from'next/navigation';import{AdminLogin}from'../admin/admin-login';import'../admin/admin.css';
+export const metadata:Metadata={title:'Đăng nhập quản trị',robots:{index:false,follow:false},referrer:'no-referrer'};
+export default async function AdminEntry({params}:{params:Promise<{adminEntry:string}>}){const{adminEntry}=await params;if(!/^jingo-[a-f0-9]{24}$/.test(adminEntry))notFound();const response=await fetch((process.env.INTERNAL_API_URL||'http://localhost:4000')+'/api/v1/admin/login-entry/'+adminEntry,{cache:'no-store'});if(!response.ok)notFound();return <AdminLogin entry={adminEntry}/>;}
