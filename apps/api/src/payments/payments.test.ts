@@ -1,4 +1,4 @@
-import'reflect-metadata';import{test}from'node:test';import assert from'node:assert/strict';import{createHmac,randomUUID,randomBytes}from'node:crypto';import{mkdtemp,rm}from'node:fs/promises';import{tmpdir}from'node:os';import{join}from'node:path';import{Test}from'@nestjs/testing';import{newDb}from'pg-mem';import{AppModule}from'../app.module';import{vnpSign}from'./protocol';
+import'reflect-metadata';import{test}from'node:test';import assert from'node:assert/strict';import{createHmac,randomUUID,randomBytes}from'node:crypto';import{mkdtemp,rm}from'node:fs/promises';import{tmpdir}from'node:os';import{join}from'node:path';import{Test}from'@nestjs/testing';import{newDb}from'pg-mem';import{AppModule}from'../app.module';import{vnpSign,issueSepayToken}from'./protocol';
 test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, exact amounts and once-only real settlement',async()=>{
  const media=await mkdtemp(join(tmpdir(),'jingo-gateways-'));process.env.MEDIA_DIR=media;process.env.NODE_ENV='test';process.env.PUBLIC_BASE_URL='https://jingo.example.test';process.env.ADMIN_EMAIL='gateway@example.test';process.env.ADMIN_PASSWORD='gateway-test-password';const pool=new(newDb({noAstCoverageCheck:true}).adapters.createPg().Pool)(),module=await Test.createTestingModule({imports:[AppModule]}).overrideProvider('DB_POOL').useValue(pool).compile(),app=module.createNestApplication({rawBody:true});app.setGlobalPrefix('api/v1');let cookie='';
  try{await app.listen(0,'127.0.0.1');const base=await app.getUrl()+'/api/v1',call=(path:string,body?:unknown,admin=false,extra:Record<string,string>={})=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json',Origin:process.env.PUBLIC_BASE_URL!,'X-Jingo-Admin':'1','X-Jingo-Request':'1',...(admin?{Cookie:cookie}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});cookie=(await call('/admin/login',{email:process.env.ADMIN_EMAIL,password:process.env.ADMIN_PASSWORD})).headers.get('set-cookie')!.split(';')[0];assert.equal((await call('/admin/payments')).status,401);assert.equal((await call('/admin/payments/events')).status,401);
@@ -45,5 +45,24 @@ test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, ex
  assert.equal((await signedHook()).status,200);assert.equal((await signedHook()).status,200);
  assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[signedOrder.id])).rowCount,1,'signed retries settle once');
  assert.equal((await pool.query('SELECT payment_status FROM jingo_orders WHERE id=$1',[signedOrder.id])).rows[0].payment_status,'PAID');
+
+ const oauthSecret='oauth-fixture-client-secret-12345678901234567890',clientId='jingo-sepay-test';
+ response=await call('/admin/payments',{...fields(c),sepayAuth:'OAUTH2',sepayOauthClientId:clientId,sepayOauthSecret:oauthSecret},true);assert.equal(response.status,201);c=await response.json();assert.equal(c.sepayOauthConfigured,true);assert.doesNotMatch(JSON.stringify(c),/oauth-fixture|Encrypted/);
+ assert.doesNotMatch(JSON.stringify((await pool.query("SELECT data FROM jingo_settings WHERE id='payments'")).rows[0]),/oauth-fixture/);
+ const tokenRequest=(secret=oauthSecret,grant='client_credentials')=>fetch(base+'/payments/sepay/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Authorization:'Basic '+Buffer.from(clientId+':'+secret).toString('base64')},body:new URLSearchParams({grant_type:grant})});
+ assert.equal((await tokenRequest('wrong')).status,401);assert.equal((await tokenRequest(oauthSecret,'refresh_token')).status,400);
+ response=await tokenRequest();assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');const token=await response.json();assert.equal(token.expires_in,3600);assert.equal(token.token_type,'Bearer');
+ response=await fetch(base+'/payments/sepay/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'client_credentials',client_id:clientId,client_secret:oauthSecret})});assert.equal(response.status,200,'body credentials supported');
+ const oauthOrder=await make(),oauthIntent=await(await call('/payments/checkout',payload(oauthOrder,'SEPAY'))).json();
+ const oauthHook=(bearer:string,patch:object={})=>call('/payments/sepay/webhook',hook(oauthIntent,990001,patch),false,{Authorization:'Bearer '+bearer});
+ assert.equal((await send(hook(oauthIntent,990001))).status,401,'API key cannot bypass OAuth');assert.equal((await signedHook()).status,401,'HMAC cannot bypass OAuth');
+ assert.equal((await oauthHook(token.access_token+'x')).status,401);
+ assert.equal((await oauthHook(issueSepayToken(oauthSecret,clientId,'LIVE',Date.now()-3601000))).status,401);
+ assert.equal((await oauthHook(issueSepayToken(oauthSecret,clientId,'TEST'))).status,401);
+ assert.equal((await oauthHook(issueSepayToken(oauthSecret,'other','LIVE'))).status,401);
+ assert.equal((await oauthHook(token.access_token)).status,200);assert.equal((await oauthHook(token.access_token)).status,200);
+ assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[oauthOrder.id])).rowCount,1,'OAuth retries settle once');
+ response=await call('/admin/payments',{...fields(c),sepayOauthSecret:oauthSecret+'-rotated'},true);assert.equal(response.status,201);c=await response.json();assert.equal((await oauthHook(token.access_token)).status,401,'rotation revokes old tokens');assert.equal((await tokenRequest()).status,401);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,200);
+ response=await call('/admin/payments',{...fields(c),sepayEnabled:false},true);assert.equal(response.status,201);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,401,'disabled gateway issues no tokens');
  }finally{await app.close();await rm(media,{recursive:true,force:true});}
 });

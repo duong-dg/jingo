@@ -17,4 +17,16 @@ export function verifySepayWebhook(raw:Buffer|undefined,timestamp:string,signatu
  const expected='sha256='+createHmac('sha256',secret).update(timestamp+'.').update(raw).digest('hex');
  return equalSecret(expected,signature);
 }
-export const sepayWebhookCredential=(config:{sepayAuth?:string;sepayHmacEncrypted?:string;sepayEncrypted?:string})=>config.sepayAuth==='HMAC_SHA256'?config.sepayHmacEncrypted:config.sepayEncrypted;
+export const sepayWebhookCredential=(config:{sepayAuth?:string;sepayOauthEncrypted?:string;sepayHmacEncrypted?:string;sepayEncrypted?:string})=>config.sepayAuth==='OAUTH2'?config.sepayOauthEncrypted:config.sepayAuth==='HMAC_SHA256'?config.sepayHmacEncrypted:config.sepayEncrypted;
+
+// Purpose-bound, short-lived tokens. Rotation of the encrypted client secret revokes all tokens.
+export function issueSepayToken(secret:string,clientId:string,mode:string,now=Date.now()){
+ const payload=Buffer.from(JSON.stringify({aud:'sepay-webhook',sub:clientId,mode,iat:Math.floor(now/1000),exp:Math.floor(now/1000)+3600})).toString('base64url');
+ return payload+'.'+createHmac('sha256',secret).update('jingo-sepay-oauth:'+payload).digest('base64url');
+}
+export function verifySepayToken(token:string,secret:string,clientId:string,mode:string,now=Date.now()){
+ if(token.length>2048)return false;
+ const parts=token.split('.');if(parts.length!==2||!parts.every(p=>/^[A-Za-z0-9_-]+$/.test(p)))return false;
+ if(!equalSecret(parts[1],createHmac('sha256',secret).update('jingo-sepay-oauth:'+parts[0]).digest('base64url')))return false;
+ try{const p=JSON.parse(Buffer.from(parts[0],'base64url').toString('utf8')),seconds=Math.floor(now/1000);return p.aud==='sepay-webhook'&&p.sub===clientId&&p.mode===mode&&Number.isInteger(p.iat)&&Number.isInteger(p.exp)&&p.iat<=seconds&&p.exp>seconds&&p.exp-p.iat===3600;}catch{return false;}
+}
