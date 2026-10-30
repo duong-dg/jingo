@@ -35,3 +35,18 @@
  .weather-compact .weather-credit{margin-top:20px;font-size:12px}
  .weather-compact .weather-credit small{font-size:11px}
 }
+
+/* A wide weather strip, not an automatically expanded panel, on desktop banners. */
+@media(min-width:951px){
+ .destination-hero:has(.weather-on-hero){display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:24px;min-height:420px}
+ .destination-hero .weather-on-hero{align-self:stretch;width:100%}
+ .weather-on-hero .weather-disclosure>summary{padding:22px 26px;gap:20px}
+ .weather-on-hero .weather-summary-copy{display:flex;align-items:center;flex-wrap:wrap;gap:12px 24px}
+ .weather-on-hero .weather-summary-copy>span:first-child{font-size:15px}
+ .weather-on-hero .weather-summary-toggle{margin-left:auto}
+ .weather-on-hero .weather-disclosure-body{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:20px 26px;padding:0 26px 24px}
+ .weather-on-hero .weather-days{margin:0;align-self:start}
+ .weather-on-hero .weather-tips{border-top:0;border-left:1px solid #ffffff30;padding:0 0 0 26px}
+ .weather-on-hero .weather-tips h3{margin-top:12px}
+ .weather-on-hero .weather-credit{grid-column:1/-1;margin-top:0}
+}

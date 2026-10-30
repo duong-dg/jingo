@@ -31,6 +31,7 @@ function PackageOption({ product, variant, date, preferred, items, clock, change
 }
 export function BookingPanel({product}:{product:Product}){
   const locale=useLocale(),en=locale==='en',basket=useWebCart(),[date,setDate]=useState(today),[clock,setClock]=useState(Date.now),[error,setError]=useState(''),[visible,setVisible]=useState(false),root=useRef<HTMLElement>(null),preferred=product.variants.find(v=>/eco/i.test(v.name))?.id||product.variants[0]?.id;
+  useEffect(()=>{const header=document.querySelector<HTMLElement>('.header');if(!header)return;const update=()=>root.current?.style.setProperty('--booking-sticky-top',Math.ceil(header.getBoundingClientRect().height+16)+'px');const observer=new ResizeObserver(update);observer.observe(header);update();return()=>observer.disconnect();},[]);
   useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),30000);return()=>clearInterval(timer);},[]);
   useEffect(()=>{if(!saleDayAvailable(product,date,clock)){const next=nextSaleDay(product,date,clock);if(next&&next!==date)setDate(next);}},[product,date,clock]);
   useEffect(()=>{const update=()=>{const box=root.current?.getBoundingClientRect();setVisible(!!box&&box.top<window.innerHeight-60&&box.bottom>0);};const observer=new ResizeObserver(update);if(root.current)observer.observe(root.current);window.addEventListener('scroll',update,{passive:true});window.addEventListener('resize',update);update();return()=>{observer.disconnect();window.removeEventListener('scroll',update);window.removeEventListener('resize',update);};},[]);
