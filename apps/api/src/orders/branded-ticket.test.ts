@@ -13,3 +13,14 @@ test('batch image discovers adjacent QR and removes duplicated payloads',async()
  const found=await supplierQrImages(image);assert.equal(found.length,2);assert.deepEqual((await Promise.all(found.map(q=>decoded(q.image)))).sort(),['IMAGE-SUPPLIER-A','IMAGE-SUPPLIER-B']);
  const duplicate=await sharp({create:{width:800,height:450,channels:3,background:'#fff'}}).composite([{input:a,left:20,top:40},{input:a,left:420,top:40}]).png().toBuffer();assert.equal((await supplierQrImages(duplicate)).length,1);
 });
+
+
+test('30-person batch retains supplier details, exact QR bytes and keeps the main event loop responsive',async()=>{
+ const{processTicketBatch}=await import('./ticket-processing');const chunks:Buffer[]=[],doc=new PDFDocument({size:'A5',margin:26});
+ const source=new Promise<Buffer>(resolve=>{doc.on('data',c=>chunks.push(c));doc.on('end',()=>resolve(Buffer.concat(chunks)));});
+ const payloads=Array.from({length:30},(_,i)=>'SUPPLIER-ĐOÀN-'+String(i).padStart(3,'0'));
+ for(let i=0;i<payloads.length;i++){if(i)doc.addPage();doc.image(await QRCode.toBuffer(payloads[i],{width:400,margin:4}),90,70,{width:240});doc.fontSize(10).text('Expiration date: 19/04/2027',26,330).text('Service Package: ECO CK BM').text('Time: PARK: 16:00 - 22:00 / SHOW: 20:00 - 21:00').text('Code: SUPPLIER-'+i).text('Cooperative agent: BM');}doc.end();
+ let ticks=0;const interval=setInterval(()=>ticks++,20);let result:Awaited<ReturnType<typeof processTicketBatch>>;try{result=await processTicketBatch(await source,{product:'Ký ức Hội An',variant:'ECO Người lớn',date:'2027-04-19'});}finally{clearInterval(interval);}
+ assert(ticks>10,'main thread remains responsive');assert.equal(result!.qrs.length,30);assert.equal(result!.qrs[0].details?.agency,'BM');assert.equal(result!.qrs[0].details?.servicePackage,'ECO CK BM');assert.equal(result!.qrs[0].details?.expirationDate,'19/04/2027');
+ const printed=await supplierQrImages(result!.data);assert.equal(printed.length,30);assert.deepEqual(printed.map(q=>q.identity).sort(),payloads.map(p=>Buffer.from(p).toString('hex')).sort());assert.equal(printed[29].details?.supplierCode,'SUPPLIER-29');const pdfjs=await(new Function('return import("pdfjs-dist/legacy/build/pdf.mjs")')()as Promise<any>),task=pdfjs.getDocument({data:new Uint8Array(result!.data),isEvalSupported:false});try{assert.equal((await task.promise).numPages,30,'exactly one printable page per QR');}finally{await task.destroy();}
+});

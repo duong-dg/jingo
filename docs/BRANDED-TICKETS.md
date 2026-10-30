@@ -13,7 +13,7 @@
 
 ## Quầy: tải file → Tiếp → In vé JinGo
 
-Sau khi thu đủ tiền, phần Xuất vé JinGo chỉ yêu cầu PDF/ảnh đối tác và nút Tiếp. Không nhập mã, chọn trang hay chỉ định số QR thủ công. API `/admin/orders/:orderId/files/batch` và `/pos/orders/:orderId/files/batch` tự quét tối đa 50 trang, 150 QR, file 5 MB. Quét toàn trang và các vùng chồng lấp để nhận nhiều QR cạnh nhau; QR trùng nội dung trong cùng file chỉ xuất một lần. Mỗi QR tương ứng một khách, một mã JGV và một trang A5 trong PDF JinGo. Giữ nguyên hình QR gốc để quét vào cổng; mã JGV là mã quản lý JinGo.
+Sau khi thu đủ tiền, phần Xuất vé JinGo chỉ yêu cầu PDF/ảnh đối tác và nút Tiếp. Không nhập mã, chọn trang hay chỉ định số QR thủ công. API `/admin/orders/:orderId/files/batch` và `/pos/orders/:orderId/files/batch` tự quét tối đa 50 trang, 150 QR, file 5 MB. Bộ đọc ZXing WASM nhận nhiều QR cạnh nhau trong một lượt quét mỗi trang; QR trùng nội dung trong cùng file chỉ xuất một lần. Mỗi QR tương ứng một khách, một mã JGV và một trang A5 trong PDF JinGo. Giữ nguyên hình QR gốc để quét vào cổng; mã JGV là mã quản lý JinGo.
 
 Không suy đoán số khách cho QR dùng chung nhiều người. Nếu đối tác cấp một QR cho cả nhóm, dùng phần xử lý bổ sung để nhập đúng số khách. File không đọc được QR hoặc số QR vượt khách còn chưa giao sẽ báo lỗi, không tạo vé hay email. Với file hỗn hợp nhiều gói/ngày, phải tải đúng file của từng dòng đơn để tránh gắn nhầm thông tin.
 
@@ -34,3 +34,14 @@ Luồng tự động tại quầy lưu cả file gốc đối tác và bản in 
 Theo lịch Việt Nam, đầu mỗi tháng tự xóa file ORIGINAL của các tháng trước tháng liền kề. Ví dụ ngày 1/12 xóa file tải lên đến hết 31/10, giữ toàn bộ tháng 11. File tải bất cứ ngày nào trong tháng 10 đều hết hạn lúc 00:00 ngày 1/12. Lịch tính theo created_at, không theo ngày dùng vé. API kiểm tra mỗi giờ và khi khởi động để chạy bù nếu máy chủ ngừng ở thời điểm chuyển tháng; mỗi lượt tối đa 500 file. PDF BRANDED, mã QR/mã vé, dữ liệu booking, doanh thu và lịch sử không bị xóa. Tự xóa chỉ xóa file trong kho riêng có UUID được theo dõi, đánh dấu deleted_at, thu hồi quyền tải và ghi audit. Giao diện hiện ngày hết hạn tải file gốc; giữ dòng lịch sử sau khi file bị xóa.
 
 Quy tắc này thay thế đề xuất giữ 30 ngày sau ngày sử dụng. File gốc đã gửi dưới dạng đính kèm vẫn nằm trong email khách sau khi bản trên server hết hạn.
+
+
+## Mẫu song ngữ và xử lý đoàn đông
+
+Bản in A5 có nhãn Việt–Anh: hạn sử dụng, tên gói dịch vụ, thời gian, mã vé đối tác và đại lý hợp tác. Với PDF có lớp chữ và nhãn nhận diện được, lấy các giá trị này từ trang vé gốc; không tự dịch hay đổi nội dung/mã của nhà cung cấp. Tên sản phẩm và mã tham chiếu JinGo vẫn được giữ riêng. QR nằm trên nền trắng, không chèn logo. Chữ gọn, chia hai cột nhãn/giá trị; mỗi QR một trang.
+
+Ảnh hoặc PDF scan không có lớp chữ chưa hỗ trợ OCR. Khi không đọc được trường, dùng gói/ngày/giờ của đơn; ghi rõ “Ngày sử dụng / Visit date” thay vì suy đoán hạn sử dụng. Đại lý thiếu thông tin được ghi “Phân phối bởi / Distributed by: JinGo”. Không suy ra mã đối tác từ QR. Nếu trang có nhiều QR, không gán cùng một mã chữ đối tác cho tất cả; các trường có nhiều giá trị khác nhau được bỏ qua để tránh gán nhầm. Kiểm tra bản in trước khi giao, dùng đúng file cho dòng đơn tương ứng.
+
+Luồng tải file theo lô đọc QR và dựng PDF trong Worker riêng. WASM tải từ dependency có sẵn trên máy chủ, không gọi CDN hay gửi file ra ngoài. Phần nặng hoàn tất trước khi mở giao dịch ghi dữ liệu; quyền, phiên bản đơn, thanh toán và chống cấp trùng vẫn được kiểm tra lại trong giao dịch. Một tác vụ xử lý file mỗi tiến trình API; giới hạn 100 giây, 50 trang, 150 QR, nguồn 5 MB và PDF JinGo 10 MB. Không giữ khóa đơn trong lúc quét. Worker được dừng khi hoàn tất hoặc hết thời gian.
+
+Đo trên máy phát triển với PDF thử một QR/trang: 20 vé khoảng 6,6 giây, 30 vé khoảng 10,2 giây, PDF đầu ra khoảng 341/493 KiB. Đây là số tham khảo, không cam kết thời gian trên VPS hoặc ảnh scan nặng. Kiểm thử tự động lô 30 vé đối chiếu toàn bộ nội dung QR (bao gồm Unicode), metadata và khả năng phục vụ việc khác của luồng chính; kiểm thử API kiểm tra giao vé, chống trùng, quyền và email. File cũ không tự đổi mẫu; mẫu mới áp dụng khi tạo PDF mới.

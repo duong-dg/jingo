@@ -1,0 +1,3 @@
+import{parentPort,workerData}from'node:worker_threads';import{supplierQrImages}from'./supplier-qr';import{brandedTicketsPdf}from'./branded-ticket';import{codeForSupplierQr,type BatchTicketInput}from'./ticket-processing';
+async function run(){const qrs=await supplierQrImages(Buffer.from(workerData.file)),input=workerData.input as BatchTicketInput;const data=await brandedTicketsPdf(qrs.map(q=>({...input,...q.details,code:codeForSupplierQr(q.identity),covers:1,note:'Xuất trình QR gốc để vào cổng / Present the original QR at the entrance.',image:q.image})));parentPort!.postMessage({data:new Uint8Array(data),qrs:qrs.map(({identity,details})=>({identity,details}))});}
+run().catch(e=>parentPort!.postMessage({error:(e as Error).message}));

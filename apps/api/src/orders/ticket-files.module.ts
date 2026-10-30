@@ -1,6 +1,7 @@
+import{processTicketBatch,codeForSupplierQr}from'./ticket-processing';
 import{TicketFileRetention,ticketFileExpiresAt}from'./ticket-file-retention';
-import{supplierQrImage,supplierQrImages}from'./supplier-qr';
-import{brandedTicketPdf,brandedTicketsPdf}from'./branded-ticket';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import type{PosActor}from'../pos/pos.schema';
+import{supplierQrImage,supplierTicketDetails}from'./supplier-qr';
+import{brandedTicketPdf}from'./branded-ticket';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import type{PosActor}from'../pos/pos.schema';
 import { BadRequestException, Body, ConflictException, Controller, Get, HttpException, HttpCode, Injectable, Module, NotFoundException, Param, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
@@ -187,7 +188,8 @@ export class TicketFilesService {
       const sourceHash=createHash('sha256').update(file.buffer).digest('hex'),name='JinGo-lo-'+sourceHash+'.pdf';
       const previous=(await this.db.pool.query('SELECT id,ticket_id FROM jingo_ticket_files WHERE order_id=$1 AND name=$2 AND revoked_at IS NULL',[orderId,name])).rows[0];
       if(previous)return{...previous,duplicate:true};
-      let qrs:Awaited<ReturnType<typeof supplierQrImages>>;try{qrs=await supplierQrImages(file.buffer);}catch(e){throw new BadRequestException((e as Error).message);}
+      const preflight=(await this.db.pool.query('SELECT version,booking_status,payment_status,snapshot FROM jingo_orders WHERE id=$1',[orderId])).rows[0];if(!preflight)throw new NotFoundException();if(preflight.version!==parsed.data.version)throw new ConflictException('Đơn đã thay đổi. Tải lại trước khi giao vé.');if(preflight.booking_status!=='CONFIRMED'||!['PAID','CREDIT'].includes(preflight.payment_status))throw new ConflictException('Thu tiền trước khi giao vé.');
+      const snapshot=preflight.snapshot;let processed:Awaited<ReturnType<typeof processTicketBatch>>;try{processed=await processTicketBatch(file.buffer,{product:snapshot.productName,variant:snapshot.variantName,date:snapshot.date,time:snapshot.timeSlot?snapshot.timeSlot.start+(snapshot.timeSlot.end?' - '+snapshot.timeSlot.end:''):undefined});}catch(e){throw new BadRequestException((e as Error).message);}const{qrs,data}=processed;if(data.length>10*1024*1024)throw new BadRequestException('PDF JinGo vượt 10 MB, chia file thành lô nhỏ hơn.');
       client=await this.db.pool.connect();await client.query('BEGIN');
       const row=(await client.query('SELECT * FROM jingo_orders WHERE id=$1 FOR UPDATE',[orderId])).rows[0];if(!row)throw new NotFoundException();
       if(posActor)await this.posWriteScope(client,orderId,posActor);
@@ -196,10 +198,8 @@ export class TicketFilesService {
       const partner=(await client.query('SELECT order_id FROM jingo_partner_orders WHERE order_id=$1',[orderId])).rowCount;
       if(row.payment_status==='CREDIT'&&!partner)throw new ConflictException('Đơn quầy chưa thu đủ tiền.');
       if(Number((await client.query('SELECT COUNT(*) AS total FROM jingo_ticket_files WHERE order_id=$1',[orderId])).rows[0].total)>48)throw new BadRequestException('Đơn đã đạt giới hạn file.');
-      const tickets=qrs.map(q=>({code:'JGV'+createHash('sha256').update(q.identity).digest('hex').slice(0,24).toUpperCase(),kind:'TOUR_VOUCHER' as const,covers:1,note:'Dùng QR đối tác trên vé JinGo để vào cổng.'}));
+      const tickets=qrs.map(q=>({code:codeForSupplierQr(q.identity),kind:'TOUR_VOUCHER' as const,covers:1,note:'Dùng QR đối tác trên vé JinGo để vào cổng.'}));
       const order=await this.orders.act(orderId,{requestId:randomUUID(),version:row.version,action:'DELIVER',note:'Tự động tách '+qrs.length+' QR từ file và xuất vé JinGo',tickets},actor,undefined,posActor?.role==='STAFF'?posActor.id:undefined,{client,silent:true});
-      const snapshot=order.snapshot,data=await brandedTicketsPdf(tickets.map((ticket,i)=>({...ticket,product:snapshot.productName,variant:snapshot.variantName,date:snapshot.date,time:snapshot.timeSlot?snapshot.timeSlot.start+(snapshot.timeSlot.end?' - '+snapshot.timeSlot.end:''):undefined,image:qrs[i].image})));
-      if(data.length>10*1024*1024)throw new BadRequestException('PDF JinGo vượt 10 MB, chia file thành lô nhỏ hơn.');
       const id=randomUUID(),ticketId=order.tickets.find(t=>t.code===tickets[0].code)!.id;
       await mkdir(join(resolve(process.env.MEDIA_DIR||'data/media'),'.tickets'),{recursive:true,mode:0o700});await writeFile(this.path(id),data,{flag:'wx',mode:0o600});saved.push(id);
       await client.query('INSERT INTO jingo_ticket_files(id,order_id,ticket_id,name,mime,bytes,hash)VALUES($1,$2,$3,$4,$5,$6,$7)',[id,orderId,ticketId,name,'application/pdf',data.length,createHash('sha256').update(data).digest('hex')]);
@@ -219,7 +219,7 @@ export class TicketFilesService {
     if(input.sourceFileId){if(file?.buffer||input.payload)throw new BadRequestException('Chỉ chọn một nguồn QR.');const source=await this.download(input.sourceFileId,orderId);if(!(await this.db.pool.query('SELECT id FROM jingo_ticket_files WHERE id=$1 AND order_id=$2 AND revoked_at IS NULL',[input.sourceFileId,orderId])).rowCount)throw new NotFoundException();file={buffer:source.data,size:source.data.length,originalname:'supplier-ticket'};}
     if((!!input.payload)===(!!file?.buffer))throw new BadRequestException('Chỉ dùng một nguồn: nội dung QR gốc hoặc ảnh QR đã cắt.');if(file&&file.buffer.length>5*1024*1024)throw new BadRequestException('Ảnh QR tối đa 5 MB.');
     const order=await this.orders.get(orderId),ticket=order.tickets.find(t=>t.id===input.ticketId);if(!ticket)throw new NotFoundException('Mã vé không thuộc đơn.');if(order.version!==input.version)throw new ConflictException('Đơn đã thay đổi. Tải lại.');
-    let data:Buffer;try{data=await brandedTicketPdf({code:ticket.code,product:order.snapshot.productName,variant:order.snapshot.variantName,date:order.snapshot.date,time:order.snapshot.timeSlot?order.snapshot.timeSlot.start+(order.snapshot.timeSlot.end?' - '+order.snapshot.timeSlot.end:''):undefined,covers:ticket.covers,note:ticket.note,payload:input.payload,image:file?.buffer?await supplierQrImage(file.buffer,input.page,input.qrNumber):undefined});}catch(e){throw new BadRequestException((e as Error).message);}
+    let data:Buffer;try{data=await brandedTicketPdf({...((file?.buffer)?await supplierTicketDetails(file.buffer,input.page):{}),code:ticket.code,product:order.snapshot.productName,variant:order.snapshot.variantName,date:order.snapshot.date,time:order.snapshot.timeSlot?order.snapshot.timeSlot.start+(order.snapshot.timeSlot.end?' - '+order.snapshot.timeSlot.end:''):undefined,covers:ticket.covers,note:ticket.note,payload:input.payload,image:file?.buffer?await supplierQrImage(file.buffer,input.page,input.qrNumber):undefined});}catch(e){throw new BadRequestException((e as Error).message);}
     if(input.preview)return{preview:data.toString('base64')};
     return this.upload(orderId,{ticketId:input.ticketId,version:input.version},{buffer:data,size:data.length,originalname:'JinGo-'+ticket.id+'.pdf'},actor,true,posActor);
   }
