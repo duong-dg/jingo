@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{PagesEditor}from'./pages-editor';import'../admin.css';import'../shared/content-admin.css';import'./pages.css';export const metadata={title:'Trang nội dung & menu',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Trang nội dung & menu" active="pages"><PagesEditor/></AdminFrame>;}

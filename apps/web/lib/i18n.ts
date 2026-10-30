@@ -1,6 +1,6 @@
 export type Locale='vi'|'en';
-export function unlocalizedPath(path:string){return(path.replace(/^\/en(?=\/|$)/,'')||'/').replace(/^\/blog(?=[/?#]|$)/,'/cam-nang').replace(/^\/destinations(?=[/?#]|$)/,'/diem-den').replace(/([?&])category=/g,'$1chuyen_muc=');}
-export function localizedPath(path:string,locale:Locale){const source=unlocalizedPath(path);return locale==='en'?'/en'+(source==='/'?'':source.replace(/^\/cam-nang(?=[/?#]|$)/,'/blog').replace(/^\/diem-den(?=[/?#]|$)/,'/destinations').replace(/([?&])chuyen_muc=/g,'$1category=')):source;}
+export function unlocalizedPath(path:string){return(path.replace(/^\/en(?=\/|$)/,'')||'/').replace(/^\/pages(?=[/?#]|$)/,'/trang').replace(/^\/contact(?=[/?#]|$)/,'/lien-he').replace(/^\/blog(?=[/?#]|$)/,'/cam-nang').replace(/^\/destinations(?=[/?#]|$)/,'/diem-den').replace(/([?&])category=/g,'$1chuyen_muc=');}
+export function localizedPath(path:string,locale:Locale){const source=unlocalizedPath(path);return locale==='en'?'/en'+(source==='/'?'':source.replace(/^\/trang(?=[/?#]|$)/,'/pages').replace(/^\/lien-he(?=[/?#]|$)/,'/contact').replace(/^\/cam-nang(?=[/?#]|$)/,'/blog').replace(/^\/diem-den(?=[/?#]|$)/,'/destinations').replace(/([?&])chuyen_muc=/g,'$1category=')):source;}
 export const dateLocale=(locale:Locale)=>locale==='en'?'en-GB':'vi-VN';
 export const english:Record<string,string>={
  'Người lớn · Địa phương':'Local adult',
