@@ -1,0 +1,2 @@
+export function publicShareUrl(base:string,path:string){const url=new URL(path,base);if(!['http:','https:'].includes(url.protocol))throw new Error('Public web URL required');url.search='';url.hash='';url.username='';url.password='';return url.toString();}
+export function socialShareLinks(url:string,title:string){return{facebook:'https://www.facebook.com/sharer/sharer.php?'+new URLSearchParams({u:url}),x:'https://x.com/intent/tweet?'+new URLSearchParams({url,text:title})};}
