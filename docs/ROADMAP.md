@@ -35,3 +35,8 @@ Danh sách này mô tả phần còn phải làm; không phải xác nhận các
 ## Đã bổ sung giỏ vé (0.37)
 
 Web, POS và CTV có giỏ nhiều gói/sản phẩm/ngày/suất, xác nhận liên hệ chung và thanh toán/ghi nợ theo tổng. Giữ phần đơn riêng cho giao vé, nguồn, vốn và xử lý từng gói. Còn voucher chung giỏ, chỉnh nội dung giỏ đã đặt và số liệu số giỏ riêng; báo cáo hiện đếm đơn thành phần.
+
+
+## Đã bổ sung Tổng quan vận hành
+
+Admin có `/admin/tong-quan`: số đơn dùng hôm nay/ngày mai, đơn đã thu tiền hoặc ghi nợ CTV nhưng còn thiếu vé, chưa thu tiền và chờ xác nhận. Bấm để lọc, 25 dòng/trang, mở trực tiếp chi tiết đơn. Tổng hợp toàn bộ dữ liệu không bị giới hạn bởi trang đầu; loại trừ hủy/lưu trữ. Cảnh báo yêu cầu liên hệ mới, email FAILED và nhật ký thanh toán REVIEW ở LIVE; REVIEW gồm lịch sử, chưa có cơ chế xác nhận đã xem. Không thay đổi tiền/đơn/tồn. Ngày Việt Nam, cập nhật bằng nút, không tự polling.

@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{Overview}from'./overview';import'../admin.css';import'./overview.css';export const metadata={title:'Tổng quan vận hành',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Tổng quan vận hành" active="overview"><Overview/></AdminFrame>;}

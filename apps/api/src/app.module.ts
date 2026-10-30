@@ -1,3 +1,4 @@
+import{OverviewModule}from'./admin/overview.module';
 import{ContactRequestsModule}from'./content/contact-requests.module';
 import{PagesModule}from'./content/pages.module';
 import{WeatherModule}from'./weather/weather.module';
@@ -24,5 +25,5 @@ class HealthController {
   @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.40.0' }; }
 }
 
-@Module({ imports: [ContactRequestsModule,PagesModule,WeatherModule,SiteSeoModule,CartsModule,TicketFilesModule,PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })
+@Module({ imports: [OverviewModule,ContactRequestsModule,PagesModule,WeatherModule,SiteSeoModule,CartsModule,TicketFilesModule,PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })
 export class AppModule {}
