@@ -287,3 +287,10 @@ GET `/admin/overview?queue=TODAY|TOMORROW|DUE|UNPAID|REQUESTED&page=1` yêu cầ
 Số khách cộng các dòng quote, giới hạn số dòng theo các nhóm được schema đặt vé cho phép. Số đã giao dùng SUM(covers) theo order_id, không đếm số mã; DUE là CONFIRMED và PAID/CREDIT, số đã giao nhỏ hơn tổng khách. Phiếu nhóm và giao từng phần được tính đúng; join tổng vé trước khi join đơn tránh nhân bản dòng. Số đơn là đơn thành phần gói/ngày, không phải số giỏ hoặc khách. Danh sách không trả access hash, QR, mã vé, email/điện thoại, payment refs hoặc metadata gateway. Chỉ tên khách và dữ liệu cần nhận diện đơn cho admin.
 
 Cảnh báo REVIEW chỉ đếm thông báo môi trường LIVE và có cả lịch sử; không tự diễn giải thành thiếu tiền/chưa xử lý. Email FAILED và liên hệ NEW là số bản ghi thực. Đây là tổng quan công việc, không thay báo cáo doanh thu/lợi nhuận; không tự thao tác nghiệp vụ, không polling. Test pg-mem bao gồm 34 đơn phù hợp/2 trang, 6 nhóm khách, covers nhóm, giao một phần/đủ, hủy/lưu trữ, biên ngày Việt Nam, phân quyền, query sai và dữ liệu không bị lộ. PostgreSQL thật vẫn cần kiểm tra tải/concurrency khi mở rộng.
+
+
+## Bố cục chi tiết đơn admin
+
+Chi tiết JG có header riêng: mã gói, mã JC nếu thuộc đơn nhiều gói, trạng thái và liên kết In phiếu đặt vé. Thông tin vé/khách, dòng số lượng/đơn giá/thành tiền và tổng gói tách khỏi thao tác xử lý. Thu chung JC nằm trong khung mở rộng riêng, chỉ tải tổng hợp khi mở; bản ghi mã JG dùng cho thao tác từng gói. Tổng hợp JC độc lập chỉ hiện khi chưa chọn gói, có nút mở gói trực tiếp thay vì điều hướng sang một trang thu tiền khác. Callback thu chung tải lại cả danh sách và chi tiết gói để cập nhật trạng thái/version.
+
+Các mục tệp vé/bản in JinGo, kho mã, lịch sử thu tiền, nguồn/giá vốn, email, nhật ký và lưu trữ được gom trong khung riêng. Lưu trữ/xóa chuyển cuối chi tiết; không thay rule nghiệp vụ hoặc API. Bỏ nút window.print mơ hồ trên tổng hợp JC trong admin; in phiếu từng JG qua route in riêng, tạo/in PDF JinGo từ phần tệp vé. Các màn hình POS/CTV/web giữ khả năng in hiện có. Nhãn thu tiền chung được làm rõ là tổng còn lại, payload và cơ chế chống thu trùng không đổi.
