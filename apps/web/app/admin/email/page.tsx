@@ -1,0 +1,1 @@
+import{AdminFrame}from'../shared/admin-frame';import{MailJournal}from'./mail-journal';import'../admin.css';import'./mail-journal.css';export const metadata={title:'Lịch sử gửi email',robots:{index:false,follow:false}};export default function Page(){return <AdminFrame title="Lịch sử gửi email" active="mail-history"><MailJournal/></AdminFrame>;}

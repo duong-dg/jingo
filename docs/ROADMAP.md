@@ -40,3 +40,8 @@ Web, POS và CTV có giỏ nhiều gói/sản phẩm/ngày/suất, xác nhận l
 ## Đã bổ sung Tổng quan vận hành
 
 Admin có `/admin/tong-quan`: số đơn dùng hôm nay/ngày mai, đơn đã thu tiền hoặc ghi nợ CTV nhưng còn thiếu vé, chưa thu tiền và chờ xác nhận. Bấm để lọc, 25 dòng/trang, mở trực tiếp chi tiết đơn. Tổng hợp toàn bộ dữ liệu không bị giới hạn bởi trang đầu; loại trừ hủy/lưu trữ. Cảnh báo yêu cầu liên hệ mới, email FAILED và nhật ký thanh toán REVIEW ở LIVE; REVIEW gồm lịch sử, chưa có cơ chế xác nhận đã xem. Không thay đổi tiền/đơn/tồn. Ngày Việt Nam, cập nhật bằng nút, không tự polling.
+
+
+## Đã bổ sung lịch sử gửi email toàn bộ
+
+Admin `/admin/email` tìm theo mã đơn JG, mã đặt chỗ JC hoặc ID email; lọc trạng thái/loại, phân trang 25 dòng, mở đúng đơn, gửi lại thủ công thư FAILED bằng luồng có kiểm tra SMTP và audit hiện có. Tổng quan dẫn thẳng danh sách FAILED. Không bị giới hạn 100 thư gần nhất; lịch sử SMTP cũ vẫn giữ dạng xem nhanh. Không tạo lại booking/thanh toán/giao vé khi đọc lịch sử hoặc đưa email vào hàng đợi.
