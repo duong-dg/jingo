@@ -26,3 +26,5 @@ Reference: https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc#oauth-20
 ## Token acquisition errors
 
 “Token endpoint did not return a valid access token” means SePay could not obtain/parse a token; it does not prove that the settlement webhook itself rejected a payment. Confirm the Token URL points to `/sepay/oauth/token`, not `/sepay/webhook`. Earlier versions supported standard form requests only and rejected the documented custom JSON fallback with HTTP 400; fallback support is now covered by integration tests. This compatibility gap is verified locally, but the exact production request format still requires the token-request response/log to confirm the cause. Never share tokens, Basic Authorization, or client secrets when collecting diagnostics.
+
+Additional hardening, NPM allowlist deployment and recovery guidance: [SEPAY-SECURITY.md](SEPAY-SECURITY.md).

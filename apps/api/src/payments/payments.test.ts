@@ -67,6 +67,20 @@ test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, ex
  assert.equal((await oauthHook(issueSepayToken(oauthSecret,'other','LIVE'))).status,401);
  assert.equal((await oauthHook(customResult.data.accessToken)).status,200);assert.equal((await oauthHook(token.access_token)).status,200);
  assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[oauthOrder.id])).rowCount,1,'OAuth retries settle once');
+
+ const storedPayload=(await pool.query('SELECT payload_encrypted FROM jingo_sepay_payloads WHERE id=$1',['SEPAY:LIVE:990001'])).rows[0];assert.ok(storedPayload);assert.doesNotMatch(storedPayload.payload_encrypted,/gateway|accountNumber|oauth-fixture/);
+ assert.equal((await pool.query('SELECT id FROM jingo_sepay_payloads WHERE id=$1',['SEPAY:LIVE:990001'])).rowCount,1,'one encrypted source per transaction');
+ const bankHook=(data:object)=>call('/payments/sepay/webhook',data,false,{Authorization:'Bearer '+token.access_token});
+ const unlinked=await bankHook(hook(oauthIntent,990002,{content:'Chuyen tien khong co ma'}));assert.equal(unlinked.status,200);assert.deepEqual(await unlinked.json(),{success:true});assert.match(unlinked.headers.get('x-jingo-webhook-request')!,/^[a-f0-9-]{36}$/);
+ assert.equal((await pool.query('SELECT status FROM jingo_gateway_events WHERE id=$1',['SEPAY:LIVE:990002'])).rows[0].status,'REVIEW');
+ const expiredOrder=await make(),expiredIntent=await(await call('/payments/checkout',payload(expiredOrder,'SEPAY'))).json();await pool.query('UPDATE jingo_gateway_attempts SET expires_at=$1 WHERE id=$2',[new Date(Date.now()-60000),expiredIntent.id]);
+ assert.equal((await bankHook(hook(expiredIntent,990003))).status,200);assert.equal((await pool.query('SELECT payment_status FROM jingo_orders WHERE id=$1',[expiredOrder.id])).rows[0].payment_status,'UNPAID');assert.match((await pool.query('SELECT reason FROM jingo_gateway_events WHERE id=$1',['SEPAY:LIVE:990003'])).rows[0].reason,/hết hạn/);
+ const codeOrder=await make(),codeIntent=await(await call('/payments/checkout',payload(codeOrder,'SEPAY'))).json();assert.equal((await bankHook(hook(codeIntent,990004,{code:'JGP'+'B'.repeat(24)}))).status,200);assert.equal((await pool.query('SELECT payment_status FROM jingo_orders WHERE id=$1',[codeOrder.id])).rows[0].payment_status,'UNPAID');
+ const priorCount=(await pool.query('SELECT id FROM jingo_sepay_payloads')).rowCount;for(const badId of ['abc','000',0])assert.equal((await bankHook(hook(oauthIntent,badId as any))).status,400);assert.equal((await bankHook({id:990005})).status,400);assert.equal((await pool.query('SELECT id FROM jingo_sepay_payloads')).rowCount,priorCount,'malformed payload not stored');
+ const retryOrder=await make(),retryIntent=await(await call('/payments/checkout',payload(retryOrder,'SEPAY'))).json(),originalQuery=pool.query.bind(pool);let failOnce=true;
+ pool.query=async(...args:any[])=>{if(failOnce&&String(args[0]).startsWith('INSERT INTO jingo_sepay_payloads')){failOnce=false;throw new Error('Simulated storage outage');}return originalQuery(...args);};
+ try{assert.equal((await bankHook(hook(retryIntent,990006))).status,500);}finally{pool.query=originalQuery;}
+ assert.equal((await bankHook(hook(retryIntent,990006))).status,200);assert.equal((await bankHook(hook(retryIntent,990006))).status,200);assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[retryOrder.id])).rowCount,1,'retry after storage recovery settles once');
  response=await call('/admin/payments',{...fields(c),sepayOauthSecret:oauthSecret+'-rotated'},true);assert.equal(response.status,201);c=await response.json();assert.equal((await oauthHook(token.access_token)).status,401,'rotation revokes old tokens');assert.equal((await tokenRequest()).status,401);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,200);
  response=await call('/admin/payments',{...fields(c),sepayEnabled:false},true);assert.equal(response.status,201);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,401,'disabled gateway issues no tokens');
  }finally{await app.close();await rm(media,{recursive:true,force:true});}
