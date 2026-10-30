@@ -10,15 +10,19 @@ const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
  async sepayToken(body:unknown,authorization:string){
  const c=await this.settings.config();const fail=()=>{throw new UnauthorizedException({error:'invalid_client'});};
  if(!c.sepayEnabled||c.sepayAuth!=='OAUTH2'||!c.sepayOauthEncrypted)return fail();
- const parsed=z.object({grant_type:z.string(),client_id:z.string().max(100).optional(),client_secret:z.string().max(256).optional()}).strict().safeParse(body);
+ const standard=z.object({grant_type:z.string().max(100),client_id:z.string().max(100).optional(),client_secret:z.string().max(256).optional()}).strict();
+ const custom=z.object({clientId:z.string().min(1).max(100),clientSecret:z.string().min(1).max(256)}).strict();
+ const parsed=z.union([standard,custom]).safeParse(body);
  if(!parsed.success)throw new BadRequestException({error:'invalid_request'});
- if(parsed.data.grant_type!=='client_credentials')throw new BadRequestException({error:'unsupported_grant_type'});
- let id=parsed.data.client_id||'',secret=parsed.data.client_secret||'';
+ const legacy='clientId' in parsed.data;
+ if(!legacy&&'grant_type' in parsed.data&&parsed.data.grant_type!=='client_credentials')throw new BadRequestException({error:'unsupported_grant_type'});
+ let id='clientId' in parsed.data?parsed.data.clientId:parsed.data.client_id||'',secret='clientSecret' in parsed.data?parsed.data.clientSecret:parsed.data.client_secret||'';
  if(authorization){if(!/^Basic [A-Za-z0-9+/]+=*$/.test(authorization)||authorization.length>2048||id||secret)return fail();
  try{const pair=Buffer.from(authorization.slice(6),'base64').toString('utf8'),index=pair.indexOf(':');if(index<0)return fail();id=decodeURIComponent(pair.slice(0,index).replace(/\+/g,' '));secret=decodeURIComponent(pair.slice(index+1).replace(/\+/g,' '));}catch{return fail();}}
  const expected=await this.mail.decrypt(c.sepayOauthEncrypted);
  if(!equalSecret(id,c.sepayOauthClientId)||!equalSecret(secret,expected))return fail();
- return{access_token:issueSepayToken(expected,c.sepayOauthClientId,c.mode),token_type:'Bearer',expires_in:3600};
+ const token=issueSepayToken(expected,c.sepayOauthClientId,c.mode);
+ return legacy?{data:{accessToken:token,expiredIn:3600}}:{access_token:token,token_type:'Bearer',expires_in:3600};
  }
  async options(){const c=await this.settings.config();return{mode:c.mode,providers:c.mode==='LIVE'?[...(c.vnpayEnabled?['VNPAY']:[]),...(c.sepayEnabled?['SEPAY']:[]),...(c.vnpayEnabled&&c.vnpayCardEnabled?['VNPAY_CARD']:[]),...(c.sepayCardEnabled?['SEPAY_CARD']:[])]:[]};}
  async checkout(body:unknown,ip:string,test=false,context?:PaymentContext){

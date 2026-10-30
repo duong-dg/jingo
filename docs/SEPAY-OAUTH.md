@@ -13,7 +13,7 @@ Implements SePay standard `client_credentials` authentication, independently sel
 
 ## Protocol and security
 
-POST token endpoint with application/x-www-form-urlencoded, `grant_type=client_credentials`, credentials in HTTP Basic or form body (not both). Returns `access_token`, `token_type: Bearer`, `expires_in: 3600`, Cache-Control no-store / Pragma no-cache. No refresh token: SePay obtains a new token after expiration. Unsupported grants and invalid clients are rejected. Existing per-process public-payment throttle also covers token requests; proxy IP is not trusted from arbitrary headers.
+POST token endpoint with application/x-www-form-urlencoded, `grant_type=client_credentials`, credentials in HTTP Basic or form body (not both). Returns `access_token`, `token_type: Bearer`, `expires_in: 3600`, Cache-Control no-store / Pragma no-cache. Also supports SePay JSON fallback `{clientId, clientSecret}` with response `{data:{accessToken, expiredIn:3600}}`. Both formats validate the same encrypted credentials and issue equally scoped tokens. No refresh token: SePay obtains a new token after expiration. Unsupported grants and invalid clients are rejected. Existing per-process public-payment throttle also covers token requests; proxy IP is not trusted from arbitrary headers.
 
 Tokens are opaque HMAC-SHA256 authenticated values with purpose, client, TEST/LIVE, issued time and expiry. Only this webhook validates them; they grant no admin, POS or CTV access. Secret is encrypted using the existing server key, never returned by admin read APIs. Token and credentials are never written to the audit log. Use HTTPS throughout the public endpoint. Rotating to a different secret invalidates prior tokens; disabling SePay stops token issuance. Selecting another authentication method rejects Bearer tokens. There is no API Key/HMAC fallback while OAuth is selected.
 
@@ -22,3 +22,7 @@ OAuth authenticates the caller; unlike SePay HMAC it does not separately sign ea
 No DB migration: credentials use the existing versioned encrypted payment settings record. Standard form parsing is provided by Nest Express. Web Next rewrite forwards this route to the API.
 
 Reference: https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc#oauth-20
+
+## Token acquisition errors
+
+“Token endpoint did not return a valid access token” means SePay could not obtain/parse a token; it does not prove that the settlement webhook itself rejected a payment. Confirm the Token URL points to `/sepay/oauth/token`, not `/sepay/webhook`. Earlier versions supported standard form requests only and rejected the documented custom JSON fallback with HTTP 400; fallback support is now covered by integration tests. This compatibility gap is verified locally, but the exact production request format still requires the token-request response/log to confirm the cause. Never share tokens, Basic Authorization, or client secrets when collecting diagnostics.

@@ -53,6 +53,11 @@ test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, ex
  assert.equal((await tokenRequest('wrong')).status,401);assert.equal((await tokenRequest(oauthSecret,'refresh_token')).status,400);
  response=await tokenRequest();assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');const token=await response.json();assert.equal(token.expires_in,3600);assert.equal(token.token_type,'Bearer');
  response=await fetch(base+'/payments/sepay/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'client_credentials',client_id:clientId,client_secret:oauthSecret})});assert.equal(response.status,200,'body credentials supported');
+
+ const customToken=async(secret=oauthSecret)=>call('/payments/sepay/oauth/token',{clientId,clientSecret:secret});
+ response=await customToken();assert.equal(response.status,200,'SePay custom JSON fallback supported');const customResult=await response.json();assert.equal(customResult.data.expiredIn,3600);assert.equal(typeof customResult.data.accessToken,'string');
+ assert.equal((await customToken('wrong')).status,401);assert.equal((await call('/payments/sepay/oauth/token',{clientId})).status,400);
+ assert.equal((await call('/payments/sepay/oauth/token',{clientId,clientSecret:oauthSecret,refreshToken:'unexpected'})).status,400,'unknown credentials/grants rejected');
  const oauthOrder=await make(),oauthIntent=await(await call('/payments/checkout',payload(oauthOrder,'SEPAY'))).json();
  const oauthHook=(bearer:string,patch:object={})=>call('/payments/sepay/webhook',hook(oauthIntent,990001,patch),false,{Authorization:'Bearer '+bearer});
  assert.equal((await send(hook(oauthIntent,990001))).status,401,'API key cannot bypass OAuth');assert.equal((await signedHook()).status,401,'HMAC cannot bypass OAuth');
@@ -60,7 +65,7 @@ test('VNPay and SePay configuration, TEST isolation, authenticated callbacks, ex
  assert.equal((await oauthHook(issueSepayToken(oauthSecret,clientId,'LIVE',Date.now()-3601000))).status,401);
  assert.equal((await oauthHook(issueSepayToken(oauthSecret,clientId,'TEST'))).status,401);
  assert.equal((await oauthHook(issueSepayToken(oauthSecret,'other','LIVE'))).status,401);
- assert.equal((await oauthHook(token.access_token)).status,200);assert.equal((await oauthHook(token.access_token)).status,200);
+ assert.equal((await oauthHook(customResult.data.accessToken)).status,200);assert.equal((await oauthHook(token.access_token)).status,200);
  assert.equal((await pool.query('SELECT id FROM jingo_order_payments WHERE order_id=$1',[oauthOrder.id])).rowCount,1,'OAuth retries settle once');
  response=await call('/admin/payments',{...fields(c),sepayOauthSecret:oauthSecret+'-rotated'},true);assert.equal(response.status,201);c=await response.json();assert.equal((await oauthHook(token.access_token)).status,401,'rotation revokes old tokens');assert.equal((await tokenRequest()).status,401);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,200);
  response=await call('/admin/payments',{...fields(c),sepayEnabled:false},true);assert.equal(response.status,201);assert.equal((await tokenRequest(oauthSecret+'-rotated')).status,401,'disabled gateway issues no tokens');
