@@ -15,7 +15,7 @@
 Ready-to-paste config: deploy/nginx/sepay-npm.conf. It has NOT been installed on the live proxy by this code change.
 
 1. On proxyserver, open JinGo Proxy Host (jingo.io.vn). Back up existing Advanced text; use valid SSL and Force SSL. Keep the host Publicly Accessible: customer pages are public.
-2. Verify that the NPM socket remote address is the real external source IP. If another proxy/CDN or source NAT sits before NPM, do not install this blindly: configure real-IP trust only for those exact trusted proxies first. Never trust arbitrary X-Forwarded-For.
+2. The snippet checks `$realip_remote_addr` (original TCP peer), not `$remote_addr`, which global real-IP settings may replace from an untrusted header. Verify that the original NPM socket address is the real external source IP. If another proxy/CDN or source NAT sits before NPM, do not install this blindly: configure real-IP trust only for those exact trusted proxies first. Never trust arbitrary X-Forwarded-For.
 3. Confirm upstream 172.16.150.171:3100 is still JinGo. Paste the contents into this host's Advanced field. Remove/merge any existing custom locations for these exact paths to avoid duplicate-location errors. A case-insensitive regex also covers trailing slashes, matching Express routing. There are two restricted endpoint families: token and bank webhook. Do not apply deny-all to the whole domain or payment checkout URLs.
 4. Save and verify NPM reports Online. On proxyserver run `sudo docker exec proxy-app-1 nginx -t`. If invalid, restore previous Advanced text before reloading. No firewall-wide changes are needed.
 5. In SePay test token acquisition and a simulated webhook. They should pass from all published SePay IPs. A request from a different public IP should return 403. Customer pages and normal checkout must remain reachable. Tests from your personal computer to these two endpoints will intentionally be blocked after enabling the allowlist.
@@ -43,3 +43,31 @@ After the retry window, inspect failed SePay deliveries and replay after recover
 Integration tests exercise valid/invalid auth, HMAC timestamp/body changes, OAuth expiration/rotation, duplicate/conflicting IDs, expired intents, unknown/mismatched codes, encrypted payloads and recovery after a simulated storage error. They use pg-mem and do not prove PostgreSQL concurrent-lock behavior. Validate concurrent callbacks against an isolated PostgreSQL test database before a large live rollout. The NPM config needs nginx -t and real SePay test requests on the deployed proxy.
 
 References: https://developer.sepay.vn/vi/sepay-webhooks/bao-mat , https://developer.sepay.vn/vi/sepay-webhooks/tich-hop-webhook , https://developer.sepay.vn/vi/sepay-webhooks/xu-ly-loi .
+
+## Live whitelist bypass found 2026-10-30
+
+Authorized read-only probes with empty POST bodies on jingo.io.vn showed:
+
+| Request | Result before fix |
+| --- | --- |
+| Token URL, no spoofed header | NPM 403 |
+| Token URL, X-Real-IP set to published SePay IP | API 400 invalid_request |
+| Webhook URL, no spoofed header | NPM 403 |
+| Webhook URL, X-Real-IP set to published SePay IP | API 401 authentication failed |
+| Webhook URL, only X-Forwarded-For spoofed | NPM 403 |
+| Webhook URL, only Forwarded spoofed | NPM 403 |
+| Customer homepage / payment options | 200 |
+
+Thus the source-IP layer was bypassable by X-Real-IP, while credential authentication remained effective. No valid token or financial payload was used. Case/trailing slash/query variants were also tested. Exact global real-IP directives have not yet been inspected; trusting a caller-controlled X-Real-IP is the observed behavior, not a guessed file location.
+
+The updated snippet gates on original `$realip_remote_addr` and forwards that same original address downstream. Replace the previous complete SePay location block; do not append a duplicate. This fix is for the current directly exposed NPM / destination-NAT topology. An upstream CDN/SNAT/proxy requires a separate trusted-peer design; do not add all internal networks as allowed SePay sources. Check nginx -t and retest both legitimate SePay and spoofed personal-client requests after installation. Repository changes do not update live NPM automatically.
+
+Inspect global trust on proxyserver without changing it:
+
+```bash
+sudo docker exec proxy-app-1 sh -c 'nginx -T 2>&1 | grep -nE "set_real_ip_from|real_ip_header|real_ip_recursive"'
+```
+
+Share only these directive lines, never the entire configuration. Audit overly broad trust such as 0.0.0.0/0, ::/0, or large private networks. Do not blindly remove entries used by other hosts without identifying their upstream proxies.
+
+Nginx original-peer documentation: https://nginx.org/en/docs/http/ngx_http_realip_module.html#embedded_variables .
