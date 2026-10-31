@@ -1,3 +1,4 @@
+import{clientAddress}from'../http/client-address';
 import{InventoryModule}from'../inventory/inventory.module';
 import{BadRequestException,Body,Controller,Get,HttpException,Module,Param,Post,Req,Res,UseGuards}from'@nestjs/common';import type{Request,Response}from'express';import{z}from'zod';
 import{AdminGuard,AuthModule}from'../admin/auth.module';import{CatalogModule}from'../catalog/catalog.module';import{TypesModule}from'../content/types.module';import{OrdersModule}from'../orders/orders.module';import{OrdersService}from'../orders/orders.service';import{orderInput,lookupInput}from'../orders/orders.schema';
@@ -31,7 +32,7 @@ function parse<T>(schema:z.ZodType<T>,body:unknown):T{const result=schema.safePa
 }
 @Controller('deliveries')class DeliveryController{
   private requests=new Map<string,{count:number;until:number}>();
-  private throttle(req:Request){const now=Date.now();for(const[k,v]of this.requests)if(v.until<now)this.requests.delete(k);const key=req.socket.remoteAddress||'unknown',v=this.requests.get(key)||{count:0,until:now+60000};v.count++;this.requests.set(key,v);if(v.count>100||this.requests.size>10000)throw new HttpException('Quá nhiều yêu cầu nhận vé.',429);}
+  private throttle(req:Request){const now=Date.now();for(const[k,v]of this.requests)if(v.until<now)this.requests.delete(k);const key=clientAddress(req).ip,v=this.requests.get(key)||{count:0,until:now+60000};v.count++;this.requests.set(key,v);if(v.count>100||this.requests.size>10000)throw new HttpException('Quá nhiều yêu cầu nhận vé.',429);}
   constructor(private readonly orders:OrdersService){}
   @Post('lookup')async lookup(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.throttle(req);res.setHeader('Cache-Control','no-store');const input=parse(z.object({code:z.string().regex(/^JG[A-F0-9]{10}$/),accessKey:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),body);return this.orders.deliveryLookup(input.code,input.accessKey);}
 }

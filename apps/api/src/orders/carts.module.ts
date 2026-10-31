@@ -1,4 +1,5 @@
-import { Body, Controller, Get, ForbiddenException, HttpException, Module, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import{RequestLimit,requestBudgets}from'../http/request-limit';
+import { Body, Controller, Get, ForbiddenException, Module, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CartsService } from './carts.service';
 import { OrdersModule } from './orders.module';
@@ -13,11 +14,10 @@ import { PosAuthService } from '../pos/pos-auth.service';
 import { permissions, type PosActor } from '../pos/pos.schema';
 function noStore(res: Response) { res.setHeader('Cache-Control', 'private, no-store'); }
 @Controller('carts') class CustomerCartsController {
-  private requests = new Map<string, { count: number; until: number }>();
+  private readonly limit=new RequestLimit();
   constructor(private readonly carts: CartsService) {}
-  private check(req: Request) { const now = Date.now(); for (const [k, v] of this.requests) if (v.until < now) this.requests.delete(k); const k = req.socket.remoteAddress || 'unknown', v = this.requests.get(k) || { count: 0, until: now + 60000 }; v.count++; this.requests.set(k, v); if (v.count > 100 || this.requests.size > 10000) throw new HttpException('Quá nhiều yêu cầu.', 429); }
-  @Post() create(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.check(req); noStore(res); if (req.headers['x-jingo-request'] !== '1' || req.headers.origin && req.headers.origin !== new URL(process.env.PUBLIC_BASE_URL || 'http://localhost:3000').origin) throw new ForbiddenException(); return this.carts.create(body); }
-  @Post('lookup') lookup(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.check(req); noStore(res); return this.carts.lookup(body); }
+  @Post() create(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.limit.check(req,res,'create',requestBudgets.create); noStore(res); if (req.headers['x-jingo-request'] !== '1' || req.headers.origin && req.headers.origin !== new URL(process.env.PUBLIC_BASE_URL || 'http://localhost:3000').origin) throw new ForbiddenException(); return this.carts.create(body); }
+  @Post('lookup') lookup(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.limit.check(req,res,'lookup',requestBudgets.lookup); noStore(res); return this.carts.lookup(body); }
 }
 @Controller('partner/carts') class PartnerCartsController {
   constructor(private readonly carts: CartsService, private readonly auth: PartnerAuthService) {}

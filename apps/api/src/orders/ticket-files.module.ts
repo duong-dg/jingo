@@ -1,3 +1,4 @@
+import{clientAddress}from'../http/client-address';
 import{processTicketBatch,codeForSupplierQr}from'./ticket-processing';
 import{TicketFileRetention,ticketFileExpiresAt}from'./ticket-file-retention';
 import{supplierQrImage,supplierTicketDetails}from'./supplier-qr';
@@ -270,7 +271,7 @@ class CustomerTicketFilesController {
   constructor(private readonly files: TicketFilesService) {}
   private check(req: Request) {
     const now = Date.now(); for (const [k, v] of this.requests) if (v.until < now) this.requests.delete(k);
-    const key = req.socket.remoteAddress || 'unknown', value = this.requests.get(key) || { count: 0, until: now + 60000 };
+    const key = clientAddress(req).ip, value = this.requests.get(key) || { count: 0, until: now + 60000 };
     value.count++; this.requests.set(key, value);
     if (value.count > 100 || this.requests.size > 10000) throw new HttpException('Quá nhiều yêu cầu. Thử lại sau một phút.', 429);
   }
@@ -288,7 +289,7 @@ class PartnerTicketFilesController {
 class SharedTicketFilesController {
   private requests = new Map<string, { count: number; until: number }>();
   constructor(private readonly files: TicketFilesService) {}
-  private check(req: Request) { const now = Date.now(); for (const [key, value] of this.requests) if (value.until < now) this.requests.delete(key); const key = req.socket.remoteAddress || 'unknown', value = this.requests.get(key) || { count: 0, until: now + 60000 }; value.count++; this.requests.set(key, value); if (value.count > 100 || this.requests.size > 10000) throw new HttpException('Quá nhiều yêu cầu. Thử lại sau một phút.', 429); }
+  private check(req: Request) { const now = Date.now(); for (const [key, value] of this.requests) if (value.until < now) this.requests.delete(key); const key = clientAddress(req).ip, value = this.requests.get(key) || { count: 0, until: now + 60000 }; value.count++; this.requests.set(key, value); if (value.count > 100 || this.requests.size > 10000) throw new HttpException('Quá nhiều yêu cầu. Thử lại sau một phút.', 429); }
   @Post() @HttpCode(200) list(@Body() body: unknown, @Req() req: Request, @Res({ passthrough: true }) res: Response) { this.check(req); privateHeaders(res); return this.files.sharedList(body); }
   @Post(':id/download') @HttpCode(200) async download(@Param('id') id: string, @Body() body: unknown, @Req() req: Request, @Res() res: Response) { this.check(req); send(res, await this.files.sharedDownload(id, body)); }
 }
