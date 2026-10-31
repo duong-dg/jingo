@@ -1,10 +1,10 @@
+import{calculateOnlineQuote,publicOnlineVariants}from'../pricing/online-discount';
 import{publicSaleClosures}from'./sale-calendar';
 import{InventoryModule,InventoryService}from'../inventory/inventory.module';
 import{Destination,DestinationsModule,DestinationsService,destinationIds}from'../destinations/destinations.module';
 import{translated,localizeProduct}from'../content/translations';
 import { BadRequestException, NotFoundException, Controller, Get, Module, Param, Query } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
-import { calculateQuote } from '../pricing/pricing';
 import { ManagedProduct } from '../admin/product.schema';
 import{MediaModule}from'../content/media.module';
 import{TypesModule,TypesService}from'../content/types.module';
@@ -13,7 +13,7 @@ import type{ProductType}from'../content/content.schema';
 const searchText=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase();
 function publicProduct(product:ManagedProduct,types:ProductType[],lang?:string,nodes:Destination[]=[]){
  const{supplierId,rules,closures,english,version,...published}=lang==='en'?localizeProduct(product):product;const type=types.find(t=>t.id===product.type);const typeEn=type&&translated('TYPE',type);
- const destination=nodes.find(node=>node.id===product.destinationId);return{...published,destinationSlug:destination?(lang==='en'?destination.englishSlug||destination.slug:destination.slug):undefined,saleClosures:publicSaleClosures(product),destination:destination?(lang==='en'?destination.englishName||destination.name:destination.name):published.destination,typeName:lang==='en'?(typeEn?type!.english!.name:'Experience'):type?.name||'Trải nghiệm',typeSlug:lang==='en'&&!typeEn?undefined:type?.slug,bookingKind:type?.bookingKind||'TICKET',languages:translated('PRODUCT',product)?['vi','en']:['vi']};
+ const destination=nodes.find(node=>node.id===product.destinationId);return{...published,variants:publicOnlineVariants(published),destinationSlug:destination?(lang==='en'?destination.englishSlug||destination.slug:destination.slug):undefined,saleClosures:publicSaleClosures(product),destination:destination?(lang==='en'?destination.englishName||destination.name:destination.name):published.destination,typeName:lang==='en'?(typeEn?type!.english!.name:'Experience'):type?.name||'Trải nghiệm',typeSlug:lang==='en'&&!typeEn?undefined:type?.slug,bookingKind:type?.bookingKind||'TICKET',languages:translated('PRODUCT',product)?['vi','en']:['vi']};
 }
 
 @Controller('products')
@@ -26,7 +26,7 @@ class CatalogController {
     if (!variant) throw new BadRequestException('Gói vé không tồn tại.');
     try {
       const quantities = Object.fromEntries(Object.keys(variant.prices).map(type => [type, 1]));
-      const quote=calculateQuote(view, variantId, date, quantities, product.rules, product.closures,slotId);return{...quote,inventory:await this.inventory.availability(product.id,variantId,date,quote.timeSlot?.id||'')};
+      const quote=calculateOnlineQuote(view, variantId, date, quantities, product.rules, product.closures,slotId);return{...quote,inventory:await this.inventory.availability(product.id,variantId,date,quote.timeSlot?.id||'')};
     } catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
   }
   @Get(':id/sale-calendar')async calendar(@Param('id')id:string){const product=await this.catalog.find(id);return{data:{variants:product.variants.map(v=>({id:v.id,timeSlots:v.timeSlots})),saleClosures:publicSaleClosures(product)}};}

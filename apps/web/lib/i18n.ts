@@ -12,6 +12,7 @@ export const english:Record<string,string>={
  'Cổng thanh toán chưa bật.':'This payment provider is not enabled.',
  'Cổng đang ở môi trường khác.':'This payment provider is unavailable in the current environment.',
  'Thông tin thanh toán không hợp lệ.':'Invalid payment information.',
+ 'Ưu đãi online không cộng dồn mã giảm giá. Bỏ mã để dùng giá online.':'Online offers cannot be combined with a voucher. Remove the voucher to use the online price.',
  'Mã giảm giá không áp dụng cho sản phẩm hoặc gói vé đang chọn.':'This voucher does not apply to the selected experience or ticket package.',
  'Mã giảm giá không áp dụng cho ngày sử dụng vé đã chọn.':'This voucher does not apply to the selected visit date.',
  'Mã giảm giá không hợp lệ.':'Invalid voucher code.',

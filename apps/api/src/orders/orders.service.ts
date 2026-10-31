@@ -1,3 +1,4 @@
+import{calculateOnlineQuote,checkOnlineVoucher}from'../pricing/online-discount';
 import{TicketStockService}from'./ticket-stock.module';
 import{ShiftsService}from'../shifts/shifts.module';
 import{SupplyService}from'../supply/supply.module';
@@ -17,7 +18,7 @@ import{applyNetPricing}from'../partners/net-pricing';
 import{ledgerRows,creditSummary,checkCredit}from'../partners/credit';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
-export interface OrderSnapshot {discount?:{code:string;amount:number;subtotal:number};variantId?:string;timeSlot?:{id:string;start:string;end?:string;requiresSelection?:boolean}; locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number }[]; conditions: object; policy: string }
+export interface OrderSnapshot {onlineDiscount?:{type:'NONE'|'PERCENT'|'AMOUNT';value:number;amount:number;subtotal:number};discount?:{code:string;amount:number;subtotal:number};variantId?:string;timeSlot?:{id:string;start:string;end?:string;requiresSelection?:boolean}; locale?:string; productId: string; productName: string; variantName: string; date: string; total: number; demo: boolean; lines: { customerType: string; quantity: number; unitPrice: number; subtotal: number; originalUnitPrice?:number;unitDiscount?:number }[]; conditions: object; policy: string }
 interface OrderRow { id: string; code: string; snapshot: OrderSnapshot; contact: object; instructions: string; booking_status: string; payment_status: string; version: number; created_at: Date; request_hash: string }
 @Injectable()
 export class OrdersService {
@@ -45,16 +46,17 @@ export class OrdersService {
       if (product.demo) throw new BadRequestException('Sản phẩm minh họa không nhận đơn.');
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year:'numeric',month:'2-digit',day:'2-digit' }).format(new Date());
       if (input.date < today) throw new BadRequestException('Ngày sử dụng đã qua.');
-      let quote;
-      try { quote = calculateQuote(product, input.variantId, input.date, input.quantities, product.rules, product.closures,input.slotId); }
+      let quote:ReturnType<typeof calculateOnlineQuote>;
+      try { quote = (!partnerId&&!pos?calculateOnlineQuote:calculateQuote)(product, input.variantId, input.date, input.quantities, product.rules, product.closures,input.slotId); }
       catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'Không thể lấy giá.'); }
       if(group)quote=applyNetPricing(quote,group);
       const quantity=quote.lines.reduce((sum,line)=>sum+line.quantity,0);await this.inventory.check(product.id,input.variantId,input.date,quote.timeSlot?.id||'',quantity,client);
+      if(!partnerId&&!pos)try{checkOnlineVoucher(quote,input.voucherCode);}catch(e){throw new BadRequestException((e as Error).message);}
       const discount=input.voucherCode?await this.vouchers.discount(input.voucherCode,quote.total,client,true,{productId:product.id,variantId:input.variantId,date:input.date}):null;const netTotal=quote.total-(discount?.amount||0);
       if (netTotal !== input.expectedTotal) throw new ConflictException('Giá vừa thay đổi. Vui lòng kiểm tra giá mới trước khi gửi.');
       if(input.locale==='en'&&!translated('PRODUCT',product))throw new ConflictException('English content has changed. Please refresh before booking.');const view=input.locale==='en'?localizeProduct(product):product;const variant = view.variants.find((v:{id:string}) => v.id === input.variantId)!;
       const snapshot: OrderSnapshot = {...(quote.timeSlot?{timeSlot:quote.timeSlot}:{}), productId: product.id,variantId:input.variantId, ...(input.locale?{locale:input.locale}:{}),productName: view.name, variantName: variant.name, date: input.date,
-        ...(discount?{discount:{code:discount.code,amount:discount.amount,subtotal:discount.subtotal}}:{}),total: netTotal, lines: quote.lines, demo: false, conditions: variant.conditions || {},
+        ...(quote.onlineDiscount?{onlineDiscount:quote.onlineDiscount}:{}),...(discount?{discount:{code:discount.code,amount:discount.amount,subtotal:discount.subtotal}}:{}),total: netTotal, lines: quote.lines, demo: false, conditions: variant.conditions || {},
         policy: input.locale==='en'?'Your booking is recorded immediately. JinGo will send your tickets by email after processing. Booking confirmation does not mean payment has been received or tickets have been issued. Follow the payment instructions provided for your booking.':'Đơn đặt vé được ghi nhận ngay. JinGo sẽ gửi vé qua email sau khi xử lý. Xác nhận đặt vé không đồng nghĩa đã thanh toán hoặc đã xuất vé. Thanh toán theo hướng dẫn của đơn hàng.' };
       const code = 'JG' + randomBytes(5).toString('hex').toUpperCase();
       const id=randomUUID();const customerAccessKey=pos?randomBytes(32).toString('hex'):input.accessKey;

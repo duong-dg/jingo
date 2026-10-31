@@ -1,10 +1,12 @@
+import type{OnlineDiscount}from'../pricing/online-discount';
 export type CustomerType = 'ADULT' | 'CHILD' | 'SENIOR' | 'LOCAL_ADULT' | 'LOCAL_CHILD' | 'LOCAL_SENIOR';
-export interface Variant {timeSlots?:{id:string;start:string;end?:string}[];
+export interface Variant {onlineDiscount?:OnlineDiscount;timeSlots?:{id:string;start:string;end?:string}[];
   id: string;
   name: string;
   prices: Partial<Record<CustomerType, number>>;
 }
 export interface Product {
+  onlineDiscount?:OnlineDiscount;
   id: string;
   slug: string;
   name: string;

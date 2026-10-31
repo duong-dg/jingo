@@ -1,3 +1,4 @@
+import{calculateOnlineQuote,checkOnlineVoucher}from'../pricing/online-discount';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
@@ -55,9 +56,10 @@ export class CartsService {
       const product = products.get(line.productId), identity = JSON.stringify([line.productId, line.variantId, line.date, line.slotId || '']);
       if (identities.has(identity)) throw new BadRequestException('Gộp số lượng các dòng cùng gói/ngày/giờ trước khi đặt.'); identities.add(identity);
       if (input.locale === 'en' && !translated('PRODUCT', product)) throw new ConflictException('English content has changed. Please refresh before booking.');
-      let quote; try { quote = calculateQuote(product, line.variantId, line.date, line.quantities, product.rules, product.closures, line.slotId); if (pricing) quote = applyNetPricing(quote, pricing); } catch (e) { throw new BadRequestException((e as Error).message); }
+      let quote:ReturnType<typeof calculateOnlineQuote>; try { quote = (context.channel==='WEB'?calculateOnlineQuote:calculateQuote)(product, line.variantId, line.date, line.quantities, product.rules, product.closures, line.slotId); if (pricing) quote = applyNetPricing(quote, pricing); } catch (e) { throw new BadRequestException((e as Error).message); }
       const quantity = quote.lines.reduce((n, l) => n + l.quantity, 0), slot = quote.timeSlot?.id || '';
       await this.inventory.check(line.productId, line.variantId, line.date, slot, quantity, client);
+      if(context.channel==='WEB')try{checkOnlineVoucher(quote,line.voucherCode);}catch(e){throw new BadRequestException((e as Error).message);}
       let discount = 0;
       if (line.voucherCode) {
         if (context.channel !== 'WEB') throw new BadRequestException('Mã giảm giá chỉ dùng cho khách web.');

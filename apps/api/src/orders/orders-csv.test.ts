@@ -13,3 +13,8 @@ test('order export aggregates local and visitor guests into their age columns wi
  const csv=ordersCsv([{code:'JGLOCAL',created_at:'2026-10-28T00:00:00Z',contact:{name:'Fixture',phone:'0901234567'},snapshot:{productName:'Show',variantName:'Eco',date:'2099-06-01',total:1150000,lines:[{customerType:'ADULT',quantity:1},{customerType:'LOCAL_ADULT',quantity:1},{customerType:'LOCAL_CHILD',quantity:1}]},booking_status:'CONFIRMED',payment_status:'UNPAID',channel:'WEB'}]);
  assert.ok(csv.includes('"2","1","0","3","1150000"'));
 });
+
+test('CSV exports saved online savings without inventing a voucher code',()=>{
+ const csv=ordersCsv([{code:'JGOFFER',created_at:'2026-10-31T00:00:00Z',contact:{name:'Fixture',phone:'0901234567'},snapshot:{productName:'Show',variantName:'Eco',date:'2099-06-01',total:540000,onlineDiscount:{amount:60000,subtotal:600000},lines:[{customerType:'ADULT',quantity:1}]},booking_status:'CONFIRMED',payment_status:'UNPAID',channel:'WEB'}]);
+ assert.ok(csv.includes('"540000","Đã đặt vé","Chưa thu tiền","Website","Không","","60000","600000"'));
+});

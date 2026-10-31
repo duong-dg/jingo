@@ -1,3 +1,4 @@
+import{adultStartingOffer}from'../../../web/lib/retail-price';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { products } from '../catalog/catalog.data';
@@ -53,4 +54,10 @@ test('weekly closures block only selected ISO weekdays inside the inclusive rang
  assert.equal(calculateQuote(product,'high','2027-06-01',{ADULT:1},[],[closure]).total,550000);
  assert.throws(()=>calculateQuote(product,'high','2027-06-01',{ADULT:1},[],[{...closure,variantId:undefined}]),/khóa bán/);
  assert.throws(()=>calculateQuote(product,'eco','2027-06-02',{ADULT:1},[],[{...closure,weekdays:undefined}]),/khóa bán/,'legacy closures still close every day in the range');
+});
+
+test('starting offer uses an adult price and the original price of that same package',()=>{
+ assert.deepEqual(adultStartingOffer({variants:[{prices:{ADULT:600000,CHILD:100000},originalPrices:{ADULT:600000}},{prices:{ADULT:350000,CHILD:50000},originalPrices:{ADULT:700000}}]}),{price:350000,originalPrice:700000});
+ assert.deepEqual(adultStartingOffer({variants:[{prices:{LOCAL_ADULT:315000,CHILD:100000},originalPrices:{LOCAL_ADULT:350000}}]}),{price:315000,originalPrice:350000});
+ assert.equal(adultStartingOffer({variants:[{prices:{CHILD:50000}}]}),null);
 });

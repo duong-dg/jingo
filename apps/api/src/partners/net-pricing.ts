@@ -1,7 +1,7 @@
+import type{OnlineQuote}from'../pricing/online-discount';
 import{BadRequestException}from'@nestjs/common';
-import{calculateQuote}from'../pricing/pricing';
 import{PriceGroup}from'./partners.schema';
-export function applyNetPricing(retail:ReturnType<typeof calculateQuote>,group:PriceGroup){
+export function applyNetPricing(retail:OnlineQuote,group:PriceGroup){
   if(group.status!=='ACTIVE')throw new BadRequestException('Bảng giá CTV tạm ngừng.');
   const lines=retail.lines.map(line=>{
     const rules=group.rules.filter(rule=>rule.productId===retail.productId&&rule.variantId===retail.variantId&&rule.customerType===line.customerType&&rule.startDate<=retail.date&&retail.date<=rule.endDate).sort((a,b)=>b.priority-a.priority);
