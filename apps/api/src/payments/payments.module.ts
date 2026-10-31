@@ -1,3 +1,4 @@
+import{PaypalGateway}from'./paypal';
 import{PaymentReconciliation}from'./reconciliation';
 import{randomUUID}from'node:crypto';
 import{ShiftsModule}from'../shifts/shifts.module';import{PartnersModule}from'../partners/partners.module';import{PartnerAuthService}from'../partners/partner-auth.service';import{PosModule}from'../pos/pos.module';import{PosAuthService}from'../pos/pos-auth.service';import{permissions}from'../pos/pos.schema';
@@ -11,6 +12,8 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Logger,Modu
  @Post('checkout')checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.throttle(req);if(req.headers['x-jingo-request']!=='1'||req.headers.origin&&req.headers.origin!==new URL(process.env.PUBLIC_BASE_URL||'http://localhost:3000').origin)throw new ForbiddenException('Invalid payment request origin');res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1');}
  @Get('vnpay/ipn')ipn(@Query()query:unknown,@Res({passthrough:true})res:Response){res.setHeader('Cache-Control','no-store');return this.service.vnpay(query);}
  @Get('vnpay/return')returned(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
+ @Post('paypal/capture')@HttpCode(200)paypalCapture(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.throttle(req);if(req.headers['x-jingo-request']!=='1'||req.headers.origin&&req.headers.origin!==new URL(process.env.PUBLIC_BASE_URL||'http://localhost:3000').origin)throw new ForbiddenException('Invalid payment request origin');res.setHeader('Cache-Control','private, no-store');return this.service.paypalCapture(body);}
+ @Post('paypal/webhook')@HttpCode(200)paypalWebhook(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){return this.observe('paypal-webhook',res,()=>this.service.paypalWebhook(body,req.headers));}
  @Post('sepay/card-ipn')@HttpCode(200)cardIpn(@Body()body:unknown,@Req()req:Request){return this.service.sepayCard(body,String(req.headers['x-secret-key']||''));}
  @Get('sepay/card-return')cardReturn(@Res()res:Response){res.setHeader('Cache-Control','no-store');res.redirect(new URL('/tra-cuu?gateway=return',process.env.PUBLIC_BASE_URL||'http://localhost:3000').toString());}
  @Post('sepay/oauth/token')@HttpCode(200)token(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){res.setHeader('Pragma','no-cache');return this.observe('token',res,async()=>{this.throttle(req);return this.service.sepayToken(body,req.headers.authorization||'');});}
@@ -34,4 +37,4 @@ import{Body,Controller,Get,HttpCode,HttpException,ForbiddenException,Logger,Modu
  constructor(private readonly service:PaymentsService,private readonly auth:PosAuthService){}
  @Post('checkout')async checkout(@Body()body:unknown,@Req()req:Request,@Res({passthrough:true})res:Response){this.auth.checkMutation(req);res.setHeader('Cache-Control','private, no-store');return this.service.checkout(body,req.socket.remoteAddress||'127.0.0.1',false,{channel:'POS',actor:await this.auth.require(req)});}
 }
-@Module({imports:[AuthModule,MailModule,ShiftsModule,PartnersModule,PosModule],controllers:[PublicPaymentsController,AdminPaymentsController,PartnerPaymentsController,PosPaymentsController],providers:[PaymentSettings,PaymentsService,PaymentReconciliation]})export class PaymentsModule{}
+@Module({imports:[AuthModule,MailModule,ShiftsModule,PartnersModule,PosModule],controllers:[PublicPaymentsController,AdminPaymentsController,PartnerPaymentsController,PosPaymentsController],providers:[PaypalGateway,PaymentSettings,PaymentsService,PaymentReconciliation]})export class PaymentsModule{}
