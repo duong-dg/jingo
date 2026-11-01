@@ -10,3 +10,8 @@ node_modules
 
 # Local QA fixtures, mock OTP outputs and generated previews are never shipped.
 tmp
+
+# Host backup artifacts and Python bytecode
+/backups/
+**/__pycache__/
+*.pyc

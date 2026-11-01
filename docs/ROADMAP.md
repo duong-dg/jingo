@@ -45,3 +45,5 @@ Admin có `/admin/tong-quan`: số đơn dùng hôm nay/ngày mai, đơn đã th
 ## Đã bổ sung lịch sử gửi email toàn bộ
 
 Admin `/admin/email` tìm theo mã đơn JG, mã đặt chỗ JC hoặc ID email; lọc trạng thái/loại, phân trang 25 dòng, mở đúng đơn, gửi lại thủ công thư FAILED bằng luồng có kiểm tra SMTP và audit hiện có. Tổng quan dẫn thẳng danh sách FAILED. Không bị giới hạn 100 thư gần nhất; lịch sử SMTP cũ vẫn giữ dạng xem nhanh. Không tạo lại booking/thanh toán/giao vé khi đọc lịch sử hoặc đưa email vào hàng đợi.
+
+- Đã bổ sung bộ sao lưu mã hóa trên Ubuntu, giữ 7 bản, admin tải về, kiểm tra toàn vẹn và thử/chuẩn bị khôi phục vào volume riêng. Cần cài timer và kiểm chứng backup/restore trên server thật; xem BACKUP-RESTORE.md.

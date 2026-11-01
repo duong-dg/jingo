@@ -1,0 +1,20 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {adminApi} from '../shared/admin-api';
+type Backup={id:string;createdAt:string;verifiedAt:string;restoreTestedAt?:string;bytes:number;sha256:string;revision:string;snapshot:{orders:number;carts:number;products:number;payments:number;ticketFiles:number}};
+type View={configured:boolean;data:Backup[];setup:{schedule:string;keep:number}|null;lastRun:{state:string;updatedAt:string}|null};
+const date=(value:string)=>new Date(value).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'});
+export function BackupView(){
+ const [view,setView]=useState<View|null>(null),[error,setError]=useState(''),[copied,setCopied]=useState('');
+ const load=()=>{setError('');void adminApi('backups').then(setView).catch(e=>setError(e.message));};
+ useEffect(()=>{void adminApi('backups').then(setView).catch(e=>setError(e.message));},[]);
+ const latest=view?.data[0],stale=latest&&Date.now()-Date.parse(latest.createdAt)>36*3600000;
+ return <section className="backup-panel"><div className="backup-intro"><div><h2>Bảo vệ dữ liệu kinh doanh</h2><p>Tải bản sao về máy để giữ dữ liệu khi server gặp sự cố.</p></div><button type="button" onClick={load}>Làm mới</button></div>
+ {error&&<p role="alert" className="admin-error">{error}</p>}
+ {!view&&!error&&<p>Đang tải bản sao…</p>}
+ {view&&<><div className={'backup-status'+(!view.configured||stale||view.lastRun?.state==='FAILED'?' backup-warning':'')}><strong>{!view.configured?'Chưa cấu hình sao lưu tự động':view.lastRun?.state==='FAILED'?'Lần sao lưu gần nhất thất bại':view.lastRun?.state==='RUNNING'?'Đang tạo bản sao':stale?'Đã quá 36 giờ chưa có bản sao mới':latest?'Đã có bản sao mã hóa':'Đang chờ bản sao đầu tiên'}</strong><p>{view.setup?`Lịch đã cài: 03:15 mỗi ngày, giờ Việt Nam · Giữ ${view.setup.keep} bản gần nhất.`:'Cần cài bộ sao lưu trên máy chủ Ubuntu trước khi sử dụng.'}</p>{latest&&<small>Bản mới nhất: {date(latest.createdAt)}</small>}</div>
+ <div className="backup-note"><strong>Giữ riêng khóa giải mã</strong><p>File tải về đã mã hóa. Hãy cất khóa sao lưu ở nơi riêng, ngoài server. Không gửi khóa qua tin nhắn hoặc email. Bản sao trên cùng server cần được tải về thường xuyên.</p></div>
+ <div className="backup-table-wrap"><table className="backup-table"><thead><tr><th>Thời gian tạo</th><th>Dung lượng</th><th>Dữ liệu</th><th>Kiểm tra</th><th>Tải về</th></tr></thead><tbody>{view.data.map(b=><tr key={b.id}><td><strong>{date(b.createdAt)}</strong><small>{b.id.slice(-8)} · {b.revision.slice(0,7)}</small></td><td>{(b.bytes/1024/1024).toLocaleString('vi-VN',{maximumFractionDigits:1})} MB</td><td>{b.snapshot.orders.toLocaleString('vi-VN')} đơn · {b.snapshot.carts.toLocaleString('vi-VN')} giỏ<small>{b.snapshot.ticketFiles.toLocaleString('vi-VN')} file vé</small></td><td><span className="backup-verified">Đã kiểm tra toàn vẹn</span><small>{b.restoreTestedAt?'Đã thử khôi phục: '+date(b.restoreTestedAt):'Chưa thử khôi phục database'}</small></td><td><a className="backup-download" href={'/api/v1/admin/backups/'+b.id+'/download'}>Tải bản sao ↓</a><button className="backup-hash" type="button" onClick={()=>{void navigator.clipboard.writeText(b.sha256).then(()=>setCopied(b.id)).catch(()=>setError('Không sao chép được mã SHA-256.'));}}>{copied===b.id?'Đã chép SHA-256':'Chép SHA-256'}</button></td></tr>)}</tbody></table>{!view.data.length&&<p className="backup-empty">Chưa có bản sao hoàn chỉnh để tải.</p>}</div>
+ <details className="backup-help"><summary>Cách sao lưu và khôi phục</summary><ol><li>Cài bộ sao lưu theo tài liệu <code>docs/BACKUP-RESTORE.md</code> trên Ubuntu. Lưu riêng khóa trong <code>/etc/jingo-backup/key</code>.</li><li>Tải bản sao về máy và giữ cùng mã SHA-256 để kiểm tra file.</li><li>Thử khôi phục vào database riêng trên máy chủ trước khi cần dùng thật. “Đã kiểm tra toàn vẹn” chỉ xác nhận mã hóa, nội dung và định dạng bản sao.</li><li>Khi cần phục hồi, quản trị máy chủ chuẩn bị dữ liệu riêng rồi kiểm tra trước khi chuyển website sang bản phục hồi. Đơn phát sinh sau thời điểm sao lưu cần đối soát lại.</li></ol></details></>}
+ </section>;
+}

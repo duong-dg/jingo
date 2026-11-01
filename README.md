@@ -474,3 +474,7 @@ Admin gắn file vào mã vé đã giao của đơn CTV PAID hoặc CREDIT tại
 Trang nhận vé chỉ hiển thị mã, hướng dẫn của vé và các file được CTV cho phép. Tên file tải trên trang khách được đổi thành tên chung, tránh lộ giá trong tên gốc; nội dung bên trong PDF/ảnh không bị sửa/xóa giá. CTV cần kiểm tra file gốc trước khi bật chia sẻ. File vẫn do admin tải lên/thu hồi; CTV không được tải file tùy ý lên kho. Không gửi email trực tiếp đến khách từ việc gắn file đơn CTV.
 
 CTV có thể thu hồi tất cả link đã tạo cho đơn rồi tạo link mới. Link thu hồi không thể mở mã hoặc tải file, và gửi lại yêu cầu tạo cũ không khôi phục link. Gửi lại một thao tác thu hồi cũ không làm mất link mới tạo sau đó. Đơn hủy/lưu trữ hoặc CTV DISABLED chặn link nhận vé và tải file; PAUSED vẫn đọc đơn/giao vé cũ. Mã/khóa tra cứu đơn ban đầu không dùng thay cho khóa link chia sẻ. Các bản khách đã lưu/in không thể thu hồi khỏi thiết bị hoặc vô hiệu tại cổng NCC bằng thao tác này.
+
+### Sao lưu tự động và khôi phục
+
+Admin → Cài đặt → Sao lưu & khôi phục: tải bản sao mã hóa về máy, xem kiểm tra toàn vẹn và ngày thử phục hồi. Bộ cài Ubuntu tạo lịch 03:15 giờ Việt Nam, giữ 7 bản, sao lưu PostgreSQL + media + cấu hình. Cần lưu khóa giải mã riêng ngoài server và chạy thử restore-test. Xem [hướng dẫn cài và phục hồi](docs/BACKUP-RESTORE.md). Chưa cài lịch trên server chỉ bằng git pull.
