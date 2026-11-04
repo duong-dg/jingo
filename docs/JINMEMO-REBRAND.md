@@ -27,7 +27,6 @@ Nếu chỉ có `compose.yaml` chỉnh riêng cho server, giữ lại trước k
 cp compose.yaml "$HOME/jingo-compose-before-jinmemo.yaml"
 git stash push -m "server-compose-before-jinmemo" -- compose.yaml
 git fetch origin
-git switch --track origin/codex/jinmemo-rebrand
 git stash pop
 ```
 
@@ -73,3 +72,23 @@ Không tự bật LIVE, không đổi khóa, không tự xác nhận tiền. Kh�
 6. Kiểm tra HTTPS, các link chia sẻ và backup vẫn hoạt động. Khi sẵn sàng mới thiết lập 301 từng đường dẫn domain cũ sang domain mới và cập nhật Search Console.
 
 Không có quyền SSH/NPM/DNS trong repository: việc đổi `.env`, NPM, hộp thư và cấu hình provider phải thực hiện trên server/tài khoản của bạn. Code đã chuẩn bị nhưng không chứng minh server đã được cập nhật.
+
+## Rà nội dung sản phẩm và bài viết — bản bổ sung
+
+Sau khi người dùng cho phép rà toàn bộ nội dung, migration `jinmemo_content_v2` mở rộng bước v1: chỉ thay từ thương hiệu JinGo trong phần chữ hiển thị (kể cả tác giả/SEO), và URL chính xác của `jingo.io.vn` thành `https://jinmemo.com` trong các trường nội dung được chỉ định. Áp dụng cho sản phẩm, blog Việt/Anh, trang nội dung, loại sản phẩm, điểm đến và tên gửi SMTP/SEO. Không thay giá, giảm giá, lịch bán, tồn, ID, slug Việt/Anh, liên kết ngôn ngữ, mã ảnh hoặc ngày xuất bản. Không thay địa chỉ email; tài khoản Google SMTP, mật khẩu và cấu hình cổng thanh toán được giữ nguyên.
+
+Trước mỗi bản ghi thay đổi, lưu data/version gốc trong `jingo_rebrand_history`, cùng transaction với cập nhật. Bảng này là lịch sử nội bộ, không trả qua API công khai; bản sao toàn bộ database vẫn cần giữ trước khi deploy. Migration chỉ chạy một lần, tăng version của nội dung đã đổi, giữ thời gian xuất bản/cập nhật gốc để không tạo cảm giác bài được biên tập lại. Bản dịch đang hợp lệ được cập nhật sourceHash tương ứng; bản nháp hoặc bản đã cũ vẫn giữ trạng thái cũ, không tự xuất bản.
+
+Kiểm tra công khai ngày 4/11/2026: API đã trả 4 sản phẩm và 3 bài blog, cả Việt/Anh. Snapshot kiểm thử cho thấy 4 sản phẩm không cần đổi chữ thương hiệu; 3 bài có tác giả/nội dung/SEO JinGo cần cập nhật. Đã thử phép biến đổi trên 14 bản ghi công khai, giữ nguyên giá, ảnh, ID, slug và URL ngôn ngữ. Đây là kiểm tra trước triển khai, chưa xác nhận dữ liệu trên server đã chạy migration mới. Có một lần 502 khi bắt đầu kiểm tra, sau đó health và các endpoint nội dung đều phản hồi; nên đối chiếu log NPM/API nếu lỗi lặp lại.
+
+Sau khi pull/build/recreate API bản mới, chạy báo cáo **chỉ đọc**:
+
+```bash
+sudo docker compose exec -T api node /app/deploy/jinmemo-audit.cjs
+```
+
+Kỳ vọng `contentMigrationApplied: true`, `remaining: []`, và kiểm tra số sản phẩm/bài xuất bản. Báo cáo không in khách hàng, đơn, mật khẩu SMTP hoặc khóa thanh toán. `contactEmailNeedsManualReview: true` nghĩa là trang liên hệ vẫn dùng email domain cũ: thay bằng địa chỉ liên hệ thực sự nhận được mail tại Admin → Trang → Liên hệ, không tự tạo mailbox mới bằng cách đổi chữ domain.
+
+Endpoint health mới có `brand: "JinMemo"`, `version: "0.41.0"` để phân biệt image đã cập nhật; health không thay thế phép kiểm tra truy vấn database/đặt vé. Tên tải file vé và CSV chuyển sang tiền tố `jinmemo-`; tên kỹ thuật như bảng, cookie, header proxy, Docker volume, khóa mã hóa và message ID email vẫn giữ để tương thích dữ liệu đã có.
+
+Không cần xóa đơn test để đổi thương hiệu hoặc chạy migration này. Không có lệnh tự động xóa đơn, thanh toán, công nợ, tồn, ca quầy hoặc file vé. PDF cũ giữ nguyên nội dung đã phát hành; vé tạo mới dùng JinMemo. Ảnh có chữ JinGo nằm trong pixel cần thay thủ công, không thể xử lý bằng thay text trong SQL.

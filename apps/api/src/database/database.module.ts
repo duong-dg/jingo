@@ -1,3 +1,4 @@
+import {migrateJinMemoContent} from './jinmemo-content';
 import {migrateJinMemoBrand} from './jinmemo-rebrand';
 import{englishSlug}from'../content/localized-slugs';
 import { Global, Inject, Injectable, Module, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
@@ -184,6 +185,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.pool.query("INSERT INTO jingo_migrations(id)VALUES('011_inventory_lock') ON CONFLICT(id) DO NOTHING");
     const stockClient=await this.pool.connect();try{await stockClient.query('BEGIN');await stockClient.query("SELECT id FROM jingo_migrations WHERE id='011_inventory_lock' FOR UPDATE");if(!(await stockClient.query("SELECT id FROM jingo_migrations WHERE id='011_inventory_backfill'")).rowCount){const products=await stockClient.query('SELECT id,data FROM jingo_products');const rows=await stockClient.query('SELECT id,snapshot,booking_status FROM jingo_orders');for(const row of rows.rows){const snapshot=row.snapshot,product=products.rows.find(p=>p.id===snapshot.productId)?.data;if(!product||!snapshot.date)continue;const matches=product.variants.filter((v:{id:string;name:string})=>snapshot.variantId?v.id===snapshot.variantId:v.name===snapshot.variantName);const variantId=matches.length===1?matches[0].id:'';const quantity=(snapshot.lines||[]).reduce((sum:number,line:{quantity:number})=>sum+Number(line.quantity),0);if(!Number.isInteger(quantity)||quantity<1)continue;await stockClient.query('INSERT INTO jingo_inventory_allocations(order_id,product_id,variant_id,visit_date,slot_id,quantity,released)VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(order_id) DO NOTHING',[row.id,product.id,variantId,snapshot.date,snapshot.timeSlot?.id||'',quantity,row.booking_status==='CANCELLED']);}await stockClient.query("INSERT INTO jingo_migrations(id)VALUES('011_inventory_backfill')");}await stockClient.query('COMMIT');}catch(e){await stockClient.query('ROLLBACK');throw e;}finally{stockClient.release();}
     await migrateJinMemoBrand(this.pool);
+    await migrateJinMemoContent(this.pool);
   }
   async onModuleDestroy() { await this.pool.end(); }
 }

@@ -23,7 +23,7 @@ import{PartnersModule}from'./partners/partners.module';
 
 @Controller('health')
 class HealthController {
-  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: 'development', version: '0.40.0' }; }
+  @Get() health() { return { status: 'ok', service: 'jingo-api', mode: process.env.NODE_ENV==='production'?'production':'development', brand:'JinMemo', version: '0.41.0' }; }
 }
 
 @Module({ imports: [BackupsModule,OverviewModule,ContactRequestsModule,PagesModule,WeatherModule,SiteSeoModule,CartsModule,TicketFilesModule,PaymentsModule,VouchersModule,SuppliersModule,DatabaseModule, CatalogModule, PricingModule, AdminModule, OrdersModule,PostsModule,PartnersModule,TranslationsModule,OperationsModule,PosModule], controllers: [HealthController] })

@@ -5,7 +5,7 @@ export async function downloadTicketFile(url: string, body?: unknown) {
   const type = response.headers.get('content-type') || '';
   if (!type.startsWith('application/pdf') && !['image/webp','image/png','image/jpeg'].some(m=>type.startsWith(m))) throw new Error('Không nhận được file vé hợp lệ.');
   const blob = await response.blob(), link = document.createElement('a'), objectUrl = URL.createObjectURL(blob);
-  link.href = objectUrl; link.download = 'jingo-ticket.' + (type.startsWith('application/pdf') ? 'pdf' : type.startsWith('image/png')?'png':type.startsWith('image/jpeg')?'jpg':'webp');
+  link.href = objectUrl; link.download = 'jinmemo-ticket.' + (type.startsWith('application/pdf') ? 'pdf' : type.startsWith('image/png')?'png':type.startsWith('image/jpeg')?'jpg':'webp');
   document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
