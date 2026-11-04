@@ -1,3 +1,7 @@
+# JinMemo (JinGo codebase)
+
+Đổi nhận diện trên nhánh `codex/jinmemo-rebrand`; triển khai domain mới theo [hướng dẫn JinMemo](docs/JINMEMO-REBRAND.md). Tên database, Docker và workspace kỹ thuật tiếp tục là jingo để giữ dữ liệu.
+
 # JinGo
 
 ## Gói vé sổ xuống, thanh tiền mobile và giá địa phương (0.40)

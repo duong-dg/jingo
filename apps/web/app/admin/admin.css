@@ -25,3 +25,6 @@ body:has(.admin-shell)>.header,body:has(.admin-shell)>.demo-banner,body:has(.adm
 .admin-login-secondary{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:20px 0}.login-card label small{font-weight:400;color:#7c877e}.login-card input[autocomplete="one-time-code"]{font-size:24px;letter-spacing:.35em;text-align:center;font-variant-numeric:tabular-nums}
 
 .online-discount-editor{padding:18px;border:1px solid #f0d6c4;border-radius:12px;background:#fff8f2;margin:0 0 18px;min-width:0}.online-discount-editor h3{font-size:16px;margin:0 0 6px}.online-discount-editor p{font-size:12px;line-height:1.7;color:#796e63;margin:0 0 12px}.online-discount-editor .field-grid{gap:12px}.online-discount-editor .online-discount-example{margin:12px 0 0}.online-discount-example strong{color:#d46431}.online-discount-example del{color:#8b8b84}@media(max-width:600px){.online-discount-editor{padding:14px}.online-discount-editor .field-grid{grid-template-columns:1fr}}
+
+/* Keep the longer JinMemo wordmark clear of the sidebar collapse control. */
+.admin-sidebar-brand{gap:8px}.admin-sidebar-brand .logo{font-size:26px;letter-spacing:-1.3px;white-space:nowrap}.admin-sidebar-toggle{width:28px;height:28px;flex:0 0 28px}

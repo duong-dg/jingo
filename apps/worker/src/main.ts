@@ -11,7 +11,7 @@ const worker = new Worker('jingo-operations', async (job) => {
     ...(redis.protocol === 'rediss:' ? { tls: {} } : {})
   }, concurrency: 2
 });
-worker.on('ready', () => console.log('JinGo worker ready (diagnostic jobs only).'));
+worker.on('ready', () => console.log('JinMemo worker ready (diagnostic jobs only).'));
 worker.on('error', (error) => console.error('Worker error:', error.message));
 worker.on('failed', (job, error) => console.error('Job failed:', job?.id, error.message));
 const shutdown = async () => { await worker.close(); process.exit(0); };

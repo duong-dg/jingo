@@ -31,7 +31,7 @@ type Settlement={attempt:Attempt;external:string;reason:string;usd:string;curren
   const c=a.config;let mapping=(await this.db.pool.query('SELECT * FROM jingo_paypal_orders WHERE attempt_id=$1',[a.id])).rows[0];
   if(!mapping){
    const token=await this.token(a.mode,c.paypalClientId,c.paypalEncrypted),base=process.env.PUBLIC_BASE_URL||'http://localhost:3000';
-   const result=await this.api(a.mode,token,'/v2/checkout/orders',{intent:'CAPTURE',purchase_units:[{reference_id:a.id,custom_id:a.id,invoice_id:a.id,description:'JinGo '+code,amount:{currency_code:'USD',value:usdValue(c.usdCents)}}],payment_source:{paypal:{experience_context:{brand_name:'JinGo',shipping_preference:'NO_SHIPPING',user_action:'PAY_NOW',return_url:new URL('/thanh-toan/paypal',base).toString(),cancel_url:new URL('/thanh-toan/paypal?cancelled=1',base).toString()}}}},a.id+'-create');
+   const result=await this.api(a.mode,token,'/v2/checkout/orders',{intent:'CAPTURE',purchase_units:[{reference_id:a.id,custom_id:a.id,invoice_id:a.id,description:'JinMemo '+code,amount:{currency_code:'USD',value:usdValue(c.usdCents)}}],payment_source:{paypal:{experience_context:{brand_name:'JinMemo',shipping_preference:'NO_SHIPPING',user_action:'PAY_NOW',return_url:new URL('/thanh-toan/paypal',base).toString(),cancel_url:new URL('/thanh-toan/paypal?cancelled=1',base).toString()}}}},a.id+'-create');
    const approval=result.links?.find((l:any)=>l.rel==='payer-action'||l.rel==='approve')?.href;
    let url:URL;try{url=new URL(approval);}catch{throw new BadGatewayException('PayPal thiếu đường dẫn xác nhận.');}
    if(!remoteId.test(result.id)||url.protocol!=='https:'||url.hostname!==(a.mode==='LIVE'?'www.paypal.com':'www.sandbox.paypal.com')||url.username||url.password||url.port)throw new BadGatewayException('Phản hồi PayPal không hợp lệ.');
@@ -50,7 +50,7 @@ type Settlement={attempt:Attempt;external:string;reason:string;usd:string;curren
   const a=await this.attempt(orderId),c=a.config,token=await this.token(a.mode,c.paypalClientId,c.paypalEncrypted);
   let order=await this.api(a.mode,token,'/v2/checkout/orders/'+orderId);
   const validOrder=()=>order.id===orderId&&order.intent==='CAPTURE'&&order.purchase_units?.length===1&&order.purchase_units[0].reference_id===a.id&&order.purchase_units[0].custom_id===a.id&&order.purchase_units[0].invoice_id===a.id&&order.purchase_units[0].amount?.currency_code==='USD'&&order.purchase_units[0].amount?.value===usdValue(c.usdCents);
-  if(!validOrder()&&order.status!=='COMPLETED')throw new ConflictException('Đơn PayPal không khớp số tiền hoặc mã JinGo.');
+  if(!validOrder()&&order.status!=='COMPLETED')throw new ConflictException('Đơn PayPal không khớp số tiền hoặc mã JinMemo.');
   if(allowCapture&&order.status==='APPROVED'){
    const current=await this.settings.config();if(!current.paypalEnabled||current.mode!==a.mode||current.paypalClientId!==c.paypalClientId||current.paypalEncrypted!==c.paypalEncrypted||new Date(a.expires_at).getTime()<=Date.now())throw new ConflictException('Yêu cầu PayPal đã hết hạn hoặc cấu hình thay đổi. Chưa thu thêm tiền.');
    const targets:CaptureTarget[]=c.cartOrders||[{id:a.order_id,amount:Number(a.amount)}];
@@ -64,7 +64,7 @@ type Settlement={attempt:Attempt;external:string;reason:string;usd:string;curren
   const captures=order.purchase_units?.[0]?.payments?.captures||[],cap=expectedCapture?captures.find((x:any)=>x.id===expectedCapture):captures[0];
   if(!cap||!remoteId.test(cap.id))throw new ConflictException('Không tìm thấy giao dịch thu PayPal.');
   if(cap.status!=='COMPLETED')return null;
-  let reason=validOrder()?'':'Đơn PayPal không khớp số tiền hoặc mã JinGo; cần kiểm tra trên PayPal';if(captures.length!==1||cap.amount?.currency_code!=='USD'||cap.amount?.value!==usdValue(c.usdCents)||cap.final_capture!==true)reason='Số tiền USD, tiền tệ hoặc lần thu PayPal không khớp; cần kiểm tra trên PayPal';
+  let reason=validOrder()?'':'Đơn PayPal không khớp số tiền hoặc mã JinMemo; cần kiểm tra trên PayPal';if(captures.length!==1||cap.amount?.currency_code!=='USD'||cap.amount?.value!==usdValue(c.usdCents)||cap.final_capture!==true)reason='Số tiền USD, tiền tệ hoặc lần thu PayPal không khớp; cần kiểm tra trên PayPal';
   return{attempt:a,external:cap.id,reason,usd:String(cap.amount?.value||''),currency:String(cap.amount?.currency_code||''),captureId:cap.id,orderId};
  }
  async webhook(body:unknown,headers:Record<string,unknown>){
